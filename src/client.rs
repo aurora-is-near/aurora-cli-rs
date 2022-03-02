@@ -22,7 +22,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
             .json(request)
             .send()
             .await?;
-        Ok(resp.json().await.unwrap())
+        resp.json().await
     }
 }
 
