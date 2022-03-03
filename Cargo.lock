@@ -41,9 +41,13 @@ dependencies = [
 name = "aurora-cli-rs"
 version = "0.1.0"
 dependencies = [
+ "aurora-engine-sdk",
  "aurora-engine-transactions",
+ "aurora-engine-types",
  "hex",
+ "libsecp256k1",
  "reqwest",
+ "rlp",
  "serde",
  "serde_json",
  "tokio",
@@ -307,12 +311,22 @@ checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
 name = "crypto-mac"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4434400df11d95d556bac068ddfedd482915eb18fe8bea89bc80b6e4b1c179e5"
+dependencies = [
+ "generic-array 0.12.4",
+ "subtle 1.0.0",
+]
+
+[[package]]
+name = "crypto-mac"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b584a330336237c1eecd3e94266efb216c56ed91225d634cb2991c5f3fd1aeab"
 dependencies = [
  "generic-array 0.14.5",
- "subtle",
+ "subtle 2.4.1",
 ]
 
 [[package]]
@@ -688,6 +702,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hmac"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dcb5e64cda4c23119ab41ba960d1e170a774c8e4b9d9e6a9bc18aabf5e59695"
+dependencies = [
+ "crypto-mac 0.7.0",
+ "digest 0.8.1",
+]
+
+[[package]]
+name = "hmac-drbg"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6e570451493f10f6581b48cdd530413b63ea9e780f544bfd3bdcaa0d89d1a7b"
+dependencies = [
+ "digest 0.8.1",
+ "generic-array 0.12.4",
+ "hmac",
+]
+
+[[package]]
 name = "http"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -865,9 +900,11 @@ dependencies = [
  "arrayref",
  "crunchy",
  "digest 0.8.1",
+ "hmac-drbg",
  "rand 0.7.3",
  "sha2 0.8.2",
- "subtle",
+ "subtle 2.4.1",
+ "typenum",
 ]
 
 [[package]]
@@ -951,7 +988,7 @@ name = "near-blake2"
 version = "0.9.1"
 source = "git+https://github.com/near/near-blake2.git#cebb7df79608a7058017940830d37c37d55d21fe"
 dependencies = [
- "crypto-mac",
+ "crypto-mac 0.8.0",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
 ]
@@ -1623,6 +1660,12 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "subtle"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 
 [[package]]
 name = "subtle"
