@@ -14,8 +14,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sk = secp256k1::SecretKey::parse(&[1; 32]).unwrap();
     let source = utils::address_from_secret_key(&sk);
     let target = Address::decode("cc5a584f545b2ca3ebacc1346556d1f5b82b8fc6").unwrap();
-    let nonce = client.get_nonce(source).await.unwrap();
-    let chain_id = client.get_chain_id().await.unwrap();
+    let nonce = client.get_nonce(source).await?;
+    let chain_id = client.get_chain_id().await?;
     let tx_hash = client
         .transfer(target, Wei::zero(), &sk, chain_id, nonce)
         .await

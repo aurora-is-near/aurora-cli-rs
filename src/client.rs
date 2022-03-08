@@ -21,7 +21,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
     pub async fn request<'a, 'b, U: Serialize>(
         &self,
         request: &Web3JsonRequest<'a, 'b, U>,
-    ) -> Result<Web3JsonResponse<serde_json::Value>, reqwest::Error> {
+    ) -> Result<Web3JsonResponse<serde_json::Value>, ClientError> {
         let resp = self
             .inner
             .post(self.rpc.as_ref())
@@ -30,7 +30,14 @@ impl<T: AsRef<str>> AuroraClient<T> {
             .await?;
         // TODO: parse information from headers too (eg x-request-id)
         // println!("{:?}", resp.headers());
-        resp.json().await
+        let full = resp.bytes().await?;
+        serde_json::from_slice(&full).map_err(|_| {
+            let text = match String::from_utf8_lossy(&full) {
+                std::borrow::Cow::Owned(s) => s,
+                std::borrow::Cow::Borrowed(s) => s.to_owned(),
+            };
+            ClientError::InvalidJson(text)
+        })
     }
 
     pub async fn get_nonce(&self, address: Address) -> Result<U256, ClientError> {
@@ -130,6 +137,7 @@ pub struct Web3JsonResponseError {
 
 #[derive(Debug)]
 pub enum ClientError {
+    InvalidJson(String),
     Rpc(Web3JsonResponseError),
     Reqwest(reqwest::Error),
 }
@@ -145,3 +153,11 @@ impl From<Web3JsonResponseError> for ClientError {
         Self::Rpc(e)
     }
 }
+
+impl std::fmt::Display for ClientError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("ClientError({})", self))
+    }
+}
+
+impl std::error::Error for ClientError {}
