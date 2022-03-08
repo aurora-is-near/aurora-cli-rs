@@ -1,0 +1,4 @@
+[submodule "aurora-engine"]
+	path = aurora-engine
+	url = https://github.com/aurora-is-near/aurora-engine
+	branch = develop

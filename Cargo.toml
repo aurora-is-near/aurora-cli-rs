@@ -6,9 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine", rev = "96263de9ca3906c2dd014a2357a2aa68a1431731", features = ["std"] }
-aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine", rev = "96263de9ca3906c2dd014a2357a2aa68a1431731", features = ["std"] }
-aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine", rev = "96263de9ca3906c2dd014a2357a2aa68a1431731", features = ["std"] }
+aurora-engine = { path = "./aurora-engine/engine/", features = ["std"] }
+aurora-engine-sdk = { path = "./aurora-engine/engine-sdk/", features = ["std"] }
+aurora-engine-transactions = { path = "./aurora-engine/engine-transactions/", features = ["std"] }
+aurora-engine-types = { path = "./aurora-engine/engine-types/", features = ["std"] }
 hex = "0.4.3"
 libsecp256k1 = "0.3.5"
 reqwest = { version = "0.11", features = ["json"] }
