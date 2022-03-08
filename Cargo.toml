@@ -10,8 +10,13 @@ aurora-engine = { path = "./aurora-engine/engine/", features = ["std"] }
 aurora-engine-sdk = { path = "./aurora-engine/engine-sdk/", features = ["std"] }
 aurora-engine-transactions = { path = "./aurora-engine/engine-transactions/", features = ["std"] }
 aurora-engine-types = { path = "./aurora-engine/engine-types/", features = ["std"] }
+base64 = "0.13.0"
+borsh = "0.8.2"
 hex = "0.4.3"
 libsecp256k1 = "0.3.5"
+near-jsonrpc-client = "0.3.0"
+near-jsonrpc-primitives = "0.12.0"
+near-primitives = "0.12.0"
 reqwest = { version = "0.11", features = ["json"] }
 rlp = "0.5.0"
 serde = { version = "1", features = ["derive"] }

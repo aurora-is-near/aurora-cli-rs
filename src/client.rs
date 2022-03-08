@@ -1,21 +1,32 @@
 use crate::eth_method::EthMethod;
+use aurora_engine::parameters::SubmitResult;
 use aurora_engine_transactions::{legacy::TransactionLegacy, EthTransactionKind};
 use aurora_engine_types::{
     types::{Address, Wei},
     H256, U256,
 };
+use borsh::BorshDeserialize;
+use near_jsonrpc_client::AsUrl;
 use secp256k1::SecretKey;
 use serde::{Deserialize, Serialize};
 
+const NEAR_TRANSACTION_KEY: &str = "nearTransactionHash";
+
 pub struct AuroraClient<T> {
     inner: reqwest::Client,
-    rpc: T,
+    aurora_rpc: T,
+    near_client: near_jsonrpc_client::JsonRpcClient,
 }
 
 impl<T: AsRef<str>> AuroraClient<T> {
-    pub fn new(rpc: T) -> Self {
+    pub fn new<U: AsUrl>(aurora_rpc: T, near_rpc: U) -> Self {
         let inner = reqwest::Client::new();
-        Self { inner, rpc }
+        let near_client = near_jsonrpc_client::JsonRpcClient::connect(near_rpc);
+        Self {
+            inner,
+            aurora_rpc,
+            near_client,
+        }
     }
 
     pub async fn request<'a, 'b, U: Serialize>(
@@ -24,7 +35,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
     ) -> Result<Web3JsonResponse<serde_json::Value>, ClientError> {
         let resp = self
             .inner
-            .post(self.rpc.as_ref())
+            .post(self.aurora_rpc.as_ref())
             .json(request)
             .send()
             .await?;
@@ -99,6 +110,61 @@ impl<T: AsRef<str>> AuroraClient<T> {
             .unwrap();
         Ok(H256::from_slice(&tx_hash_bytes))
     }
+
+    pub async fn get_transaction_outcome(
+        &self,
+        tx_hash: H256,
+        relayer: &str,
+    ) -> Result<TransactionOutcome, ClientError> {
+        let method = EthMethod::GetTransactionReceipt(tx_hash);
+        let request = Web3JsonRequest::from_method(1, &method);
+        let response = self.request(&request).await?;
+
+        if let Some(e) = response.error {
+            return Err(e.into());
+        }
+
+        let response_value = response
+            .result
+            .as_ref()
+            .ok_or(ClientError::AuroraTransactionNotFound(tx_hash))?;
+        let near_tx_value = response_value
+            .as_object()
+            .ok_or_else(|| ClientError::NotJsonObject(response_value.clone()))?
+            .get(NEAR_TRANSACTION_KEY)
+            .ok_or_else(|| ClientError::ResponseKeyNotFound(String::from(NEAR_TRANSACTION_KEY)))?;
+        let near_tx_str = near_tx_value
+            .as_str()
+            .ok_or_else(|| ClientError::NotJsonString(near_tx_value.clone()))?;
+        let near_tx_hex = near_tx_str.strip_prefix("0x").unwrap_or(near_tx_str);
+        let near_tx_hash = hex::decode(near_tx_hex)?;
+
+        let tx_status_request = near_jsonrpc_client::methods::tx::RpcTransactionStatusRequest {
+            transaction_info:
+                near_jsonrpc_primitives::types::transactions::TransactionInfo::TransactionId {
+                    hash: near_tx_hash.as_slice().try_into().unwrap(),
+                    account_id: relayer.parse().unwrap(),
+                },
+        };
+        let near_tx_status = self.near_client.call(tx_status_request).await.unwrap();
+        match near_tx_status.status {
+            near_primitives::views::FinalExecutionStatus::SuccessValue(result) => {
+                let result_bytes = base64::decode(result).unwrap();
+                let result = SubmitResult::try_from_slice(&result_bytes).unwrap();
+                Ok(TransactionOutcome::Result(result))
+            }
+            near_primitives::views::FinalExecutionStatus::Failure(e) => {
+                Ok(TransactionOutcome::Failure(e))
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum TransactionOutcome {
+    Result(SubmitResult),
+    Failure(near_primitives::errors::TxExecutionError),
 }
 
 #[derive(Debug, Serialize)]
@@ -137,9 +203,20 @@ pub struct Web3JsonResponseError {
 
 #[derive(Debug)]
 pub enum ClientError {
+    AuroraTransactionNotFound(H256),
+    InvalidHex(hex::FromHexError),
     InvalidJson(String),
+    ResponseKeyNotFound(String),
+    NotJsonObject(serde_json::Value),
+    NotJsonString(serde_json::Value),
     Rpc(Web3JsonResponseError),
     Reqwest(reqwest::Error),
+}
+
+impl From<hex::FromHexError> for ClientError {
+    fn from(e: hex::FromHexError) -> Self {
+        Self::InvalidHex(e)
+    }
 }
 
 impl From<reqwest::Error> for ClientError {
