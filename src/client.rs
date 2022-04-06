@@ -85,13 +85,26 @@ impl<T: AsRef<str>> AuroraClient<T> {
         chain_id: u64,
         nonce: U256,
     ) -> Result<H256, ClientError> {
+        self.eth_transaction(Some(target), amount, signer, chain_id, nonce, Vec::new())
+            .await
+    }
+
+    pub async fn eth_transaction(
+        &self,
+        target: Option<Address>,
+        amount: Wei,
+        signer: &SecretKey,
+        chain_id: u64,
+        nonce: U256,
+        data: Vec<u8>,
+    ) -> Result<H256, ClientError> {
         let tx = TransactionLegacy {
             nonce,
             gas_price: U256::zero(),
             gas_limit: U256::from(u64::MAX),
-            to: Some(target),
+            to: target,
             value: amount,
-            data: Vec::new(),
+            data,
         };
         let signed_tx =
             EthTransactionKind::Legacy(crate::utils::sign_transaction(tx, chain_id, signer));
@@ -187,6 +200,7 @@ impl<'a> Web3JsonRequest<'a, 'static, Vec<String>> {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct Web3JsonResponse<T> {
     jsonrpc: String,
     id: u32,
@@ -195,6 +209,7 @@ pub struct Web3JsonResponse<T> {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct Web3JsonResponseError {
     code: i64,
     data: serde_json::Value,
