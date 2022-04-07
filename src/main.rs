@@ -5,7 +5,7 @@ mod transaction_reader;
 mod utils;
 
 const AURORA_MAINNET_ENDPOINT: &str = "https://mainnet.aurora.dev/";
-const NEAR_MAINNET_ENDPOINT: &str = "https://archival-rpc.mainnet.near.org";
+const NEAR_MAINNET_ENDPOINT: &str = "https://archival-rpc.mainnet.near.org/";
 
 use aurora_engine_types::{
     types::{Address, Wei},
@@ -20,9 +20,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
     let network = args.network.unwrap_or_default();
 
-    let client = match network {
-        Network::Mainnet => AuroraClient::new(AURORA_MAINNET_ENDPOINT, NEAR_MAINNET_ENDPOINT),
+    let api_key = match args.api_key_path {
+        Some(path) => std::fs::read_to_string(path)?,
+        None => {
+            let default_path = ".api_key";
+            std::fs::read_to_string(default_path).unwrap_or_default()
+        }
     };
+    let (aurora_endpoint, near_endpoint) = match network {
+        Network::Mainnet => (AURORA_MAINNET_ENDPOINT, NEAR_MAINNET_ENDPOINT),
+    };
+    let client = AuroraClient::new(format!("{}{}", aurora_endpoint, api_key), near_endpoint);
 
     match args.command {
         Command::GetResult { tx_hash_hex } => {
