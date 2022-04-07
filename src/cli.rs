@@ -22,6 +22,12 @@ pub enum Command {
         #[clap(short, long)]
         amount: String,
     },
+    Deploy {
+        #[clap(short, long)]
+        source_private_key_hex: String,
+        #[clap(short, long)]
+        input_data_hex: String,
+    },
     ProcessTxData {
         #[clap(subcommand)]
         action: ProcessTxAction,

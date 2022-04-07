@@ -77,18 +77,6 @@ impl<T: AsRef<str>> AuroraClient<T> {
         Ok(value.parse().unwrap())
     }
 
-    pub async fn transfer(
-        &self,
-        target: Address,
-        amount: Wei,
-        signer: &SecretKey,
-        chain_id: u64,
-        nonce: U256,
-    ) -> Result<H256, ClientError> {
-        self.eth_transaction(Some(target), amount, signer, chain_id, nonce, Vec::new())
-            .await
-    }
-
     pub async fn eth_transaction(
         &self,
         target: Option<Address>,

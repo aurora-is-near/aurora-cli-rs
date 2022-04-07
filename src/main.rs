@@ -39,35 +39,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             let sk_bytes = utils::hex_to_arr32(&source_private_key_hex)?;
             let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
-            let source = utils::address_from_secret_key(&sk);
-            println!("FROM {:?}", source);
-
-            let nonce = client.get_nonce(source).await?;
-            let chain_id = client.get_chain_id().await?;
-
             let target = Address::decode(&target_addr_hex).unwrap();
             let amount = Wei::new(U256::from_dec_str(&amount).unwrap());
-            let tx_hash = client
-                .transfer(target, amount, &sk, chain_id, nonce)
-                .await
-                .unwrap();
-
-            // Wait for the RPC to pick up the transaction
-            loop {
-                match client
-                    .get_transaction_outcome(tx_hash, "relay.aurora")
-                    .await
-                {
-                    Ok(result) => {
-                        println!("{:?}", result);
-                        break;
-                    }
-                    Err(ClientError::AuroraTransactionNotFound(_)) => {
-                        continue;
-                    }
-                    Err(other) => return Err(Box::new(other) as Box<dyn std::error::Error>),
-                }
-            }
+            send_transaction(&client, &sk, Some(target), amount, Vec::new()).await?;
+        }
+        Command::Deploy {
+            source_private_key_hex,
+            input_data_hex,
+        } => {
+            let sk_bytes = utils::hex_to_arr32(&source_private_key_hex)?;
+            let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
+            let input = hex::decode(input_data_hex)?;
+            send_transaction(&client, &sk, None, Wei::zero(), input).await?;
         }
         Command::ProcessTxData {
             action,
@@ -100,6 +83,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     transaction_reader::count_transactions_by_type(paths).await
                 }
             }
+        }
+    }
+
+    Ok(())
+}
+
+async fn send_transaction<T: AsRef<str>>(
+    client: &AuroraClient<T>,
+    sk: &secp256k1::SecretKey,
+    to: Option<Address>,
+    amount: Wei,
+    input: Vec<u8>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let source = utils::address_from_secret_key(sk);
+    println!("FROM {:?}", source);
+
+    let nonce = client.get_nonce(source).await?;
+    let chain_id = client.get_chain_id().await?;
+
+    let tx_hash = client
+        .eth_transaction(to, amount, sk, chain_id, nonce, input)
+        .await
+        .unwrap();
+
+    // Wait for the RPC to pick up the transaction
+    loop {
+        match client
+            .get_transaction_outcome(tx_hash, "relay.aurora")
+            .await
+        {
+            Ok(result) => {
+                println!("{:?}", result);
+                break;
+            }
+            Err(ClientError::AuroraTransactionNotFound(_)) => {
+                continue;
+            }
+            Err(other) => return Err(Box::new(other) as Box<dyn std::error::Error>),
         }
     }
 
