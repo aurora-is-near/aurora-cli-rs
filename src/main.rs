@@ -51,6 +51,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let amount = Wei::new(U256::from_dec_str(&amount).unwrap());
             send_transaction(&client, &sk, Some(target), amount, Vec::new()).await?;
         }
+        Command::ContractCall {
+            source_private_key_hex,
+            target_addr_hex,
+            amount,
+            input_data_hex,
+        } => {
+            let sk_bytes = utils::hex_to_arr32(&source_private_key_hex)?;
+            let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
+            let target = Address::decode(&target_addr_hex).unwrap();
+            let amount = amount
+                .as_ref()
+                .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
+                .unwrap_or_else(Wei::zero);
+            let input = hex::decode(input_data_hex)?;
+            send_transaction(&client, &sk, Some(target), amount, input).await?;
+        }
         Command::Deploy {
             source_private_key_hex,
             input_data_hex,

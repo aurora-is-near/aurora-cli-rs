@@ -24,6 +24,16 @@ pub enum Command {
         #[clap(short, long)]
         amount: String,
     },
+    ContractCall {
+        #[clap(short, long)]
+        source_private_key_hex: String,
+        #[clap(short, long)]
+        target_addr_hex: String,
+        #[clap(short, long)]
+        amount: Option<String>,
+        #[clap(short, long)]
+        input_data_hex: String,
+    },
     Deploy {
         #[clap(short, long)]
         source_private_key_hex: String,
