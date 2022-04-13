@@ -7,10 +7,14 @@ use aurora_engine_types::{
 };
 use borsh::BorshDeserialize;
 use near_jsonrpc_client::AsUrl;
+use near_primitives::views;
 use secp256k1::SecretKey;
 use serde::{Deserialize, Serialize};
 
 const NEAR_TRANSACTION_KEY: &str = "nearTransactionHash";
+
+type NearQueryError =
+    near_jsonrpc_client::errors::JsonRpcError<near_jsonrpc_primitives::types::query::RpcQueryError>;
 
 pub struct AuroraClient<T> {
     inner: reqwest::Client,
@@ -160,6 +164,43 @@ impl<T: AsRef<str>> AuroraClient<T> {
             _ => unreachable!(),
         }
     }
+
+    pub async fn get_nep141_from_erc20(&self, erc20: Address) -> Result<String, ClientError> {
+        let result = self
+            .near_view_call("get_nep141_from_erc20".into(), erc20.as_bytes().to_vec())
+            .await?;
+        Ok(String::from_utf8_lossy(&result.result).into_owned())
+    }
+
+    async fn near_view_call(
+        &self,
+        method_name: String,
+        args: Vec<u8>,
+    ) -> Result<views::CallResult, ClientError> {
+        let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
+            block_reference: near_primitives::types::Finality::Final.into(),
+            request: near_primitives::views::QueryRequest::CallFunction {
+                account_id: "aurora".parse().unwrap(),
+                method_name,
+                args: args.into(),
+            },
+        };
+        let response = self.near_client.call(request).await?;
+
+        match response.kind {
+            near_jsonrpc_primitives::types::query::QueryResponseKind::CallResult(result) => {
+                Ok(result)
+            }
+            near_jsonrpc_primitives::types::query::QueryResponseKind::LegacyError(e) => Err(
+                ClientError::NearRpc(near_jsonrpc_client::errors::JsonRpcError::ServerError(
+                    near_jsonrpc_client::errors::JsonRpcServerError::InternalError {
+                        info: Some(e.error),
+                    },
+                )),
+            ),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -213,6 +254,7 @@ pub enum ClientError {
     NotJsonObject(serde_json::Value),
     NotJsonString(serde_json::Value),
     Rpc(Web3JsonResponseError),
+    NearRpc(NearQueryError),
     Reqwest(reqwest::Error),
 }
 
@@ -231,6 +273,12 @@ impl From<reqwest::Error> for ClientError {
 impl From<Web3JsonResponseError> for ClientError {
     fn from(e: Web3JsonResponseError) -> Self {
         Self::Rpc(e)
+    }
+}
+
+impl From<NearQueryError> for ClientError {
+    fn from(e: NearQueryError) -> Self {
+        Self::NearRpc(e)
     }
 }
 

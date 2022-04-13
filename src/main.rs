@@ -76,6 +76,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let input = hex::decode(input_data_hex)?;
             send_transaction(&client, &sk, None, Wei::zero(), input).await?;
         }
+        Command::GetNep141 { erc_20_address_hex } => {
+            let erc20 = Address::decode(&erc_20_address_hex).unwrap();
+            match client.get_nep141_from_erc20(erc20).await {
+                Ok(nep_141_account) => println!("{}", nep_141_account),
+                Err(e) => {
+                    let error_msg = format!("{:?}", e);
+                    if error_msg.contains("ERC20_NOT_FOUND") {
+                        println!("No NEP-141 account associated with {}", erc_20_address_hex);
+                    } else {
+                        panic!("{}", error_msg);
+                    }
+                }
+            };
+        }
         Command::ProcessTxData {
             action,
             input_files_list_path,

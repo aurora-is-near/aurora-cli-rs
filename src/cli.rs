@@ -40,6 +40,9 @@ pub enum Command {
         #[clap(short, long)]
         input_data_hex: String,
     },
+    GetNep141 {
+        erc_20_address_hex: String,
+    },
     ProcessTxData {
         #[clap(subcommand)]
         action: ProcessTxAction,
