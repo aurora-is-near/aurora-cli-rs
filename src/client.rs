@@ -191,13 +191,6 @@ impl<T: AsRef<str>> AuroraClient<T> {
             near_jsonrpc_primitives::types::query::QueryResponseKind::CallResult(result) => {
                 Ok(result)
             }
-            near_jsonrpc_primitives::types::query::QueryResponseKind::LegacyError(e) => Err(
-                ClientError::NearRpc(near_jsonrpc_client::errors::JsonRpcError::ServerError(
-                    near_jsonrpc_client::errors::JsonRpcServerError::InternalError {
-                        info: Some(e.error),
-                    },
-                )),
-            ),
             _ => unreachable!(),
         }
     }
