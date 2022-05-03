@@ -62,6 +62,7 @@ pub enum ProcessTxAction {
 #[derive(Debug)]
 pub enum Network {
     Mainnet,
+    Testnet,
 }
 
 impl Default for Network {
@@ -76,6 +77,7 @@ impl FromStr for Network {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "mainnet" => Ok(Self::Mainnet),
+            "testnet" => Ok(Self::Testnet),
             _ => Err("Unrecognized network name"),
         }
     }
