@@ -1,11 +1,11 @@
 use crate::eth_method::EthMethod;
-use aurora_engine::parameters::SubmitResult;
+use aurora_engine::parameters::{SubmitResult, TransactionStatus};
 use aurora_engine_transactions::{legacy::TransactionLegacy, EthTransactionKind};
 use aurora_engine_types::{
     types::{Address, Wei},
     H256, U256,
 };
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_jsonrpc_client::AsUrl;
 use near_primitives::views;
 use secp256k1::SecretKey;
@@ -141,13 +141,23 @@ impl<T: AsRef<str>> AuroraClient<T> {
         let near_tx_str = near_tx_value
             .as_str()
             .ok_or_else(|| ClientError::NotJsonString(near_tx_value.clone()))?;
+        // println!("{}", near_tx_str);
         let near_tx_hex = near_tx_str.strip_prefix("0x").unwrap_or(near_tx_str);
         let near_tx_hash = hex::decode(near_tx_hex)?;
 
+        self.get_near_transaction_outcome(H256::from_slice(&near_tx_hash), relayer)
+            .await
+    }
+
+    pub async fn get_near_transaction_outcome(
+        &self,
+        near_tx_hash: H256,
+        relayer: &str,
+    ) -> Result<TransactionOutcome, ClientError> {
         let tx_status_request = near_jsonrpc_client::methods::tx::RpcTransactionStatusRequest {
             transaction_info:
                 near_jsonrpc_primitives::types::transactions::TransactionInfo::TransactionId {
-                    hash: near_tx_hash.as_slice().try_into().unwrap(),
+                    hash: near_tx_hash.as_bytes().try_into().unwrap(),
                     account_id: relayer.parse().unwrap(),
                 },
         };
@@ -170,6 +180,26 @@ impl<T: AsRef<str>> AuroraClient<T> {
             .near_view_call("get_nep141_from_erc20".into(), erc20.as_bytes().to_vec())
             .await?;
         Ok(String::from_utf8_lossy(&result.result).into_owned())
+    }
+
+    pub async fn view_contract_call(
+        &self,
+        sender: Address,
+        target: Address,
+        amount: Wei,
+        input: Vec<u8>,
+    ) -> Result<TransactionStatus, ClientError> {
+        let args = aurora_engine::parameters::ViewCallArgs {
+            sender,
+            address: target,
+            amount: amount.to_bytes(),
+            input,
+        };
+        let result = self
+            .near_view_call("view".into(), args.try_to_vec().unwrap())
+            .await?;
+        let status = TransactionStatus::try_from_slice(&result.result).unwrap();
+        Ok(status)
     }
 
     async fn near_view_call(

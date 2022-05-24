@@ -16,6 +16,10 @@ pub enum Command {
     GetResult {
         tx_hash_hex: String,
     },
+    GetNearResult {
+        tx_hash_b58: String,
+        relayer: Option<String>,
+    },
     Transfer {
         #[clap(short, long)]
         source_private_key_hex: String,
@@ -27,6 +31,16 @@ pub enum Command {
     ContractCall {
         #[clap(short, long)]
         source_private_key_hex: String,
+        #[clap(short, long)]
+        target_addr_hex: String,
+        #[clap(short, long)]
+        amount: Option<String>,
+        #[clap(short, long)]
+        input_data_hex: String,
+    },
+    ContractView {
+        #[clap(short, long)]
+        sender_addr_hex: Option<String>,
         #[clap(short, long)]
         target_addr_hex: String,
         #[clap(short, long)]

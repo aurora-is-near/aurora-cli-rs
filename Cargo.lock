@@ -143,6 +143,7 @@ dependencies = [
  "aurora-engine-types",
  "base64 0.13.0",
  "borsh 0.8.2",
+ "bs58",
  "clap",
  "hex",
  "libsecp256k1",

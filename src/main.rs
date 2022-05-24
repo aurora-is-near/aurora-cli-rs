@@ -43,6 +43,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await?;
             println!("{:?}", outcome);
         }
+        Command::GetNearResult {
+            tx_hash_b58,
+            relayer,
+        } => {
+            let tx_hash = bs58::decode(tx_hash_b58.as_str()).into_vec().unwrap();
+            let tx_hash = aurora_engine_types::H256::from_slice(&tx_hash);
+            let relayer = relayer.as_deref().unwrap_or("relay.aurora");
+            let outcome = client
+                .get_near_transaction_outcome(tx_hash, relayer)
+                .await?;
+            println!("{:?}", outcome);
+        }
         Command::Transfer {
             source_private_key_hex,
             target_addr_hex,
@@ -69,6 +81,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or_else(Wei::zero);
             let input = hex::decode(input_data_hex)?;
             send_transaction(&client, &sk, Some(target), amount, input).await?;
+        }
+        Command::ContractView {
+            target_addr_hex,
+            amount,
+            input_data_hex,
+            sender_addr_hex,
+        } => {
+            let target = Address::decode(&target_addr_hex).unwrap();
+            let sender = sender_addr_hex
+                .map(|x| Address::decode(&x).unwrap())
+                .unwrap_or_default();
+            let amount = amount
+                .as_ref()
+                .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
+                .unwrap_or_else(Wei::zero);
+            let input = hex::decode(input_data_hex)?;
+
+            let result = client
+                .view_contract_call(sender, target, amount, input)
+                .await
+                .unwrap();
+            println!("{:?}", result);
         }
         Command::Deploy {
             source_private_key_hex,
