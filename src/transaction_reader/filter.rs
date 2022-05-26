@@ -37,6 +37,76 @@ impl Filter for MinNearGasUsed {
     }
 }
 
+pub struct MaxNearGasUsed(pub u128);
+impl Filter for MaxNearGasUsed {
+    fn pass(&self, data: &TxData) -> bool {
+        match data.gas_profile.get("TOTAL") {
+            None => false,
+            Some(total) => total <= &self.0,
+        }
+    }
+}
+
+pub struct MinEvmGasUsed(pub u64);
+impl Filter for MinEvmGasUsed {
+    fn pass(&self, data: &TxData) -> bool {
+        match &data.status {
+            TxStatus::Executed(submit_result) => submit_result.gas_used >= self.0,
+            _ => false,
+        }
+    }
+}
+
+pub struct MaxEvmGasUsed(pub u64);
+impl Filter for MaxEvmGasUsed {
+    fn pass(&self, data: &TxData) -> bool {
+        match &data.status {
+            TxStatus::Executed(submit_result) => submit_result.gas_used <= self.0,
+            _ => false,
+        }
+    }
+}
+
+pub struct GeneralGasFilter {
+    pub min_near: Option<u128>,
+    pub min_evm: Option<u64>,
+    pub max_near: Option<u128>,
+    pub max_evm: Option<u64>,
+}
+
+impl Filter for GeneralGasFilter {
+    fn pass(&self, data: &TxData) -> bool {
+        let near_gas_used = match data.gas_profile.get("TOTAL") {
+            None => return false,
+            Some(total) => total,
+        };
+        let evm_gas_used = match &data.status {
+            TxStatus::Executed(submit_result) => &submit_result.gas_used,
+            _ => return false,
+        };
+
+        self.min_near
+            .as_ref()
+            .map(|g| near_gas_used >= g)
+            .unwrap_or(true)
+            && self
+                .min_evm
+                .as_ref()
+                .map(|g| evm_gas_used >= g)
+                .unwrap_or(true)
+            && self
+                .max_near
+                .as_ref()
+                .map(|g| near_gas_used <= g)
+                .unwrap_or(true)
+            && self
+                .max_evm
+                .as_ref()
+                .map(|g| evm_gas_used <= g)
+                .unwrap_or(true)
+    }
+}
+
 pub struct EthTxTo(pub Address);
 impl Filter for EthTxTo {
     fn pass(&self, data: &TxData) -> bool {

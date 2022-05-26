@@ -184,6 +184,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     transaction_reader::process_data::<aggregator::GroupByFlatStatus, _>(paths, &f)
                         .await
                 }
+                ProcessTxAction::FilterGasRange {
+                    min_near,
+                    min_evm,
+                    max_near,
+                    max_evm,
+                } => {
+                    let f = Arc::new(filter::GeneralGasFilter {
+                        min_near,
+                        min_evm,
+                        max_near,
+                        max_evm,
+                    });
+                    transaction_reader::process_data::<aggregator::Echo, _>(paths, &f).await
+                }
             }
         }
     }
