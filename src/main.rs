@@ -16,6 +16,8 @@ use aurora_engine_types::{
 use clap::Parser;
 use cli::{Cli, Command, Network, ProcessTxAction};
 use client::{AuroraClient, ClientError};
+use std::sync::Arc;
+use transaction_reader::{aggregator, filter};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -142,20 +144,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             match action {
                 ProcessTxAction::AverageGasProfile => {
-                    transaction_reader::get_average_gas_profile(paths).await
+                    let f = Arc::new(filter::MatchFlatStatus(
+                        transaction_reader::FlatTxStatus::Succeeded,
+                    ));
+                    transaction_reader::process_data::<aggregator::AverageGasProfile, _>(paths, &f)
+                        .await
                 }
                 ProcessTxAction::FilterTo { target_addr_hex } => {
                     let to = Address::decode(&target_addr_hex).unwrap();
-                    transaction_reader::get_txs_to(paths, to).await;
+                    let f = Arc::new(filter::EthTxTo(to));
+                    transaction_reader::process_data::<aggregator::Echo, _>(paths, &f).await
                 }
                 ProcessTxAction::GasDistribution => {
-                    transaction_reader::count_transactions_by_gas(paths).await
+                    let f1 = filter::MatchFlatStatus(transaction_reader::FlatTxStatus::Succeeded);
+                    let f2 = filter::MatchFlatStatus(transaction_reader::FlatTxStatus::GasLimit);
+                    let f = Arc::new(filter::Or::new(f1, f2));
+                    transaction_reader::process_data::<aggregator::GroupByGas, _>(paths, &f).await
                 }
                 ProcessTxAction::NearGasVsEvmGas => {
-                    transaction_reader::get_near_gas_vs_evm_gas(paths).await
+                    let f = Arc::new(filter::StatusExecuted);
+                    transaction_reader::process_data::<aggregator::GasComparison, _>(paths, &f)
+                        .await
                 }
                 ProcessTxAction::OutcomeDistribution => {
-                    transaction_reader::count_transactions_by_type(paths).await
+                    let f = Arc::new(filter::None);
+                    transaction_reader::process_data::<aggregator::GroupByFlatStatus, _>(paths, &f)
+                        .await
                 }
             }
         }
