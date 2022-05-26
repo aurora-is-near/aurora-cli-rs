@@ -143,12 +143,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .collect();
 
             match action {
-                ProcessTxAction::AverageGasProfile => {
-                    let f = Arc::new(filter::MatchFlatStatus(
-                        transaction_reader::FlatTxStatus::Succeeded,
-                    ));
-                    transaction_reader::process_data::<aggregator::AverageGasProfile, _>(paths, &f)
-                        .await
+                ProcessTxAction::AverageGasProfile { min_near_gas } => {
+                    let f1 = filter::MatchFlatStatus(transaction_reader::FlatTxStatus::Succeeded);
+                    match min_near_gas {
+                        None => {
+                            let f = Arc::new(f1);
+                            transaction_reader::process_data::<aggregator::AverageGasProfile, _>(
+                                paths, &f,
+                            )
+                            .await
+                        }
+                        Some(min_gas) => {
+                            let f2 = filter::MinNearGasUsed(min_gas);
+                            let f = Arc::new(filter::And::new(f1, f2));
+                            transaction_reader::process_data::<aggregator::AverageGasProfile, _>(
+                                paths, &f,
+                            )
+                            .await
+                        }
+                    }
                 }
                 ProcessTxAction::FilterTo { target_addr_hex } => {
                     let to = Address::decode(&target_addr_hex).unwrap();
@@ -167,7 +180,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .await
                 }
                 ProcessTxAction::OutcomeDistribution => {
-                    let f = Arc::new(filter::None);
+                    let f = Arc::new(filter::NoFilter);
                     transaction_reader::process_data::<aggregator::GroupByFlatStatus, _>(paths, &f)
                         .await
                 }

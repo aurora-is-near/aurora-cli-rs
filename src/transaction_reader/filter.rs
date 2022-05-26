@@ -6,8 +6,8 @@ pub trait Filter {
     fn pass(&self, data: &TxData) -> bool;
 }
 
-pub struct None;
-impl Filter for None {
+pub struct NoFilter;
+impl Filter for NoFilter {
     fn pass(&self, _data: &TxData) -> bool {
         true
     }
@@ -24,6 +24,16 @@ pub struct MatchFlatStatus(pub FlatTxStatus);
 impl Filter for MatchFlatStatus {
     fn pass(&self, data: &TxData) -> bool {
         data.status.flatten() == self.0
+    }
+}
+
+pub struct MinNearGasUsed(pub u128);
+impl Filter for MinNearGasUsed {
+    fn pass(&self, data: &TxData) -> bool {
+        match data.gas_profile.get("TOTAL") {
+            None => false,
+            Some(total) => total >= &self.0,
+        }
     }
 }
 
@@ -45,6 +55,11 @@ impl Filter for EthTxTo {
 pub struct And<F1, F2> {
     f1: F1,
     f2: F2,
+}
+impl<F1, F2> And<F1, F2> {
+    pub fn new(f1: F1, f2: F2) -> Self {
+        Self { f1, f2 }
+    }
 }
 impl<F1: Filter, F2: Filter> Filter for And<F1, F2> {
     fn pass(&self, data: &TxData) -> bool {

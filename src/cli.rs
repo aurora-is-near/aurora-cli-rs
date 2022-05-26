@@ -67,7 +67,7 @@ pub enum Command {
 #[derive(Subcommand)]
 pub enum ProcessTxAction {
     NearGasVsEvmGas,
-    AverageGasProfile,
+    AverageGasProfile { min_near_gas: Option<u128> },
     GasDistribution,
     OutcomeDistribution,
     FilterTo { target_addr_hex: String },
