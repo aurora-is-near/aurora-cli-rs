@@ -40,6 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         format!("{}{}", aurora_endpoint, api_key),
         near_endpoint,
         engine_account_id,
+        args.signer_key_path,
     );
 
     match args.command {
@@ -136,6 +137,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::GetBridgeProver => {
             println!("{:?}", client.get_bridge_prover().await);
+        }
+        Command::FactoryUpdate { wasm_bytes_path } => {
+            let args = std::fs::read(wasm_bytes_path).unwrap();
+            let tx_outcome = client
+                .near_contract_call("factory_update".into(), args)
+                .await
+                .unwrap();
+            println!("{:?}", tx_outcome);
         }
         Command::ProcessTxData {
             action,

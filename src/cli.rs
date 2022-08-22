@@ -9,6 +9,8 @@ pub struct Cli {
     pub api_key_path: Option<String>,
     #[clap(short, long)]
     pub engine_account_id: Option<String>,
+    #[clap(short, long)]
+    pub signer_key_path: Option<String>,
     #[clap(subcommand)]
     pub command: Command,
 }
@@ -64,6 +66,10 @@ pub enum Command {
         #[clap(subcommand)]
         action: ProcessTxAction,
         input_files_list_path: String,
+    },
+    FactoryUpdate {
+        #[clap(short, long)]
+        wasm_bytes_path: String,
     },
 }
 

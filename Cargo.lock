@@ -147,6 +147,7 @@ dependencies = [
  "clap",
  "hex",
  "libsecp256k1 0.3.5",
+ "near-crypto",
  "near-jsonrpc-client",
  "near-jsonrpc-primitives",
  "near-primitives",

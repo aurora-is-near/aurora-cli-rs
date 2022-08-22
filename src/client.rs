@@ -15,16 +15,25 @@ const NEAR_TRANSACTION_KEY: &str = "nearTransactionHash";
 
 type NearQueryError =
     near_jsonrpc_client::errors::JsonRpcError<near_jsonrpc_primitives::types::query::RpcQueryError>;
+type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
+    near_jsonrpc_client::methods::broadcast_tx_commit::RpcTransactionError,
+>;
 
 pub struct AuroraClient<T> {
     inner: reqwest::Client,
     aurora_rpc: T,
     near_client: near_jsonrpc_client::JsonRpcClient,
     engine_account_id: String,
+    signer_key_path: Option<String>,
 }
 
 impl<T: AsRef<str>> AuroraClient<T> {
-    pub fn new<U: AsUrl>(aurora_rpc: T, near_rpc: U, engine_account_id: String) -> Self {
+    pub fn new<U: AsUrl>(
+        aurora_rpc: T,
+        near_rpc: U,
+        engine_account_id: String,
+        signer_key_path: Option<String>,
+    ) -> Self {
         let inner = reqwest::Client::new();
         let near_client = near_jsonrpc_client::JsonRpcClient::connect(near_rpc);
         Self {
@@ -32,6 +41,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
             aurora_rpc,
             near_client,
             engine_account_id,
+            signer_key_path,
         }
     }
 
@@ -233,6 +243,49 @@ impl<T: AsRef<str>> AuroraClient<T> {
             _ => unreachable!(),
         }
     }
+
+    pub async fn near_contract_call(
+        &self,
+        method_name: String,
+        args: Vec<u8>,
+    ) -> Result<views::FinalExecutionOutcomeView, ClientError> {
+        let path = self
+            .signer_key_path
+            .as_ref()
+            .map(std::path::Path::new)
+            .expect("Signer path must be provided to use this functionality");
+        let signer = near_crypto::InMemorySigner::from_file(path);
+        let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
+            block_reference: near_primitives::types::Finality::Final.into(),
+            request: near_primitives::views::QueryRequest::ViewAccessKey {
+                account_id: signer.account_id.clone(),
+                public_key: signer.public_key.clone(),
+            },
+        };
+        let response = self.near_client.call(request).await?;
+        let block_hash = response.block_hash;
+        let nonce = match response.kind {
+            near_jsonrpc_primitives::types::query::QueryResponseKind::AccessKey(k) => k.nonce + 1,
+            _ => unreachable!(),
+        };
+        let request =
+            near_jsonrpc_client::methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest {
+                signed_transaction: near_primitives::transaction::SignedTransaction::call(
+                    nonce,
+                    signer.account_id.clone(),
+                    self.engine_account_id.parse().unwrap(),
+                    &signer,
+                    0,
+                    method_name,
+                    args,
+                    300_000_000_000_000,
+                    block_hash,
+                ),
+            };
+        let response = self.near_client.call(request).await?;
+
+        Ok(response)
+    }
 }
 
 #[derive(Debug)]
@@ -287,6 +340,7 @@ pub enum ClientError {
     NotJsonString(serde_json::Value),
     Rpc(Web3JsonResponseError),
     NearRpc(NearQueryError),
+    NearContractCall(NearCallError),
     Reqwest(reqwest::Error),
 }
 
@@ -311,6 +365,12 @@ impl From<Web3JsonResponseError> for ClientError {
 impl From<NearQueryError> for ClientError {
     fn from(e: NearQueryError) -> Self {
         Self::NearRpc(e)
+    }
+}
+
+impl From<NearCallError> for ClientError {
+    fn from(e: NearCallError) -> Self {
+        Self::NearContractCall(e)
     }
 }
 
