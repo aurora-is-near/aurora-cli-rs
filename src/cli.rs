@@ -7,6 +7,8 @@ pub struct Cli {
     pub network: Option<Network>,
     #[clap(short, long)]
     pub api_key_path: Option<String>,
+    #[clap(short, long)]
+    pub engine_account_id: Option<String>,
     #[clap(subcommand)]
     pub command: Command,
 }

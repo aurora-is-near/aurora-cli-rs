@@ -31,11 +31,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::fs::read_to_string(default_path).unwrap_or_default()
         }
     };
+    let engine_account_id = args.engine_account_id.unwrap_or_else(|| "aurora".into());
     let (aurora_endpoint, near_endpoint) = match network {
         Network::Mainnet => (AURORA_MAINNET_ENDPOINT, NEAR_MAINNET_ENDPOINT),
         Network::Testnet => (AURORA_TESTNET_ENDPOINT, NEAR_TESTNET_ENDPOINT),
     };
-    let client = AuroraClient::new(format!("{}{}", aurora_endpoint, api_key), near_endpoint);
+    let client = AuroraClient::new(
+        format!("{}{}", aurora_endpoint, api_key),
+        near_endpoint,
+        engine_account_id,
+    );
 
     match args.command {
         Command::GetResult { tx_hash_hex } => {

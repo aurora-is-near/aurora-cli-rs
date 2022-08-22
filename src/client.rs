@@ -20,16 +20,18 @@ pub struct AuroraClient<T> {
     inner: reqwest::Client,
     aurora_rpc: T,
     near_client: near_jsonrpc_client::JsonRpcClient,
+    engine_account_id: String,
 }
 
 impl<T: AsRef<str>> AuroraClient<T> {
-    pub fn new<U: AsUrl>(aurora_rpc: T, near_rpc: U) -> Self {
+    pub fn new<U: AsUrl>(aurora_rpc: T, near_rpc: U, engine_account_id: String) -> Self {
         let inner = reqwest::Client::new();
         let near_client = near_jsonrpc_client::JsonRpcClient::connect(near_rpc);
         Self {
             inner,
             aurora_rpc,
             near_client,
+            engine_account_id,
         }
     }
 
@@ -217,7 +219,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
         let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
             block_reference: near_primitives::types::Finality::Final.into(),
             request: near_primitives::views::QueryRequest::CallFunction {
-                account_id: "aurora".parse().unwrap(),
+                account_id: self.engine_account_id.parse().unwrap(),
                 method_name,
                 args: args.into(),
             },
