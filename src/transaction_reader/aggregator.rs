@@ -1,4 +1,5 @@
 use crate::transaction_reader::{FlatTxStatus, ParsedTx, TxStatus};
+use aurora_engine_types::types::Address;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 
@@ -9,6 +10,64 @@ pub trait Aggregator: Sized {
     fn start(self) -> tokio::task::JoinHandle<Self>;
     fn pre_process(tx: &ParsedTx) -> Self::Input;
     fn finish(self);
+}
+
+type FromToGasUsageEntry = (Address, Option<Address>, u128, u64, u128);
+pub struct FromToGasUsage {
+    entries: Vec<FromToGasUsageEntry>,
+    receive_channel: mpsc::UnboundedReceiver<Option<FromToGasUsageEntry>>,
+}
+impl Aggregator for FromToGasUsage {
+    type Input = Option<FromToGasUsageEntry>;
+
+    fn create() -> (mpsc::UnboundedSender<Self::Input>, Self) {
+        let (send_channel, receive_channel) = mpsc::unbounded_channel();
+
+        (
+            send_channel,
+            Self {
+                entries: Vec::new(),
+                receive_channel,
+            },
+        )
+    }
+
+    fn start(mut self) -> tokio::task::JoinHandle<Self> {
+        tokio::task::spawn(async move {
+            while let Some(maybe_entry) = self.receive_channel.recv().await {
+                if let Some(entry) = maybe_entry {
+                    self.entries.push(entry);
+                }
+            }
+
+            self
+        })
+    }
+
+    fn pre_process(tx: &ParsedTx) -> Self::Input {
+        let eth_tx = tx.data.eth_tx.as_ref()?;
+        let norm_tx: aurora_engine_transactions::NormalizedEthTransaction = eth_tx.clone().into();
+        let from = norm_tx.address?;
+        let to = norm_tx.to;
+        let gas_limit = norm_tx.gas_limit.low_u64();
+        let gas_price = norm_tx.max_fee_per_gas.low_u128();
+        let gas_used = tx.data.gas_profile.get("TOTAL").copied()?;
+        Some((from, to, gas_used, gas_limit, gas_price))
+    }
+
+    fn finish(self) {
+        for (from, to, gas_used, gas_limit, gas_price) in self.entries {
+            let to_str = to.map(|t| t.encode()).unwrap_or_default();
+            println!(
+                "{},{},{:?},{:?},{:?}",
+                from.encode(),
+                to_str,
+                gas_used,
+                gas_limit,
+                gas_price
+            );
+        }
+    }
 }
 
 pub struct GroupByFlatStatus {

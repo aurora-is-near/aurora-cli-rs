@@ -83,7 +83,10 @@ async fn read_file(path: &str) -> serde_json::Value {
         Ok(b) => b,
         Err(e) => panic!("ERROR on file {}: {:?}", path, e),
     };
-    serde_json::from_slice(&bytes).unwrap()
+    match serde_json::from_slice(&bytes) {
+        Ok(x) => x,
+        Err(e) => panic!("ERROR on file {}: {:?}", path, e),
+    }
 }
 
 fn get_gas_profile(value: &serde_json::Value) -> Option<HashMap<String, u128>> {

@@ -182,6 +182,13 @@ impl<T: AsRef<str>> AuroraClient<T> {
         Ok(String::from_utf8_lossy(&result.result).into_owned())
     }
 
+    pub async fn get_bridge_prover(&self) -> Result<String, ClientError> {
+        let result = self
+            .near_view_call("get_bridge_prover".into(), Vec::new())
+            .await?;
+        Ok(String::from_utf8_lossy(&result.result).into_owned())
+    }
+
     pub async fn view_contract_call(
         &self,
         sender: Address,

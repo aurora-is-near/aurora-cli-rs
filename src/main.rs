@@ -129,6 +129,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             };
         }
+        Command::GetBridgeProver => {
+            println!("{:?}", client.get_bridge_prover().await);
+        }
         Command::ProcessTxData {
             action,
             input_files_list_path,
@@ -197,6 +200,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         max_evm,
                     });
                     transaction_reader::process_data::<aggregator::Echo, _>(paths, &f).await
+                }
+                ProcessTxAction::FromToGasUsed => {
+                    let f = Arc::new(filter::NoFilter);
+                    transaction_reader::process_data::<aggregator::FromToGasUsage, _>(paths, &f)
+                        .await
                 }
             }
         }

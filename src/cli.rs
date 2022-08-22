@@ -57,6 +57,7 @@ pub enum Command {
     GetNep141 {
         erc_20_address_hex: String,
     },
+    GetBridgeProver,
     ProcessTxData {
         #[clap(subcommand)]
         action: ProcessTxAction,
@@ -85,6 +86,7 @@ pub enum ProcessTxAction {
         #[clap(long)]
         max_evm: Option<u64>,
     },
+    FromToGasUsed,
 }
 
 #[derive(Debug)]
