@@ -46,8 +46,8 @@ impl Aggregator for FromToGasUsage {
 
     fn pre_process(tx: &ParsedTx) -> Self::Input {
         let eth_tx = tx.data.eth_tx.as_ref()?;
-        let norm_tx: aurora_engine_transactions::NormalizedEthTransaction = eth_tx.clone().into();
-        let from = norm_tx.address?;
+        let norm_tx: aurora_engine_transactions::NormalizedEthTransaction = eth_tx.clone().try_into().ok()?;
+        let from = norm_tx.address;
         let to = norm_tx.to;
         let gas_limit = norm_tx.gas_limit.low_u64();
         let gas_price = norm_tx.max_fee_per_gas.low_u128();
