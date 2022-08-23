@@ -156,21 +156,21 @@ impl<T: AsRef<str>> AuroraClient<T> {
         let near_rx_hex = near_tx_str.strip_prefix("0x").unwrap_or(near_tx_str);
         let near_receipt_id = hex::decode(near_rx_hex)?;
 
-        self.get_near_receipt_outcome(H256::from_slice(&near_receipt_id))
+        self.get_near_receipt_outcome(near_receipt_id.as_slice().try_into().unwrap())
             .await
     }
 
     pub async fn get_near_receipt_outcome(
         &self,
-        near_receipt_id: H256,
+        near_receipt_id: near_primitives::hash::CryptoHash,
     ) -> Result<TransactionOutcome, ClientError> {
-        let mut receipt_id = near_receipt_id.as_bytes().try_into().unwrap();
+        let mut receipt_id = near_receipt_id;
         let receiver_id: near_primitives::types::AccountId =
             self.engine_account_id.parse().unwrap();
         loop {
             let block_hash = {
                 let request = near_jsonrpc_client::methods::block::RpcBlockRequest {
-                    block_reference: near_primitives::types::Finality::None.into(),
+                    block_reference: near_primitives::types::Finality::Final.into(),
                 };
                 let response = self.near_client.call(request).await.unwrap();
                 response.header.hash
