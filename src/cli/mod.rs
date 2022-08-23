@@ -1,18 +1,11 @@
 use clap::{Parser, Subcommand};
-use std::str::FromStr;
 
 pub mod process_tx_data;
 
 #[derive(Parser)]
 pub struct Cli {
     #[clap(short, long)]
-    pub network: Option<Network>,
-    #[clap(short, long)]
-    pub api_key_path: Option<String>,
-    #[clap(short, long)]
-    pub engine_account_id: Option<String>,
-    #[clap(short, long)]
-    pub signer_key_path: Option<String>,
+    pub config_path: Option<String>,
     #[clap(subcommand)]
     pub command: Command,
 }
@@ -27,15 +20,11 @@ pub enum Command {
     },
     Transfer {
         #[clap(short, long)]
-        source_private_key_hex: String,
-        #[clap(short, long)]
         target_addr_hex: String,
         #[clap(short, long)]
         amount: String,
     },
     ContractCall {
-        #[clap(short, long)]
-        source_private_key_hex: String,
         #[clap(short, long)]
         target_addr_hex: String,
         #[clap(short, long)]
@@ -55,8 +44,6 @@ pub enum Command {
     },
     Xcc {
         #[clap(short, long)]
-        source_private_key_hex: String,
-        #[clap(short, long)]
         target_near_account: String,
         #[clap(short, long)]
         method_name: String,
@@ -70,8 +57,6 @@ pub enum Command {
         attached_gas: Option<String>,
     },
     Deploy {
-        #[clap(short, long)]
-        source_private_key_hex: String,
         #[clap(short, long)]
         input_data_hex: String,
     },
@@ -88,28 +73,4 @@ pub enum Command {
         #[clap(short, long)]
         wasm_bytes_path: String,
     },
-}
-
-#[derive(Debug)]
-pub enum Network {
-    Mainnet,
-    Testnet,
-}
-
-impl Default for Network {
-    fn default() -> Self {
-        Self::Mainnet
-    }
-}
-
-impl FromStr for Network {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "mainnet" => Ok(Self::Mainnet),
-            "testnet" => Ok(Self::Testnet),
-            _ => Err("Unrecognized network name"),
-        }
-    }
 }

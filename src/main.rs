@@ -1,5 +1,6 @@
 mod cli;
 mod client;
+mod config;
 mod eth_method;
 mod transaction_reader;
 mod utils;
@@ -15,22 +16,18 @@ use aurora_engine_types::{
 };
 use borsh::BorshSerialize;
 use clap::Parser;
-use cli::{Cli, Command, Network};
+use cli::{Cli, Command};
 use client::{AuroraClient, ClientError};
+use config::Network;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
-    let network = args.network.unwrap_or_default();
+    let config_path = args.config_path.as_deref().unwrap_or("default-config.json");
+    let config = config::Config::from_file(config_path)?;
+    let network = config.network;
 
-    let api_key = match args.api_key_path {
-        Some(path) => std::fs::read_to_string(path)?,
-        None => {
-            let default_path = ".api_key";
-            std::fs::read_to_string(default_path).unwrap_or_default()
-        }
-    };
-    let engine_account_id = args.engine_account_id.unwrap_or_else(|| "aurora".into());
+    let api_key = config.aurora_api_key.as_deref().unwrap_or_default();
     let (aurora_endpoint, near_endpoint) = match network {
         Network::Mainnet => (AURORA_MAINNET_ENDPOINT, NEAR_MAINNET_ENDPOINT),
         Network::Testnet => (AURORA_TESTNET_ENDPOINT, NEAR_TESTNET_ENDPOINT),
@@ -38,8 +35,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = AuroraClient::new(
         format!("{}{}", aurora_endpoint, api_key),
         near_endpoint,
-        engine_account_id,
-        args.signer_key_path,
+        config.engine_account_id.clone(),
+        config.near_key_path.clone(),
     );
 
     match args.command {
@@ -55,18 +52,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{:?}", outcome);
         }
         Command::Transfer {
-            source_private_key_hex,
             target_addr_hex,
             amount,
         } => {
-            let sk_bytes = utils::hex_to_arr32(&source_private_key_hex)?;
+            let source_private_key_hex = config.get_evm_secret_key();
+            let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
             let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
             let target = Address::decode(&target_addr_hex).unwrap();
             let amount = Wei::new(U256::from_dec_str(&amount).unwrap());
             send_transaction(&client, &sk, Some(target), amount, Vec::new()).await?;
         }
         Command::Xcc {
-            source_private_key_hex,
             target_near_account,
             method_name,
             json_args,
@@ -74,7 +70,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             deposit_yocto,
             attached_gas,
         } => {
-            let sk_bytes = utils::hex_to_arr32(&source_private_key_hex)?;
+            let source_private_key_hex = config.get_evm_secret_key();
+            let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
             let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
             let near_args = match json_args {
                 Some(args) => args.into_bytes(),
@@ -135,12 +132,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{:?}", result);
         }
         Command::ContractCall {
-            source_private_key_hex,
             target_addr_hex,
             amount,
             input_data_hex,
         } => {
-            let sk_bytes = utils::hex_to_arr32(&source_private_key_hex)?;
+            let source_private_key_hex = config.get_evm_secret_key();
+            let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
             let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
             let target = Address::decode(&target_addr_hex).unwrap();
             let amount = amount
@@ -172,11 +169,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap();
             println!("{:?}", result);
         }
-        Command::Deploy {
-            source_private_key_hex,
-            input_data_hex,
-        } => {
-            let sk_bytes = utils::hex_to_arr32(&source_private_key_hex)?;
+        Command::Deploy { input_data_hex } => {
+            let source_private_key_hex = config.get_evm_secret_key();
+            let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
             let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
             let input = hex::decode(input_data_hex)?;
             send_transaction(&client, &sk, None, Wei::zero(), input).await?;

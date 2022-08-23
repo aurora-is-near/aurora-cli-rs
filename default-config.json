@@ -1,0 +1,7 @@
+{
+    "network": "mainnet",
+    "engine_account_id": "aurora",
+    "aurora_api_key": null,
+    "near_key_path": null,
+    "evm_secret_key": null
+}
