@@ -47,21 +47,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match args.command {
         Command::GetResult { tx_hash_hex } => {
             let tx_hash = aurora_engine_types::H256::from_slice(&hex::decode(tx_hash_hex).unwrap());
-            let outcome = client
-                .get_transaction_outcome(tx_hash, "relay.aurora")
-                .await?;
+            let outcome = client.get_transaction_outcome(tx_hash).await?;
             println!("{:?}", outcome);
         }
-        Command::GetNearResult {
-            tx_hash_b58,
-            relayer,
-        } => {
-            let tx_hash = bs58::decode(tx_hash_b58.as_str()).into_vec().unwrap();
+        Command::GetNearResult { receipt_id_b58 } => {
+            let tx_hash = bs58::decode(receipt_id_b58.as_str()).into_vec().unwrap();
             let tx_hash = aurora_engine_types::H256::from_slice(&tx_hash);
-            let relayer = relayer.as_deref().unwrap_or("relay.aurora");
-            let outcome = client
-                .get_near_transaction_outcome(tx_hash, relayer)
-                .await?;
+            let outcome = client.get_near_receipt_outcome(tx_hash).await?;
             println!("{:?}", outcome);
         }
         Command::Transfer {
@@ -326,7 +318,7 @@ async fn send_as_near_transaction<T: AsRef<str>>(
         U256::from_big_endian(&result.result).low_u64()
     };
     let signed_tx = aurora_engine_transactions::EthTransactionKind::Legacy(
-        utils::sign_transaction(tx, chain_id, &sk),
+        utils::sign_transaction(tx, chain_id, sk),
     );
     let result = client
         .near_contract_call("submit".into(), (&signed_tx).into())
@@ -354,10 +346,7 @@ async fn send_transaction<T: AsRef<str>>(
 
     // Wait for the RPC to pick up the transaction
     loop {
-        match client
-            .get_transaction_outcome(tx_hash, "relay.aurora")
-            .await
-        {
+        match client.get_transaction_outcome(tx_hash).await {
             Ok(result) => {
                 println!("{:?}", result);
                 break;

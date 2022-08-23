@@ -131,7 +131,6 @@ impl<T: AsRef<str>> AuroraClient<T> {
     pub async fn get_transaction_outcome(
         &self,
         tx_hash: H256,
-        relayer: &str,
     ) -> Result<TransactionOutcome, ClientError> {
         let method = EthMethod::GetTransactionReceipt(tx_hash);
         let request = Web3JsonRequest::from_method(1, &method);
@@ -154,36 +153,50 @@ impl<T: AsRef<str>> AuroraClient<T> {
             .as_str()
             .ok_or_else(|| ClientError::NotJsonString(near_tx_value.clone()))?;
         // println!("{}", near_tx_str);
-        let near_tx_hex = near_tx_str.strip_prefix("0x").unwrap_or(near_tx_str);
-        let near_tx_hash = hex::decode(near_tx_hex)?;
+        let near_rx_hex = near_tx_str.strip_prefix("0x").unwrap_or(near_tx_str);
+        let near_receipt_id = hex::decode(near_rx_hex)?;
 
-        self.get_near_transaction_outcome(H256::from_slice(&near_tx_hash), relayer)
+        self.get_near_receipt_outcome(H256::from_slice(&near_receipt_id))
             .await
     }
 
-    pub async fn get_near_transaction_outcome(
+    pub async fn get_near_receipt_outcome(
         &self,
-        near_tx_hash: H256,
-        relayer: &str,
+        near_receipt_id: H256,
     ) -> Result<TransactionOutcome, ClientError> {
-        let tx_status_request = near_jsonrpc_client::methods::tx::RpcTransactionStatusRequest {
-            transaction_info:
-                near_jsonrpc_primitives::types::transactions::TransactionInfo::TransactionId {
-                    hash: near_tx_hash.as_bytes().try_into().unwrap(),
-                    account_id: relayer.parse().unwrap(),
-                },
-        };
-        let near_tx_status = self.near_client.call(tx_status_request).await.unwrap();
-        match near_tx_status.status {
-            near_primitives::views::FinalExecutionStatus::SuccessValue(result) => {
-                let result_bytes = base64::decode(result).unwrap();
-                let result = SubmitResult::try_from_slice(&result_bytes).unwrap();
-                Ok(TransactionOutcome::Result(result))
+        let mut receipt_id = near_receipt_id.as_bytes().try_into().unwrap();
+        let receiver_id: near_primitives::types::AccountId =
+            self.engine_account_id.parse().unwrap();
+        loop {
+            let block_hash = {
+                let request = near_jsonrpc_client::methods::block::RpcBlockRequest {
+                    block_reference: near_primitives::types::Finality::None.into(),
+                };
+                let response = self.near_client.call(request).await.unwrap();
+                response.header.hash
+            };
+            let request = near_jsonrpc_client::methods::light_client_proof::RpcLightClientExecutionProofRequest {
+                id: near_primitives::types::TransactionOrReceiptId::Receipt { receipt_id, receiver_id: receiver_id.clone() },
+                light_client_head: block_hash,
+            };
+            let response = self.near_client.call(request).await.unwrap();
+            match response.outcome_proof.outcome.status {
+                near_primitives::views::ExecutionStatusView::SuccessValue(result) => {
+                    let result_bytes = base64::decode(result).unwrap();
+                    let result = SubmitResult::try_from_slice(&result_bytes).unwrap();
+                    return Ok(TransactionOutcome::Result(result));
+                }
+                near_primitives::views::ExecutionStatusView::Failure(e) => {
+                    return Ok(TransactionOutcome::Failure(e))
+                }
+                near_primitives::views::ExecutionStatusView::SuccessReceiptId(id) => {
+                    println!("Intermediate receipt_id: {:?}", id);
+                    receipt_id = id;
+                }
+                near_primitives::views::ExecutionStatusView::Unknown => {
+                    panic!("Unknown receipt_id: {:?}", near_receipt_id)
+                }
             }
-            near_primitives::views::FinalExecutionStatus::Failure(e) => {
-                Ok(TransactionOutcome::Failure(e))
-            }
-            _ => unreachable!(),
         }
     }
 

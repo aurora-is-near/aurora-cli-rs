@@ -21,8 +21,7 @@ pub enum Command {
         tx_hash_hex: String,
     },
     GetNearResult {
-        tx_hash_b58: String,
-        relayer: Option<String>,
+        receipt_id_b58: String,
     },
     Transfer {
         #[clap(short, long)]
