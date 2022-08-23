@@ -1,6 +1,8 @@
 use clap::{Parser, Subcommand};
 use std::str::FromStr;
 
+pub mod process_tx_data;
+
 #[derive(Parser)]
 pub struct Cli {
     #[clap(short, long)]
@@ -79,37 +81,13 @@ pub enum Command {
     GetBridgeProver,
     ProcessTxData {
         #[clap(subcommand)]
-        action: ProcessTxAction,
+        action: process_tx_data::ProcessTxAction,
         input_files_list_path: String,
     },
     FactoryUpdate {
         #[clap(short, long)]
         wasm_bytes_path: String,
     },
-}
-
-#[derive(Subcommand)]
-pub enum ProcessTxAction {
-    NearGasVsEvmGas,
-    AverageGasProfile {
-        min_near_gas: Option<u128>,
-    },
-    GasDistribution,
-    OutcomeDistribution,
-    FilterTo {
-        target_addr_hex: String,
-    },
-    FilterGasRange {
-        #[clap(long)]
-        min_near: Option<u128>,
-        #[clap(long)]
-        min_evm: Option<u64>,
-        #[clap(long)]
-        max_near: Option<u128>,
-        #[clap(long)]
-        max_evm: Option<u64>,
-    },
-    FromToGasUsed,
 }
 
 #[derive(Debug)]
