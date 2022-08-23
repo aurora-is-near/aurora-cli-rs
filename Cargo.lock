@@ -121,6 +121,7 @@ name = "aurora-cli-rs"
 version = "0.1.0"
 dependencies = [
  "aurora-engine",
+ "aurora-engine-precompiles",
  "aurora-engine-sdk",
  "aurora-engine-transactions",
  "aurora-engine-types",
@@ -128,6 +129,7 @@ dependencies = [
  "borsh",
  "bs58",
  "clap",
+ "ethabi",
  "hex",
  "libsecp256k1 0.3.5",
  "near-crypto",
@@ -699,6 +701,10 @@ checksum = "e4966fba78396ff92db3b817ee71143eccd98acf0f876b8d600e585a670c5d1b"
 dependencies = [
  "ethereum-types",
  "hex",
+ "once_cell",
+ "regex",
+ "serde",
+ "serde_json",
  "sha3",
  "thiserror",
  "uint",
@@ -714,6 +720,7 @@ dependencies = [
  "fixed-hash",
  "impl-codec 0.6.0",
  "impl-rlp",
+ "impl-serde",
  "scale-info 1.0.0",
  "tiny-keccak",
 ]
@@ -747,6 +754,7 @@ dependencies = [
  "fixed-hash",
  "impl-codec 0.6.0",
  "impl-rlp",
+ "impl-serde",
  "primitive-types 0.11.1",
  "scale-info 1.0.0",
  "uint",
@@ -1206,6 +1214,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f28220f89297a075ddc7245cd538076ee98b01f2a9c23a53a4f1105d5a322808"
 dependencies = [
  "rlp",
+]
+
+[[package]]
+name = "impl-serde"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4551f042f3438e64dbd6226b20527fc84a6e1fe65688b58746a2f53623f25f5c"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -2030,6 +2047,7 @@ dependencies = [
  "fixed-hash",
  "impl-codec 0.6.0",
  "impl-rlp",
+ "impl-serde",
  "scale-info 1.0.0",
  "uint",
 ]

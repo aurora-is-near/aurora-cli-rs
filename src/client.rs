@@ -221,7 +221,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
         Ok(status)
     }
 
-    async fn near_view_call(
+    pub async fn near_view_call(
         &self,
         method_name: String,
         args: Vec<u8>,

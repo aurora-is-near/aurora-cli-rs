@@ -52,6 +52,22 @@ pub enum Command {
         #[clap(short, long)]
         input_data_hex: String,
     },
+    Xcc {
+        #[clap(short, long)]
+        source_private_key_hex: String,
+        #[clap(short, long)]
+        target_near_account: String,
+        #[clap(short, long)]
+        method_name: String,
+        #[clap(short, long)]
+        json_args: Option<String>,
+        #[clap(long)]
+        json_args_stdin: Option<bool>,
+        #[clap(short, long)]
+        deposit_yocto: Option<String>,
+        #[clap(short, long)]
+        attached_gas: Option<String>,
+    },
     Deploy {
         #[clap(short, long)]
         source_private_key_hex: String,
