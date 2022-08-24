@@ -75,6 +75,14 @@ pub enum WriteCommand {
         #[clap(short, long)]
         attached_gas: Option<String>,
     },
+    EngineCall {
+        #[clap(short, long)]
+        target_addr_hex: String,
+        #[clap(short, long)]
+        amount: Option<String>,
+        #[clap(short, long)]
+        input_data_hex: String,
+    },
     FactoryUpdate {
         wasm_bytes_path: String,
     },
@@ -197,7 +205,24 @@ pub async fn execute_command<T: AsRef<str>>(
                 .await?;
                 println!("{:?}", result);
             }
-
+            WriteCommand::EngineCall {
+                target_addr_hex,
+                amount,
+                input_data_hex,
+            } => {
+                let source_private_key_hex = config.get_evm_secret_key();
+                let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
+                let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
+                let target = Address::decode(&target_addr_hex).unwrap();
+                let amount = amount
+                    .as_ref()
+                    .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
+                    .unwrap_or_else(Wei::zero);
+                let input = hex::decode(input_data_hex)?;
+                let result =
+                    send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
+                println!("{:?}", result);
+            }
             WriteCommand::FactoryUpdate { wasm_bytes_path } => {
                 let args = std::fs::read(wasm_bytes_path).unwrap();
                 let tx_outcome = client
