@@ -267,7 +267,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
             .as_ref()
             .map(std::path::Path::new)
             .expect("Signer path must be provided to use this functionality");
-        let signer = near_crypto::InMemorySigner::from_file(path);
+        let signer = crate::utils::read_key_file(path).unwrap();
         let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
             block_reference: near_primitives::types::Finality::Final.into(),
             request: near_primitives::views::QueryRequest::ViewAccessKey {

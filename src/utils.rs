@@ -1,7 +1,9 @@
 use aurora_engine_transactions::legacy::{LegacyEthSignedTransaction, TransactionLegacy};
 use aurora_engine_types::{types::Address, U256};
+use near_crypto::InMemorySigner;
 use rlp::RlpStream;
 use secp256k1::{Message, PublicKey, SecretKey};
+use std::{io, path::Path};
 
 pub(crate) fn hex_to_arr32(h: &str) -> Result<[u8; 32], hex::FromHexError> {
     let mut output = [0u8; 32];
@@ -35,4 +37,30 @@ pub(crate) fn sign_transaction(
         r,
         s,
     }
+}
+
+pub(crate) fn read_key_file<P: AsRef<Path>>(path: P) -> io::Result<InMemorySigner> {
+    let content = std::fs::read_to_string(path)?;
+    let key: KeyFile = serde_json::from_str(&content)?;
+    Ok(InMemorySigner {
+        account_id: key.account_id,
+        public_key: key.public_key,
+        secret_key: key.secret_key,
+    })
+}
+
+/// This is copied from the nearcore repo
+/// https://github.com/near/nearcore/blob/5252ba65ce81e187a3ba76dc3db754a596bc16d1/core/crypto/src/key_file.rs#L12
+/// for the purpose of having the `private_key` serde alias because that change has not yet
+/// been released (as of v0.14.0). We should delete this and use near's type once the new
+/// version is released.
+#[derive(serde::Serialize, serde::Deserialize)]
+struct KeyFile {
+    pub account_id: near_primitives::types::AccountId,
+    pub public_key: near_crypto::PublicKey,
+    // Credential files generated which near cli works with have private_key
+    // rather than secret_key field.  To make it possible to read those from
+    // neard add private_key as an alias to this field so either will work.
+    #[serde(alias = "private_key")]
+    pub secret_key: near_crypto::SecretKey,
 }
