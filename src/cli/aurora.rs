@@ -61,9 +61,6 @@ pub enum WriteCommand {
         #[clap(short, long)]
         input_data_hex: String,
     },
-    FactoryUpdate {
-        wasm_bytes_path: String,
-    },
 }
 
 pub async fn execute_command<T: AsRef<str>>(
@@ -153,14 +150,6 @@ pub async fn execute_command<T: AsRef<str>>(
                     .unwrap_or_else(Wei::zero);
                 let input = hex::decode(input_data_hex)?;
                 send_transaction(client, &sk, Some(target), amount, input).await?;
-            }
-            WriteCommand::FactoryUpdate { wasm_bytes_path } => {
-                let args = std::fs::read(wasm_bytes_path).unwrap();
-                let tx_outcome = client
-                    .near_contract_call("factory_update".into(), args)
-                    .await
-                    .unwrap();
-                println!("{:?}", tx_outcome);
             }
         },
     }

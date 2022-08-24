@@ -40,6 +40,9 @@ pub enum WriteCommand {
         #[clap(short, long)]
         attached_gas: Option<String>,
     },
+    FactoryUpdate {
+        wasm_bytes_path: String,
+    },
 }
 
 pub async fn execute_command<T: AsRef<str>>(
@@ -123,6 +126,15 @@ pub async fn execute_command<T: AsRef<str>>(
                 )
                 .await?;
                 println!("{:?}", result);
+            }
+
+            WriteCommand::FactoryUpdate { wasm_bytes_path } => {
+                let args = std::fs::read(wasm_bytes_path).unwrap();
+                let tx_outcome = client
+                    .near_contract_call("factory_update".into(), args)
+                    .await
+                    .unwrap();
+                println!("{:?}", tx_outcome);
             }
         },
     };
