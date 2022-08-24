@@ -211,7 +211,7 @@ pub async fn execute_command<T: AsRef<str>>(
             } => {
                 let source_private_key_hex = config.get_evm_secret_key();
                 let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
-                let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
+                let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
                 let promise = PromiseArgs::Create(parse_xcc_args(
                     target_near_account,
                     method_name,
@@ -287,10 +287,10 @@ fn parse_write_call_args(
     config: &Config,
     target_addr_hex: String,
     amount: Option<String>,
-) -> (secp256k1::SecretKey, Address, Wei) {
+) -> (libsecp256k1::SecretKey, Address, Wei) {
     let source_private_key_hex = config.get_evm_secret_key();
     let sk_bytes = utils::hex_to_arr32(source_private_key_hex).unwrap();
-    let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
+    let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
     let target = Address::decode(&target_addr_hex).unwrap();
     let amount = amount
         .as_ref()
@@ -337,7 +337,7 @@ fn parse_xcc_args(
 
 async fn send_as_near_transaction<T: AsRef<str>>(
     client: &AuroraClient<T>,
-    sk: &secp256k1::SecretKey,
+    sk: &libsecp256k1::SecretKey,
     to: Option<Address>,
     amount: Wei,
     input: Vec<u8>,

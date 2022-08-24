@@ -6,9 +6,9 @@ use aurora_engine_types::{
     H256, U256,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
+use libsecp256k1::SecretKey;
 use near_jsonrpc_client::AsUrl;
 use near_primitives::views;
-use secp256k1::SecretKey;
 use serde::{Deserialize, Serialize};
 
 const NEAR_TRANSACTION_KEY: &str = "nearTransactionHash";

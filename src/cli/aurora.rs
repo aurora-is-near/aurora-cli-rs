@@ -65,7 +65,7 @@ pub async fn execute_command<T: AsRef<str>>(
             WriteCommand::Deploy { input_data_hex } => {
                 let source_private_key_hex = config.get_evm_secret_key();
                 let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
-                let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
+                let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
                 let input = hex::decode(input_data_hex)?;
                 send_transaction(client, &sk, None, Wei::zero(), input).await?;
             }
@@ -75,7 +75,7 @@ pub async fn execute_command<T: AsRef<str>>(
             } => {
                 let source_private_key_hex = config.get_evm_secret_key();
                 let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
-                let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
+                let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
                 let target = Address::decode(&target_addr_hex).unwrap();
                 let amount = Wei::new(U256::from_dec_str(&amount).unwrap());
                 send_transaction(client, &sk, Some(target), amount, Vec::new()).await?;
@@ -87,7 +87,7 @@ pub async fn execute_command<T: AsRef<str>>(
             } => {
                 let source_private_key_hex = config.get_evm_secret_key();
                 let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
-                let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
+                let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
                 let target = Address::decode(&target_addr_hex).unwrap();
                 let amount = amount
                     .as_ref()
@@ -103,7 +103,7 @@ pub async fn execute_command<T: AsRef<str>>(
 
 async fn send_transaction<T: AsRef<str>>(
     client: &AuroraClient<T>,
-    sk: &secp256k1::SecretKey,
+    sk: &libsecp256k1::SecretKey,
     to: Option<Address>,
     amount: Wei,
     input: Vec<u8>,

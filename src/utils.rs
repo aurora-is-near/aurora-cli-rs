@@ -1,8 +1,8 @@
 use aurora_engine_transactions::legacy::{LegacyEthSignedTransaction, TransactionLegacy};
 use aurora_engine_types::{types::Address, U256};
+use libsecp256k1::{Message, PublicKey, SecretKey};
 use near_crypto::InMemorySigner;
 use rlp::RlpStream;
-use secp256k1::{Message, PublicKey, SecretKey};
 use std::{io, path::Path};
 
 pub(crate) fn hex_to_arr32(h: &str) -> Result<[u8; 32], hex::FromHexError> {
@@ -27,7 +27,7 @@ pub(crate) fn sign_transaction(
     let message_hash = aurora_engine_sdk::keccak(rlp_stream.as_raw());
     let message = Message::parse_slice(message_hash.as_bytes()).unwrap();
 
-    let (signature, recovery_id) = secp256k1::sign(&message, secret_key);
+    let (signature, recovery_id) = libsecp256k1::sign(&message, secret_key);
     let v: u64 = (recovery_id.serialize() as u64) + 2 * chain_id + 35;
     let r = U256::from_big_endian(&signature.r.b32());
     let s = U256::from_big_endian(&signature.s.b32());

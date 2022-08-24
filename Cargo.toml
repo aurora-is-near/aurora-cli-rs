@@ -17,7 +17,7 @@ bs58 = "0.4.0"
 clap = { version = "3.1.6", features = ["derive"] }
 ethabi = "17.1"
 hex = "0.4.3"
-libsecp256k1 = "0.3.5"
+libsecp256k1 = "0.7.0"
 near-crypto = "0.12.0"
 near-jsonrpc-client = { git = "https://github.com/near/near-jsonrpc-client-rs/", rev = "c8bed6aef58a6ac8aae6c02ca52e01213918037d" }
 near-jsonrpc-primitives = "0.12.0"
