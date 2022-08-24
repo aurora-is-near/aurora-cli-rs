@@ -21,7 +21,26 @@ pub enum Command {
 
 #[derive(Subcommand)]
 pub enum ReadCommand {
-    GetReceiptResult { receipt_id_b58: String },
+    GetReceiptResult {
+        receipt_id_b58: String,
+    },
+    EngineCall {
+        #[clap(short, long)]
+        sender_addr_hex: Option<String>,
+        #[clap(short, long)]
+        target_addr_hex: String,
+        #[clap(short, long)]
+        amount: Option<String>,
+        #[clap(short, long)]
+        input_data_hex: String,
+    },
+    GetBridgedNep141 {
+        erc_20_address_hex: String,
+    },
+    GetAuroraErc20 {
+        nep_141_account: String,
+    },
+    GetEngineBridgeProver,
 }
 
 #[derive(Subcommand)]
@@ -58,6 +77,48 @@ pub async fn execute_command<T: AsRef<str>>(
                     .get_near_receipt_outcome(tx_hash.as_slice().try_into().unwrap())
                     .await?;
                 println!("{:?}", outcome);
+            }
+            ReadCommand::EngineCall {
+                sender_addr_hex,
+                target_addr_hex,
+                amount,
+                input_data_hex,
+            } => {
+                let target = Address::decode(&target_addr_hex).unwrap();
+                let sender = sender_addr_hex
+                    .map(|x| Address::decode(&x).unwrap())
+                    .unwrap_or_default();
+                let amount = amount
+                    .as_ref()
+                    .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
+                    .unwrap_or_else(Wei::zero);
+                let input = hex::decode(input_data_hex)?;
+
+                let result = client
+                    .view_contract_call(sender, target, amount, input)
+                    .await
+                    .unwrap();
+                println!("{:?}", result);
+            }
+            ReadCommand::GetBridgedNep141 { erc_20_address_hex } => {
+                let erc20 = Address::decode(&erc_20_address_hex).unwrap();
+                match client.get_nep141_from_erc20(erc20).await {
+                    Ok(nep_141_account) => println!("{}", nep_141_account),
+                    Err(e) => {
+                        let error_msg = format!("{:?}", e);
+                        if error_msg.contains("ERC20_NOT_FOUND") {
+                            println!("No NEP-141 account associated with {}", erc_20_address_hex);
+                        } else {
+                            panic!("{}", error_msg);
+                        }
+                    }
+                };
+            }
+            ReadCommand::GetAuroraErc20 { nep_141_account } => {
+                println!("{:?}", client.get_erc20_from_nep141(&nep_141_account).await);
+            }
+            ReadCommand::GetEngineBridgeProver => {
+                println!("{:?}", client.get_bridge_prover().await);
             }
         },
         Command::Write { subcommand } => match subcommand {
