@@ -136,6 +136,7 @@ dependencies = [
  "near-jsonrpc-client",
  "near-jsonrpc-primitives",
  "near-primitives",
+ "rand 0.7.3",
  "reqwest",
  "rlp",
  "serde",

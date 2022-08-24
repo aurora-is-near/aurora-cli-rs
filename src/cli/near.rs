@@ -50,6 +50,16 @@ pub enum ReadCommand {
         #[clap(short, long)]
         attached_gas: Option<String>,
     },
+    EngineErc20 {
+        #[clap(short, long)]
+        sender_addr_hex: Option<String>,
+        #[clap(short, long)]
+        target_addr_hex: String,
+        #[clap(short, long)]
+        amount: Option<String>,
+        #[clap(subcommand)]
+        erc20: crate::cli::erc20::Erc20,
+    },
     GetBridgedNep141 {
         erc_20_address_hex: String,
     },
@@ -83,6 +93,14 @@ pub enum WriteCommand {
         #[clap(short, long)]
         input_data_hex: String,
     },
+    EngineErc20 {
+        #[clap(short, long)]
+        target_addr_hex: String,
+        #[clap(short, long)]
+        amount: Option<String>,
+        #[clap(subcommand)]
+        erc20: crate::cli::erc20::Erc20,
+    },
     FactoryUpdate {
         wasm_bytes_path: String,
     },
@@ -108,16 +126,24 @@ pub async fn execute_command<T: AsRef<str>>(
                 amount,
                 input_data_hex,
             } => {
-                let target = Address::decode(&target_addr_hex).unwrap();
-                let sender = sender_addr_hex
-                    .map(|x| Address::decode(&x).unwrap())
-                    .unwrap_or_default();
-                let amount = amount
-                    .as_ref()
-                    .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
-                    .unwrap_or_else(Wei::zero);
+                let (sender, target, amount) =
+                    parse_read_call_args(sender_addr_hex, target_addr_hex, amount);
                 let input = hex::decode(input_data_hex)?;
-
+                let result = client
+                    .view_contract_call(sender, target, amount, input)
+                    .await
+                    .unwrap();
+                println!("{:?}", result);
+            }
+            ReadCommand::EngineErc20 {
+                erc20,
+                target_addr_hex,
+                amount,
+                sender_addr_hex,
+            } => {
+                let (sender, target, amount) =
+                    parse_read_call_args(sender_addr_hex, target_addr_hex, amount);
+                let input = erc20.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
                     .await
@@ -210,15 +236,19 @@ pub async fn execute_command<T: AsRef<str>>(
                 amount,
                 input_data_hex,
             } => {
-                let source_private_key_hex = config.get_evm_secret_key();
-                let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
-                let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
-                let target = Address::decode(&target_addr_hex).unwrap();
-                let amount = amount
-                    .as_ref()
-                    .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
-                    .unwrap_or_else(Wei::zero);
+                let (sk, target, amount) = parse_write_call_args(config, target_addr_hex, amount);
                 let input = hex::decode(input_data_hex)?;
+                let result =
+                    send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
+                println!("{:?}", result);
+            }
+            WriteCommand::EngineErc20 {
+                erc20,
+                target_addr_hex,
+                amount,
+            } => {
+                let (sk, target, amount) = parse_write_call_args(config, target_addr_hex, amount);
+                let input = erc20.abi_encode()?;
                 let result =
                     send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
                 println!("{:?}", result);
@@ -234,6 +264,39 @@ pub async fn execute_command<T: AsRef<str>>(
         },
     };
     Ok(())
+}
+
+fn parse_read_call_args(
+    sender_addr_hex: Option<String>,
+    target_addr_hex: String,
+    amount: Option<String>,
+) -> (Address, Address, Wei) {
+    let target = Address::decode(&target_addr_hex).unwrap();
+    let sender = sender_addr_hex
+        .map(|x| Address::decode(&x).unwrap())
+        .unwrap_or_default();
+    let amount = amount
+        .as_ref()
+        .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
+        .unwrap_or_else(Wei::zero);
+
+    (sender, target, amount)
+}
+
+fn parse_write_call_args(
+    config: &Config,
+    target_addr_hex: String,
+    amount: Option<String>,
+) -> (secp256k1::SecretKey, Address, Wei) {
+    let source_private_key_hex = config.get_evm_secret_key();
+    let sk_bytes = utils::hex_to_arr32(source_private_key_hex).unwrap();
+    let sk = secp256k1::SecretKey::parse(&sk_bytes).unwrap();
+    let target = Address::decode(&target_addr_hex).unwrap();
+    let amount = amount
+        .as_ref()
+        .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
+        .unwrap_or_else(Wei::zero);
+    (sk, target, amount)
 }
 
 fn parse_xcc_args(
