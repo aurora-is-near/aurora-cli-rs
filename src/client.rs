@@ -207,6 +207,16 @@ impl<T: AsRef<str>> AuroraClient<T> {
         Ok(String::from_utf8_lossy(&result.result).into_owned())
     }
 
+    pub async fn get_erc20_from_nep141(&self, nep141: &str) -> Result<Address, ClientError> {
+        let args = aurora_engine::parameters::GetErc20FromNep141CallArgs {
+            nep141: nep141.parse().unwrap(),
+        };
+        let result = self
+            .near_view_call("get_erc20_from_nep141".into(), args.try_to_vec().unwrap())
+            .await?;
+        Ok(Address::try_from_slice(&result.result).unwrap())
+    }
+
     pub async fn get_bridge_prover(&self) -> Result<String, ClientError> {
         let result = self
             .near_view_call("get_bridge_prover".into(), Vec::new())

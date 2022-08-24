@@ -39,6 +39,9 @@ pub enum ReadCommand {
     GetNep141 {
         erc_20_address_hex: String,
     },
+    GetErc20 {
+        nep_141_account: String,
+    },
     GetBridgeProver,
 }
 
@@ -111,6 +114,9 @@ pub async fn execute_command<T: AsRef<str>>(
                         }
                     }
                 };
+            }
+            ReadCommand::GetErc20 { nep_141_account } => {
+                println!("{:?}", client.get_erc20_from_nep141(&nep_141_account).await);
             }
             ReadCommand::GetBridgeProver => {
                 println!("{:?}", client.get_bridge_prover().await);
