@@ -4,6 +4,7 @@ pub mod aurora;
 pub mod erc20;
 pub mod near;
 pub mod process_tx_data;
+pub mod solidity;
 
 #[derive(Parser)]
 pub struct Cli {

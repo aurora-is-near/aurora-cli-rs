@@ -60,6 +60,16 @@ pub enum ReadCommand {
         #[clap(subcommand)]
         erc20: crate::cli::erc20::Erc20,
     },
+    Solidity {
+        #[clap(short, long)]
+        sender_addr_hex: Option<String>,
+        #[clap(short, long)]
+        target_addr_hex: String,
+        #[clap(short, long)]
+        amount: Option<String>,
+        #[clap(subcommand)]
+        contract_call: crate::cli::solidity::Solidity,
+    },
     GetBridgedNep141 {
         erc_20_address_hex: String,
     },
@@ -92,6 +102,14 @@ pub enum WriteCommand {
         amount: Option<String>,
         #[clap(short, long)]
         input_data_hex: String,
+    },
+    Solidity {
+        #[clap(short, long)]
+        target_addr_hex: String,
+        #[clap(short, long)]
+        amount: Option<String>,
+        #[clap(subcommand)]
+        contract_call: crate::cli::solidity::Solidity,
     },
     EngineErc20 {
         #[clap(short, long)]
@@ -144,6 +162,21 @@ pub async fn execute_command<T: AsRef<str>>(
                 let (sender, target, amount) =
                     parse_read_call_args(sender_addr_hex, target_addr_hex, amount);
                 let input = erc20.abi_encode()?;
+                let result = client
+                    .view_contract_call(sender, target, amount, input)
+                    .await
+                    .unwrap();
+                println!("{:?}", result);
+            }
+            ReadCommand::Solidity {
+                contract_call,
+                target_addr_hex,
+                amount,
+                sender_addr_hex,
+            } => {
+                let (sender, target, amount) =
+                    parse_read_call_args(sender_addr_hex, target_addr_hex, amount);
+                let input = contract_call.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
                     .await
@@ -249,6 +282,17 @@ pub async fn execute_command<T: AsRef<str>>(
             } => {
                 let (sk, target, amount) = parse_write_call_args(config, target_addr_hex, amount);
                 let input = erc20.abi_encode()?;
+                let result =
+                    send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
+                println!("{:?}", result);
+            }
+            WriteCommand::Solidity {
+                contract_call,
+                target_addr_hex,
+                amount,
+            } => {
+                let (sk, target, amount) = parse_write_call_args(config, target_addr_hex, amount);
+                let input = contract_call.abi_encode()?;
                 let result =
                     send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
                 println!("{:?}", result);

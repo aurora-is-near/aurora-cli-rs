@@ -129,7 +129,7 @@ impl Erc20 {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParseError(String);
 
-fn wrap_error<E: std::fmt::Debug>(e: E) -> ParseError {
+pub fn wrap_error<E: std::fmt::Debug>(e: E) -> ParseError {
     ParseError(format!("{:?}", e))
 }
 
