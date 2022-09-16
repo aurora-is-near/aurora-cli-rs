@@ -224,6 +224,15 @@ impl<T: AsRef<str>> AuroraClient<T> {
         Ok(String::from_utf8_lossy(&result.result).into_owned())
     }
 
+    pub async fn paused_precompiles(&self) -> Result<u32, ClientError> {
+        let result = self
+            .near_view_call("paused_precompiles".into(), Vec::new())
+            .await?;
+
+        let (int_bytes, _) = result.result.split_at(std::mem::size_of::<u32>());
+        Ok(u32::from_le_bytes(int_bytes.try_into().unwrap()))
+    }
+
     pub async fn view_contract_call(
         &self,
         sender: Address,

@@ -1,3 +1,4 @@
+use crate::cli::pausables::{PrecompileFlags, PrecompileNames};
 use crate::{client::AuroraClient, config::Config, utils};
 use aurora_engine_types::{
     parameters::{CrossContractCallArgs, PromiseArgs, PromiseCreateArgs},
@@ -77,6 +78,7 @@ pub enum ReadCommand {
         nep_141_account: String,
     },
     GetEngineBridgeProver,
+    PausedPrecompiles,
 }
 
 #[derive(Subcommand)]
@@ -121,6 +123,12 @@ pub enum WriteCommand {
     },
     FactoryUpdate {
         wasm_bytes_path: String,
+    },
+    PausePrecompiles {
+        precompiles: Vec<String>,
+    },
+    ResumePrecompiles {
+        precompiles: Vec<String>,
     },
 }
 
@@ -232,6 +240,15 @@ pub async fn execute_command<T: AsRef<str>>(
             ReadCommand::GetEngineBridgeProver => {
                 println!("{:?}", client.get_bridge_prover().await);
             }
+            ReadCommand::PausedPrecompiles => {
+                let bits = client.paused_precompiles().await?;
+                let flags = PrecompileFlags::from_bits(bits).unwrap_or_else(PrecompileFlags::empty);
+                let names = PrecompileNames::from(flags);
+                let count = names.count();
+                let list = names.join(", ");
+
+                println!("Paused precompiles ({} total): {:?}", count, list);
+            }
         },
         Command::Write { subcommand } => match subcommand {
             WriteCommand::EngineXcc {
@@ -301,6 +318,28 @@ pub async fn execute_command<T: AsRef<str>>(
                 let args = std::fs::read(wasm_bytes_path).unwrap();
                 let tx_outcome = client
                     .near_contract_call("factory_update".into(), args)
+                    .await
+                    .unwrap();
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::PausePrecompiles { precompiles } => {
+                let names = PrecompileNames::from(precompiles);
+                let flags = PrecompileFlags::from(names);
+                let args = flags.bits().to_le_bytes().to_vec();
+
+                let tx_outcome = client
+                    .near_contract_call("pause_precompiles".to_owned(), args)
+                    .await
+                    .unwrap();
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::ResumePrecompiles { precompiles } => {
+                let names = PrecompileNames::from(precompiles);
+                let flags = PrecompileFlags::from(names);
+                let args = flags.bits().to_le_bytes().to_vec();
+
+                let tx_outcome = client
+                    .near_contract_call("resume_precompiles".to_owned(), args)
                     .await
                     .unwrap();
                 println!("{:?}", tx_outcome);
