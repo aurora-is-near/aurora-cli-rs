@@ -53,6 +53,7 @@ pub async fn execute_command<T: AsRef<str>>(
     config: &Config,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match command {
+        // Command::Benchmark
         Command::Read { subcommand } => match subcommand {
             ReadCommand::GetResult { tx_hash_hex } => {
                 let tx_hash =
@@ -114,6 +115,7 @@ async fn send_transaction<T: AsRef<str>>(
     let nonce = client.get_nonce(source).await?;
     let chain_id = client.get_chain_id().await?;
 
+    // Is this calling engine method 'call' and 'deploy_code'?
     let tx_hash = client
         .eth_transaction(to, amount, sk, chain_id, nonce, input)
         .await

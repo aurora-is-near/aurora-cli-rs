@@ -131,6 +131,7 @@ pub async fn execute_command<T: AsRef<str>>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         Command::Read { subcommand } => match subcommand {
+            // getter methods
             ReadCommand::GetReceiptResult { receipt_id_b58 } => {
                 let tx_hash = bs58::decode(receipt_id_b58.as_str()).into_vec().unwrap();
                 let outcome = client
@@ -232,8 +233,27 @@ pub async fn execute_command<T: AsRef<str>>(
             ReadCommand::GetEngineBridgeProver => {
                 println!("{:?}", client.get_bridge_prover().await);
             }
+            // get_chain_id
+            // get_upgrade_index
+            // get_block_hash
+            // get_code
+            // get_balance
+            // get_nonce
+            // get_storage_at
+            // get_paused_flags
+            // get_accounts_counter
+            // get nep141_from_erc20
+            // ft_total_supply
+            // ft_total_eth_supply_on_near
+            // ft_total_eth_supply_on_aurora
+            // ft_balance_of
+            // ft_balance_of_eth
+            // storage_balance_of
+            // ft_metadata
+            // verify_log_entry
         },
         Command::Write { subcommand } => match subcommand {
+            // All "submit" engine method
             WriteCommand::EngineXcc {
                 target_near_account,
                 method_name,
@@ -300,11 +320,30 @@ pub async fn execute_command<T: AsRef<str>>(
             WriteCommand::FactoryUpdate { wasm_bytes_path } => {
                 let args = std::fs::read(wasm_bytes_path).unwrap();
                 let tx_outcome = client
+                // I cannot find this engine method called as "factory_update"
                     .near_contract_call("factory_update".into(), args)
                     .await
                     .unwrap();
                 println!("{:?}", tx_outcome);
             }
+            // deploy_code 
+            // call
+            // meta-call
+            // register_relayer
+            // ft_on_transfer
+            // deploy_erc20_token
+            // begin_chain
+            // begin_block
+            // withdraw
+            // deposit
+            // is_used_proof
+            // ft_transfer
+            // ft_transfer_call
+            // storage_deposit
+            // storage_unregister
+            // storage_withdraw
+            // set_paused_flags
+            // mint_account
         },
     };
     Ok(())
