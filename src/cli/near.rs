@@ -1,11 +1,13 @@
-use crate::{client::AuroraClient, config::Config, utils};
+use crate::{client::AuroraClient, config::Config, utils, cli::borsh_io::{GetStorageAtInput, FungibleTokenMetadata}};
+use serde_json::json;
 use aurora_engine_types::{
     parameters::{CrossContractCallArgs, PromiseArgs, PromiseCreateArgs},
     types::{Address, NearGas, Wei, Yocto},
     U256,
 };
-use borsh::BorshSerialize;
+use borsh::{BorshSerialize, BorshDeserialize};
 use clap::Subcommand;
+use near_primitives::views::CallResult;
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -70,6 +72,7 @@ pub enum ReadCommand {
         #[clap(subcommand)]
         contract_call: crate::cli::solidity::Solidity,
     },
+    // get nep141_from_erc20
     GetBridgedNep141 {
         erc_20_address_hex: String,
     },
@@ -77,6 +80,55 @@ pub enum ReadCommand {
         nep_141_account: String,
     },
     GetEngineBridgeProver,
+    // get_chain_id
+    GetChainId,
+    // get_upgrade_index
+    GetUpgradeIndex,
+    // get_block_hash
+    GetBlockHash,
+    // get_code
+    GetCode {
+        address_hex: String,
+    },
+    // get_balance
+    GetBalance {
+        address_hex: String,
+    },
+    // get_nonce
+    GetNonce {
+        address_hex: String,
+    },
+    // get_storage_at
+    GetStorageAt {
+        address_hex: String,
+        key_hex: String,
+    },
+    // get_paused_flags
+    GetPausedFlags,
+    // get_accounts_counter
+    GetAccountsCounter,
+    // ft_total_supply
+    FtTotalSupply,
+    // ft_total_eth_supply_on_near
+    FtTotalSupplyOnNear,
+    // ft_total_eth_supply_on_aurora
+    FtTotalEthSupplyOnAurora,
+    // ft_balance_of
+    FtBalanceOf {
+        account_id: String
+    },
+    // ft_balance_of_eth
+    FtBalanceOfEth {
+        account_id: String
+    },
+    // storage_balance_of
+    StorageBalanceOf { 
+        account_id: String
+    },
+    // ft_metadata
+    FtMetadata,
+    // verify_log_entry
+    VerifyLogEntry,
 }
 
 #[derive(Subcommand)]
@@ -131,7 +183,6 @@ pub async fn execute_command<T: AsRef<str>>(
 ) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         Command::Read { subcommand } => match subcommand {
-            // getter methods
             ReadCommand::GetReceiptResult { receipt_id_b58 } => {
                 let tx_hash = bs58::decode(receipt_id_b58.as_str()).into_vec().unwrap();
                 let outcome = client
@@ -233,24 +284,170 @@ pub async fn execute_command<T: AsRef<str>>(
             ReadCommand::GetEngineBridgeProver => {
                 println!("{:?}", client.get_bridge_prover().await);
             }
-            // get_chain_id
-            // get_upgrade_index
-            // get_block_hash
-            // get_code
-            // get_balance
-            // get_nonce
-            // get_storage_at
-            // get_paused_flags
-            // get_accounts_counter
-            // get nep141_from_erc20
-            // ft_total_supply
-            // ft_total_eth_supply_on_near
-            // ft_total_eth_supply_on_aurora
-            // ft_balance_of
-            // ft_balance_of_eth
-            // storage_balance_of
-            // ft_metadata
-            // verify_log_entry
+            ReadCommand::GetChainId => {
+                let chain_id = {
+                    let result = client.near_view_call("get_chain_id".into(), vec![]).await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", chain_id);
+            }
+            ReadCommand::GetUpgradeIndex => {
+                let upgrade_index = {
+                    let result = client
+                        .near_view_call("get_upgrade_index".into(), vec![])
+                        .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", upgrade_index);
+            }
+            ReadCommand::GetBlockHash => {
+                let block_hash = {
+                    let result = client
+                        .near_view_call("get_block_hash".into(), vec![])
+                        .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", block_hash);
+            }
+            ReadCommand::GetCode { address_hex } => {
+                let code = client
+                    .near_view_call("get_code".into(), address_hex.as_bytes().to_vec())
+                    .await?.result;
+                println!("{:?}", code);
+            }
+            ReadCommand::GetBalance { address_hex } => {
+                let balance = {
+                    let result = client
+                    .near_view_call("get_balance".into(), address_hex.as_bytes().to_vec())
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", balance);
+            },
+            ReadCommand::GetNonce {
+                address_hex,
+            } => {
+                let nonce = {
+                    let result = client
+                    .near_view_call("get_nonce".into(), address_hex.as_bytes().to_vec())
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", nonce);
+            },
+            ReadCommand::GetStorageAt {
+                address_hex,
+                key_hex,
+            } => {
+                let mut buffer: Vec<u8> = Vec::new();
+                let input = GetStorageAtInput {
+                    address: Address::decode(&address_hex).unwrap(),
+                    key: hex::decode(key_hex).unwrap(),
+                };
+                input.serialize(&mut buffer)?;
+                let storage = {
+                    let result = client
+                    .near_view_call("get_storage_at".into(), buffer)
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", storage);
+            },
+            ReadCommand::GetPausedFlags => {
+                let paused_flags = client
+                    .near_view_call("get_paused_flags".into(), vec![])
+                    .await?.result;
+                println!("{:?}", paused_flags);
+            },
+            ReadCommand::GetAccountsCounter => {
+                let paused_flags = client
+                    .near_view_call("get_accounts_counter".into(), vec![])
+                    .await?.result;
+                println!("{:?}", paused_flags);
+            },
+            ReadCommand::FtTotalSupply => {
+                let ft_total_supply = {
+                    let result = client
+                    .near_view_call("ft_total_supply".into(), vec![])
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", ft_total_supply);
+            },
+            ReadCommand::FtTotalSupplyOnNear => {
+                let ft_total_supply_on_near = {
+                    let result = client
+                    .near_view_call("ft_total_supply_on_near".into(), vec![])
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", ft_total_supply_on_near);
+            },
+            ReadCommand::FtTotalEthSupplyOnAurora => {
+                let ft_total_eth_supply_on_aurora = {
+                    let result = client
+                    .near_view_call("ft_total_eth_supply_on_aurora".into(), vec![])
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", ft_total_eth_supply_on_aurora);
+            },
+            ReadCommand::FtBalanceOf {
+                account_id
+            } => {
+                let obj = json!({"account_id": account_id});
+                let ft_balance_of = {
+                    let result = client
+                    .near_view_call("ft_balance_of".into(), obj.to_string().as_bytes().to_vec())
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", ft_balance_of);
+            },
+            ReadCommand::FtBalanceOfEth {
+                account_id
+            } => {
+                let obj = json!({"account_id": account_id});
+                let ft_balance_of_eth = {
+                    let result = client
+                    .near_view_call("ft_balance_of_eth".into(), obj.to_string().as_bytes().to_vec())
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", ft_balance_of_eth);
+            },
+            ReadCommand::StorageBalanceOf {
+                account_id
+            } => {
+                let obj = json!({"account_id": account_id});
+                let storage_balance_of = {
+                    let result = client
+                    .near_view_call("storage_balance_of".into(), obj.to_string().as_bytes().to_vec())
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", storage_balance_of);
+            },
+            ReadCommand::FtMetadata => {
+                let ft_metadata = {
+                    let result = client
+                    .near_view_call("ft_metadata".into(), vec![])
+                    .await?;
+                    result.result
+                };
+                let ft_metadata_json: FungibleTokenMetadata = FungibleTokenMetadata::try_from_slice(&ft_metadata).unwrap(); 
+                println!("{:?}", ft_metadata_json);
+            },
+            ReadCommand::VerifyLogEntry => {
+                let verify_log_entry = {
+                    let result = client
+                    .near_view_call("verify_log_entry".into(), vec![])
+                    .await?;
+                    result.result
+                };
+                let boolean_val = bool::try_from_slice(&verify_log_entry).unwrap();
+                println!("{:?}", boolean_val);
+            },
         },
         Command::Write { subcommand } => match subcommand {
             // All "submit" engine method
@@ -320,30 +517,29 @@ pub async fn execute_command<T: AsRef<str>>(
             WriteCommand::FactoryUpdate { wasm_bytes_path } => {
                 let args = std::fs::read(wasm_bytes_path).unwrap();
                 let tx_outcome = client
-                // I cannot find this engine method called as "factory_update"
+                    // I cannot find this engine method called as "factory_update"
                     .near_contract_call("factory_update".into(), args)
                     .await
                     .unwrap();
                 println!("{:?}", tx_outcome);
-            }
-            // deploy_code 
-            // call
-            // meta-call
-            // register_relayer
-            // ft_on_transfer
-            // deploy_erc20_token
-            // begin_chain
-            // begin_block
-            // withdraw
-            // deposit
-            // is_used_proof
-            // ft_transfer
-            // ft_transfer_call
-            // storage_deposit
-            // storage_unregister
-            // storage_withdraw
-            // set_paused_flags
-            // mint_account
+            } // deploy_code
+              // call
+              // meta-call
+              // register_relayer
+              // ft_on_transfer
+              // deploy_erc20_token
+              // begin_chain
+              // begin_block
+              // withdraw
+              // deposit
+              // is_used_proof
+              // ft_transfer
+              // ft_transfer_call
+              // storage_deposit
+              // storage_unregister
+              // storage_withdraw
+              // set_paused_flags
+              // mint_account
         },
     };
     Ok(())
@@ -451,6 +647,22 @@ async fn send_as_near_transaction<T: AsRef<str>>(
     );
     let result = client
         .near_contract_call("submit".into(), (&signed_tx).into())
+        .await?;
+    Ok(result)
+}
+
+async fn get_as_near_transaction<T: AsRef<str>>(
+    config: &Config,
+    client: &AuroraClient<T>,
+    method_name: &str,
+) -> Result<CallResult, Box<dyn std::error::Error>> {
+    let source_private_key_hex = config.get_evm_secret_key();
+    let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
+    let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
+
+    let sender_address = utils::address_from_secret_key(&sk);
+    let result = client
+        .near_view_call(method_name.into(), sender_address.as_bytes().to_vec())
         .await?;
     Ok(result)
 }
