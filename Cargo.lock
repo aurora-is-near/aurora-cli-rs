@@ -138,6 +138,7 @@ dependencies = [
  "near-primitives",
  "rand 0.7.3",
  "reqwest",
+ "rjson",
  "rlp",
  "serde",
  "serde_json",

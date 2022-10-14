@@ -1,13 +1,18 @@
-use crate::{client::AuroraClient, config::Config, utils, cli::borsh_io::{GetStorageAtInput, FungibleTokenMetadata}};
-use serde_json::json;
+use crate::{
+    cli::borsh_io::{FungibleTokenMetadata, GetStorageAtInput},
+    client::AuroraClient,
+    config::Config,
+    utils,
+};
+use aurora_engine::json::parse_json;
 use aurora_engine_types::{
     parameters::{CrossContractCallArgs, PromiseArgs, PromiseCreateArgs},
     types::{Address, NearGas, Wei, Yocto},
     U256,
 };
-use borsh::{BorshSerialize, BorshDeserialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use clap::Subcommand;
-use near_primitives::views::CallResult;
+use serde_json::json;
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -110,20 +115,20 @@ pub enum ReadCommand {
     // ft_total_supply
     FtTotalSupply,
     // ft_total_eth_supply_on_near
-    FtTotalSupplyOnNear,
+    FtTotalEthSupplyOnNear,
     // ft_total_eth_supply_on_aurora
     FtTotalEthSupplyOnAurora,
     // ft_balance_of
     FtBalanceOf {
-        account_id: String
+        account_id: String,
     },
     // ft_balance_of_eth
     FtBalanceOfEth {
-        account_id: String
+        account_id: String,
     },
     // storage_balance_of
-    StorageBalanceOf { 
-        account_id: String
+    StorageBalanceOf {
+        account_id: String,
     },
     // ft_metadata
     FtMetadata,
@@ -312,29 +317,28 @@ pub async fn execute_command<T: AsRef<str>>(
             ReadCommand::GetCode { address_hex } => {
                 let code = client
                     .near_view_call("get_code".into(), address_hex.as_bytes().to_vec())
-                    .await?.result;
+                    .await?
+                    .result;
                 println!("{:?}", code);
             }
             ReadCommand::GetBalance { address_hex } => {
                 let balance = {
                     let result = client
-                    .near_view_call("get_balance".into(), address_hex.as_bytes().to_vec())
-                    .await?;
+                        .near_view_call("get_balance".into(), address_hex.as_bytes().to_vec())
+                        .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{:?}", balance);
-            },
-            ReadCommand::GetNonce {
-                address_hex,
-            } => {
+            }
+            ReadCommand::GetNonce { address_hex } => {
                 let nonce = {
                     let result = client
-                    .near_view_call("get_nonce".into(), address_hex.as_bytes().to_vec())
-                    .await?;
+                        .near_view_call("get_nonce".into(), address_hex.as_bytes().to_vec())
+                        .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{:?}", nonce);
-            },
+            }
             ReadCommand::GetStorageAt {
                 address_hex,
                 key_hex,
@@ -347,107 +351,110 @@ pub async fn execute_command<T: AsRef<str>>(
                 input.serialize(&mut buffer)?;
                 let storage = {
                     let result = client
-                    .near_view_call("get_storage_at".into(), buffer)
-                    .await?;
+                        .near_view_call("get_storage_at".into(), buffer)
+                        .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{:?}", storage);
-            },
+            }
             ReadCommand::GetPausedFlags => {
                 let paused_flags = client
                     .near_view_call("get_paused_flags".into(), vec![])
-                    .await?.result;
-                println!("{:?}", paused_flags);
-            },
+                    .await?
+                    .result;
+                println!("{:?}", paused_flags[0]);
+            }
             ReadCommand::GetAccountsCounter => {
-                let paused_flags = client
-                    .near_view_call("get_accounts_counter".into(), vec![])
-                    .await?.result;
-                println!("{:?}", paused_flags);
-            },
+                let accounts_counter = {
+                    let result = client
+                        .near_view_call("get_accounts_counter".into(), vec![])
+                        .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                };
+                println!("{:?}", accounts_counter);
+            }
             ReadCommand::FtTotalSupply => {
                 let ft_total_supply = {
                     let result = client
-                    .near_view_call("ft_total_supply".into(), vec![])
-                    .await?;
+                        .near_view_call("ft_total_supply".into(), vec![])
+                        .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{:?}", ft_total_supply);
-            },
-            ReadCommand::FtTotalSupplyOnNear => {
-                let ft_total_supply_on_near = {
+            }
+            ReadCommand::FtTotalEthSupplyOnNear => {
+                let ft_total_eth_supply_on_near = {
                     let result = client
-                    .near_view_call("ft_total_supply_on_near".into(), vec![])
-                    .await?;
+                        .near_view_call("ft_total_eth_supply_on_near".into(), vec![])
+                        .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
-                println!("{:?}", ft_total_supply_on_near);
-            },
+                println!("{:?}", ft_total_eth_supply_on_near);
+            }
             ReadCommand::FtTotalEthSupplyOnAurora => {
                 let ft_total_eth_supply_on_aurora = {
                     let result = client
-                    .near_view_call("ft_total_eth_supply_on_aurora".into(), vec![])
-                    .await?;
+                        .near_view_call("ft_total_eth_supply_on_aurora".into(), vec![])
+                        .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{:?}", ft_total_eth_supply_on_aurora);
-            },
-            ReadCommand::FtBalanceOf {
-                account_id
-            } => {
-                let obj = json!({"account_id": account_id});
+            }
+            ReadCommand::FtBalanceOf { account_id } => {
+                let obj = json!({ "account_id": account_id });
                 let ft_balance_of = {
                     let result = client
-                    .near_view_call("ft_balance_of".into(), obj.to_string().as_bytes().to_vec())
-                    .await?;
+                        .near_view_call("ft_balance_of".into(), obj.to_string().as_bytes().to_vec())
+                        .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{:?}", ft_balance_of);
-            },
-            ReadCommand::FtBalanceOfEth {
-                account_id
-            } => {
-                let obj = json!({"account_id": account_id});
+            }
+            ReadCommand::FtBalanceOfEth { account_id } => {
+                let obj = json!({ "account_id": account_id });
                 let ft_balance_of_eth = {
                     let result = client
-                    .near_view_call("ft_balance_of_eth".into(), obj.to_string().as_bytes().to_vec())
-                    .await?;
+                        .near_view_call(
+                            "ft_balance_of_eth".into(),
+                            obj.to_string().as_bytes().to_vec(),
+                        )
+                        .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{:?}", ft_balance_of_eth);
-            },
-            ReadCommand::StorageBalanceOf {
-                account_id
-            } => {
-                let obj = json!({"account_id": account_id});
+            }
+            ReadCommand::StorageBalanceOf { account_id } => {
+                let obj = json!({ "account_id": account_id });
                 let storage_balance_of = {
                     let result = client
-                    .near_view_call("storage_balance_of".into(), obj.to_string().as_bytes().to_vec())
-                    .await?;
+                        .near_view_call(
+                            "storage_balance_of".into(),
+                            obj.to_string().as_bytes().to_vec(),
+                        )
+                        .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{:?}", storage_balance_of);
-            },
+            }
             ReadCommand::FtMetadata => {
                 let ft_metadata = {
-                    let result = client
-                    .near_view_call("ft_metadata".into(), vec![])
-                    .await?;
+                    let result = client.near_view_call("ft_metadata".into(), vec![]).await?;
                     result.result
                 };
-                let ft_metadata_json: FungibleTokenMetadata = FungibleTokenMetadata::try_from_slice(&ft_metadata).unwrap(); 
+                // Need to serialize data
+                let ft_metadata_json= parse_json(&ft_metadata).unwrap();
                 println!("{:?}", ft_metadata_json);
-            },
+            }
             ReadCommand::VerifyLogEntry => {
                 let verify_log_entry = {
                     let result = client
-                    .near_view_call("verify_log_entry".into(), vec![])
-                    .await?;
+                        .near_view_call("verify_log_entry".into(), vec![])
+                        .await?;
                     result.result
                 };
                 let boolean_val = bool::try_from_slice(&verify_log_entry).unwrap();
                 println!("{:?}", boolean_val);
-            },
+            }
         },
         Command::Write { subcommand } => match subcommand {
             // All "submit" engine method
@@ -647,22 +654,6 @@ async fn send_as_near_transaction<T: AsRef<str>>(
     );
     let result = client
         .near_contract_call("submit".into(), (&signed_tx).into())
-        .await?;
-    Ok(result)
-}
-
-async fn get_as_near_transaction<T: AsRef<str>>(
-    config: &Config,
-    client: &AuroraClient<T>,
-    method_name: &str,
-) -> Result<CallResult, Box<dyn std::error::Error>> {
-    let source_private_key_hex = config.get_evm_secret_key();
-    let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
-    let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
-
-    let sender_address = utils::address_from_secret_key(&sk);
-    let result = client
-        .near_view_call(method_name.into(), sender_address.as_bytes().to_vec())
         .await?;
     Ok(result)
 }

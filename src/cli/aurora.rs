@@ -114,8 +114,6 @@ async fn send_transaction<T: AsRef<str>>(
 
     let nonce = client.get_nonce(source).await?;
     let chain_id = client.get_chain_id().await?;
-
-    // Is this calling engine method 'call' and 'deploy_code'?
     let tx_hash = client
         .eth_transaction(to, amount, sk, chain_id, nonce, input)
         .await
