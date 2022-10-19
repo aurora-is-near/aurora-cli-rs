@@ -1,14 +1,19 @@
+use std::str::FromStr;
+
 use crate::{
-    cli::borsh_io::{FungibleTokenMetadata, GetStorageAtInput},
+    cli::borsh_io::{
+        AccountBalance, AccountBalanceSerde,
+        FungibleTokenMetadata, GetStorageAtInput, BeginChainArgs, BeginBlockArgs, WithdrawCallArgs, PauseEthConnectorCallArgs
+    },
     client::AuroraClient,
     config::Config,
     utils,
 };
-use aurora_engine::json::parse_json;
+use aurora_engine::parameters::DeployErc20TokenArgs;
 use aurora_engine_types::{
     parameters::{CrossContractCallArgs, PromiseArgs, PromiseCreateArgs},
-    types::{Address, NearGas, Wei, Yocto},
-    U256,
+    types::{Address, NearGas, RawU256, Wei, Yocto, NEP141Wei},
+    U256, account_id::AccountId,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
 use clap::Subcommand;
@@ -115,7 +120,7 @@ pub enum ReadCommand {
     // ft_total_supply
     FtTotalSupply,
     // ft_total_eth_supply_on_near
-    FtTotalEthSupplyOnNear,
+    FtTotalSupplyOnNear,
     // ft_total_eth_supply_on_aurora
     FtTotalEthSupplyOnAurora,
     // ft_balance_of
@@ -132,8 +137,6 @@ pub enum ReadCommand {
     },
     // ft_metadata
     FtMetadata,
-    // verify_log_entry
-    VerifyLogEntry,
 }
 
 #[derive(Subcommand)]
@@ -178,6 +181,87 @@ pub enum WriteCommand {
     },
     FactoryUpdate {
         wasm_bytes_path: String,
+    },
+    // deploy_code
+    DeployCode {
+        code_byte_hex: String,
+    },
+    // call
+    Call {
+        call_byte_hex: String,
+    },
+    // register_relayer
+    RegisterRelayer {
+        relayer_eth_address_hex: String,
+    },
+    // ft_on_transfer
+    FTOnTransfer {
+        sender_near_id: String,
+        amount: String,
+        msg: String,
+    },
+    // deploy_erc20_token
+    DeployERC20Token {
+        nep141: String,
+    },
+    // begin_chain
+    BeginChain {
+        chain_id: String,
+        genesis_alloc: String,
+    },
+    // begin_block
+    BeginBlock {
+        /// The current block's hash (for replayer use).
+        hash: String,
+        /// The current block's beneficiary address.
+        coinbase: String,
+        /// The current block's timestamp (in seconds since the Unix epoch).
+        timestamp: String,
+        /// The current block's number (the genesis block is number zero).
+        number: String,
+        /// The current block's difficulty.
+        difficulty: String,
+        /// The current block's gas limit.
+        gaslimit: String,
+    },
+    // withdraw
+    Withdraw {
+        recipient_address: String,
+        amount: String,
+    },
+    // deposit
+    Deposit {
+        raw_proof: String,
+    },
+    // ft_transfer
+    FTTransfer {
+        receiver_id: String,
+        amount: String,
+        memo: String,
+    },
+    // ft_transfer_call
+    FTTransferCall {
+        receiver_id: String,
+        amount: String,
+        memo: String,
+        msg: String,
+    },
+    // storage_deposit
+    StorageDeposit {
+        account_id: String,
+        registration_only: Option<bool>,
+    },
+    // storage_unregister
+    StorageUnregister {
+        force: Option<bool>,
+    },
+    // storage_withdraw
+    StorageWithdraw {
+        amount: String,
+    },
+    // set_paused_flags
+    SetPausedFlags {
+        paused_mask: String,
     },
 }
 
@@ -362,16 +446,14 @@ pub async fn execute_command<T: AsRef<str>>(
                     .near_view_call("get_paused_flags".into(), vec![])
                     .await?
                     .result;
-                println!("{:?}", paused_flags[0]);
+                println!("{:?}", paused_flags);
             }
             ReadCommand::GetAccountsCounter => {
-                let accounts_counter = {
-                    let result = client
-                        .near_view_call("get_accounts_counter".into(), vec![])
-                        .await?;
-                    U256::from_big_endian(&result.result).low_u64()
-                };
-                println!("{:?}", accounts_counter);
+                let paused_flags = client
+                    .near_view_call("get_accounts_counter".into(), vec![])
+                    .await?
+                    .result;
+                println!("{:?}", paused_flags);
             }
             ReadCommand::FtTotalSupply => {
                 let ft_total_supply = {
@@ -382,14 +464,14 @@ pub async fn execute_command<T: AsRef<str>>(
                 };
                 println!("{:?}", ft_total_supply);
             }
-            ReadCommand::FtTotalEthSupplyOnNear => {
-                let ft_total_eth_supply_on_near = {
+            ReadCommand::FtTotalSupplyOnNear => {
+                let ft_total_supply_on_near = {
                     let result = client
-                        .near_view_call("ft_total_eth_supply_on_near".into(), vec![])
+                        .near_view_call("ft_total_supply_on_near".into(), vec![])
                         .await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
-                println!("{:?}", ft_total_eth_supply_on_near);
+                println!("{:?}", ft_total_supply_on_near);
             }
             ReadCommand::FtTotalEthSupplyOnAurora => {
                 let ft_total_eth_supply_on_aurora = {
@@ -441,20 +523,11 @@ pub async fn execute_command<T: AsRef<str>>(
                     let result = client.near_view_call("ft_metadata".into(), vec![]).await?;
                     result.result
                 };
-                // Need to serialize data
-                let ft_metadata_json= parse_json(&ft_metadata).unwrap();
+                let ft_metadata_json: FungibleTokenMetadata =
+                    FungibleTokenMetadata::try_from_slice(&ft_metadata).unwrap();
                 println!("{:?}", ft_metadata_json);
-            }
-            ReadCommand::VerifyLogEntry => {
-                let verify_log_entry = {
-                    let result = client
-                        .near_view_call("verify_log_entry".into(), vec![])
-                        .await?;
-                    result.result
-                };
-                let boolean_val = bool::try_from_slice(&verify_log_entry).unwrap();
-                println!("{:?}", boolean_val);
-            }
+            } 
+            // is_used_proof
         },
         Command::Write { subcommand } => match subcommand {
             // All "submit" engine method
@@ -529,24 +602,193 @@ pub async fn execute_command<T: AsRef<str>>(
                     .await
                     .unwrap();
                 println!("{:?}", tx_outcome);
-            } // deploy_code
-              // call
-              // meta-call
-              // register_relayer
-              // ft_on_transfer
-              // deploy_erc20_token
-              // begin_chain
-              // begin_block
-              // withdraw
-              // deposit
-              // is_used_proof
-              // ft_transfer
-              // ft_transfer_call
-              // storage_deposit
-              // storage_unregister
-              // storage_withdraw
-              // set_paused_flags
-              // mint_account
+            }
+            WriteCommand::DeployCode { code_byte_hex } => {
+                let input = hex::decode(code_byte_hex)?;
+                let tx_outcome = client
+                    .near_contract_call("deploy_code".into(), input)
+                    .await?;
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::Call { call_byte_hex } => {
+                let input = hex::decode(call_byte_hex)?;
+                let tx_outcome = client.near_contract_call("call".into(), input).await?;
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::RegisterRelayer {
+                relayer_eth_address_hex,
+            } => {
+                let relayer = hex::decode(relayer_eth_address_hex)?;
+                let tx_outcome = client
+                    .near_contract_call("register_relayer".into(), relayer)
+                    .await?;
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::FTOnTransfer {
+                sender_near_id,
+                amount,
+                msg,
+            } => {
+                let obj = json!({ "sender_id": sender_near_id, "amount": amount, "msg": msg });
+                let tx_outcome = client
+                    .near_contract_call(
+                        "ft_on_transfer".into(),
+                        obj.to_string().as_bytes().to_vec(),
+                    )
+                    .await?;
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::DeployERC20Token { nep141 } => {
+                let mut buffer: Vec<u8> = Vec::new();
+                let nep141: AccountId = nep141.parse().unwrap();
+                let input = DeployErc20TokenArgs {
+                    nep141
+                };
+                input.serialize(&mut buffer)?;
+                let tx_outcome = client
+                    .near_contract_call("deploy_erc20_token".into(), buffer)
+                    .await?;
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::BeginChain {
+                chain_id,
+                genesis_alloc,
+            } => {
+                let genesis_accts: Vec<AccountBalanceSerde> = serde_json::from_str(&genesis_alloc)?;
+                let mut genesis_accts_borsh: Vec<AccountBalance> = Vec::new();
+                for i in genesis_accts {
+                    let acct = AccountBalance {
+                        address: i.address,
+                        balance: i.balance,
+                    };
+                    genesis_accts_borsh.push(acct);
+                }
+                let mut buffer: Vec<u8> = Vec::new();
+                let chain_id: RawU256 = U256::from(chain_id.parse::<u64>().unwrap()).into();
+                let input = BeginChainArgs {
+                    chain_id,
+                    genesis_alloc: genesis_accts_borsh,
+                };
+                input.serialize(&mut buffer)?;
+                let tx_outcome = client
+                    .near_contract_call("begin_chain".into(), buffer)
+                    .await?;
+                println!("{:?}", tx_outcome);
+            } 
+            WriteCommand::BeginBlock { hash, coinbase, timestamp, number, difficulty, gaslimit } => {
+                let mut buffer: Vec<u8> = Vec::new();
+                let hash: RawU256 = U256::from(hash.parse::<u64>().unwrap()).into();
+                let coinbase = Address::decode(&coinbase).unwrap();
+                let timestamp: RawU256 = U256::from(timestamp.parse::<u64>().unwrap()).into();
+                let number: RawU256 = U256::from(number.parse::<u64>().unwrap()).into();
+                let difficulty: RawU256 = U256::from(difficulty.parse::<u64>().unwrap()).into();
+                let gaslimit: RawU256 = U256::from(gaslimit.parse::<u64>().unwrap()).into();
+                let input = BeginBlockArgs {
+                    hash,
+                    coinbase,
+                    timestamp,
+                    number,
+                    difficulty,
+                    gaslimit,
+                };
+                input.serialize(&mut buffer)?;
+                let tx_outcome = client
+                    .near_contract_call("begin_block".into(), buffer)
+                    .await?;
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::Withdraw {
+                recipient_address,
+                amount,
+            } => {
+                let mut buffer: Vec<u8> = Vec::new();
+                let addr = Address::decode(&recipient_address).unwrap();
+                let input = WithdrawCallArgs {
+                    recipient_address: addr,
+                    amount: NEP141Wei::new(u128::from_str(&amount).unwrap()),
+                };
+                input.serialize(&mut buffer)?;
+                let tx_outcome = client
+                    .near_contract_call("withdraw".into(), buffer)
+                    .await?;
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::Deposit { raw_proof } => {
+                let tx_outcome = client
+                    .near_contract_call("deposit".into(), raw_proof.as_bytes().to_vec())
+                    .await?;
+                println!("{:?}", tx_outcome);
+            },
+            WriteCommand::FTTransfer {
+                receiver_id,
+                amount,
+                memo,
+            } => {
+                let obj = json!({ "receiver_id": receiver_id, "amount": amount, "memo": memo });
+                let tx_outcome = client
+                    .near_contract_call("ft_transfer".into(), obj.to_string().as_bytes().to_vec())
+                    .await?;
+                println!("{:?}", tx_outcome);
+            }
+            WriteCommand::FTTransferCall {
+                receiver_id,
+                amount,
+                memo,
+                msg,
+            } => {
+                let obj = json!({ "receiver_id": receiver_id, "amount": amount, "memo": memo, "msg": msg });
+                let tx_outcome = client
+                    .near_contract_call(
+                        "ft_transfer_call".into(),
+                        obj.to_string().as_bytes().to_vec(),
+                    )
+                    .await?;
+                println!("{:?}", tx_outcome);
+            },
+            WriteCommand::StorageDeposit {
+                account_id,
+                registration_only,
+            } => {
+                let obj = json!({ "account_id": account_id, "registration_only": registration_only });
+                let tx_outcome = client
+                    .near_contract_call(
+                        "storage_deposit".into(),
+                        obj.to_string().as_bytes().to_vec(),
+                    )
+                    .await?;
+                println!("{:?}", tx_outcome);
+            },
+            WriteCommand::StorageUnregister { force } => {
+                let obj = json!({ "force": force });
+                let tx_outcome = client
+                    .near_contract_call(
+                        "storage_unregister".into(),
+                        obj.to_string().as_bytes().to_vec(),
+                    )
+                    .await?;
+                println!("{:?}", tx_outcome);
+            },
+            WriteCommand::StorageWithdraw { amount } => {
+                let obj = json!({ "amount": amount });
+                let tx_outcome = client
+                    .near_contract_call(
+                        "storage_withdraw".into(),
+                        obj.to_string().as_bytes().to_vec(),
+                    )
+                    .await?;
+                println!("{:?}", tx_outcome);
+            },
+            WriteCommand::SetPausedFlags { paused_mask } => {
+                let mut buffer: Vec<u8> = Vec::new();
+                let input = PauseEthConnectorCallArgs {
+                    paused_mask: u8::from_str(&paused_mask).unwrap(),
+                };
+                input.serialize(&mut buffer)?;
+                let tx_outcome = client
+                    .near_contract_call("set_paused_flags".into(), buffer)
+                    .await?;
+                println!("{:?}", tx_outcome);
+            },
         },
     };
     Ok(())
