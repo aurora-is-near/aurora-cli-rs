@@ -229,10 +229,12 @@ pub enum WriteCommand {
         recipient_address: String,
         amount: String,
     },
+    /* 
     // deposit
     Deposit {
         raw_proof: String,
     },
+    */
     // ft_transfer
     FTTransfer {
         receiver_id: String,
@@ -713,12 +715,15 @@ pub async fn execute_command<T: AsRef<str>>(
                     .await?;
                 println!("{:?}", tx_outcome);
             }
+            // This only should be done by a bridge
+            /* 
             WriteCommand::Deposit { raw_proof } => {
                 let tx_outcome = client
                     .near_contract_call("deposit".into(), raw_proof.as_bytes().to_vec())
                     .await?;
                 println!("{:?}", tx_outcome);
             },
+            */
             WriteCommand::FTTransfer {
                 receiver_id,
                 amount,
