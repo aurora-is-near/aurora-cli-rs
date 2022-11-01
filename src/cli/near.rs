@@ -370,10 +370,10 @@ pub async fn execute_command<T: AsRef<str>>(
                 };
             }
             ReadCommand::GetAuroraErc20 { nep_141_account } => {
-                println!("{:?}", client.get_erc20_from_nep141(&nep_141_account).await);
+                println!("{:?}", client.get_erc20_from_nep141(&nep_141_account).await?);
             }
             ReadCommand::GetEngineBridgeProver => {
-                println!("{:?}", client.get_bridge_prover().await);
+                println!("{:?}", client.get_bridge_prover().await?);
             }
             ReadCommand::GetChainId => {
                 let chain_id = {
@@ -396,7 +396,7 @@ pub async fn execute_command<T: AsRef<str>>(
                     let result = client
                         .near_view_call("get_block_hash".into(), vec![])
                         .await?;
-                    U256::from_big_endian(&result.result).low_u64()
+                    result.result
                 };
                 println!("{:?}", block_hash);
             }
