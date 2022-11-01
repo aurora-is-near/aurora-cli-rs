@@ -451,12 +451,12 @@ pub async fn execute_command<T: AsRef<str>>(
                 println!("{:?}", paused_flags);
             }
             ReadCommand::GetAccountsCounter => {
-                let account_counter = {let result = client
+                let accounts_counter = {let result = client
                     .near_view_call("get_accounts_counter".into(), vec![])
                     .await?;
                     U256::from_big_endian(&result.result).low_u64()
-                }
-                println!("{:?}", account_counter);
+                };
+                println!("{:?}", accounts_counter);
             }
             ReadCommand::FtTotalSupply => {
                 let ft_total_supply = {
