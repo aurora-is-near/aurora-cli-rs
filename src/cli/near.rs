@@ -135,8 +135,7 @@ pub enum ReadCommand {
     StorageBalanceOf {
         account_id: String,
     },
-    // ft_metadata
-    FtMetadata,
+    FtMetadata
 }
 
 #[derive(Subcommand)]
@@ -265,6 +264,7 @@ pub enum WriteCommand {
     SetPausedFlags {
         paused_mask: String,
     },
+
 }
 
 pub async fn execute_command<T: AsRef<str>>(
@@ -451,11 +451,12 @@ pub async fn execute_command<T: AsRef<str>>(
                 println!("{:?}", paused_flags);
             }
             ReadCommand::GetAccountsCounter => {
-                let paused_flags = client
+                let account_counter = {let result = client
                     .near_view_call("get_accounts_counter".into(), vec![])
-                    .await?
-                    .result;
-                println!("{:?}", paused_flags);
+                    .await?;
+                    U256::from_big_endian(&result.result).low_u64()
+                }
+                println!("{:?}", account_counter);
             }
             ReadCommand::FtTotalSupply => {
                 let ft_total_supply = {
