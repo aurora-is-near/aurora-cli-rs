@@ -138,6 +138,7 @@ dependencies = [
  "near-primitives",
  "rand 0.7.3",
  "reqwest",
+ "rjson",
  "rlp",
  "serde",
  "serde_json",
@@ -214,6 +215,7 @@ dependencies = [
  "borsh",
  "hex",
  "primitive-types 0.11.1",
+ "serde",
 ]
 
 [[package]]

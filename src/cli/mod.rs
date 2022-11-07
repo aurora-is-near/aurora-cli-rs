@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 pub mod aurora;
 pub mod erc20;
 pub mod near;
+pub mod borsh_io;
 pub mod process_tx_data;
 pub mod solidity;
 
