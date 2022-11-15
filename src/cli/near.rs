@@ -92,7 +92,9 @@ pub enum ReadCommand {
     // get_upgrade_index
     GetUpgradeIndex,
     // get_block_hash
-    GetBlockHash,
+    GetBlockHash {
+        block_number: String,
+    },
     // get_code
     GetCode {
         address_hex: String,
@@ -323,12 +325,15 @@ pub async fn execute_command<T: AsRef<str>>(
                 };
                 println!("{:?}", upgrade_index);
             }
-            ReadCommand::GetBlockHash => {
+            ReadCommand::GetBlockHash {
+                block_number
+            } => {
+                let height_serialized: u128 =  block_number.parse::<u128>().unwrap();
                 let block_hash = {
                     let result = client
-                        .near_view_call("get_block_hash".into(), vec![])
+                        .near_view_call("get_block_hash".into(), height_serialized.to_le_bytes().to_vec())
                         .await?;
-                    result.result
+                    println!("{:?}", result);
                 };
                 println!("{:?}", block_hash);
             }
