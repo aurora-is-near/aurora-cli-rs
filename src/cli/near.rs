@@ -1,18 +1,15 @@
 use std::str::FromStr;
 
 use crate::{
-    cli::borsh_io::{
-        AccountBalance, AccountBalanceSerde,
-        FungibleTokenMetadata, GetStorageAtInput, BeginChainArgs, BeginBlockArgs, WithdrawCallArgs, PauseEthConnectorCallArgs
-    },
     client::AuroraClient,
     config::Config,
     utils,
 };
-use aurora_engine::parameters::DeployErc20TokenArgs;
+use aurora_engine::fungible_token::FungibleTokenMetadata;
+use aurora_engine::parameters::{DeployErc20TokenArgs, GetStorageAtArgs, PauseEthConnectorCallArgs};
 use aurora_engine_types::{
     parameters::{CrossContractCallArgs, PromiseArgs, PromiseCreateArgs},
-    types::{Address, NearGas, RawU256, Wei, Yocto, NEP141Wei},
+    types::{Address, NearGas, Wei, Yocto},
     U256, account_id::AccountId,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -179,17 +176,6 @@ pub enum WriteCommand {
     DeployERC20Token {
         nep141: String,
     },
-    // begin_chain
-    BeginChain {
-        chain_id: String,
-        genesis_alloc: String,
-    },
-    // withdraw
-    Withdraw {
-        recipient_address: String,
-        amount: String,
-    },
-    
     // deposit
     Deposit {
         raw_proof: String,
@@ -376,9 +362,10 @@ pub async fn execute_command<T: AsRef<str>>(
                 key_hex,
             } => {
                 let mut buffer: Vec<u8> = Vec::new();
-                let input = GetStorageAtInput {
+                let key_bytes32: [u8;32] = hex::decode(key_hex).unwrap().try_into().unwrap();
+                let input = GetStorageAtArgs {
                     address: Address::decode(&address_hex).unwrap(),
-                    key: hex::decode(key_hex).unwrap(),
+                    key: key_bytes32,
                 };
                 input.serialize(&mut buffer)?;
                 let storage = {
@@ -527,47 +514,6 @@ pub async fn execute_command<T: AsRef<str>>(
                 input.serialize(&mut buffer)?;
                 let tx_outcome = client
                     .near_contract_call("deploy_erc20_token".into(), buffer)
-                    .await?;
-                println!("{:?}", tx_outcome);
-            }
-            WriteCommand::BeginChain {
-                chain_id,
-                genesis_alloc,
-            } => {
-                let genesis_accts: Vec<AccountBalanceSerde> = serde_json::from_str(&genesis_alloc)?;
-                let mut genesis_accts_borsh: Vec<AccountBalance> = Vec::new();
-                for i in genesis_accts {
-                    let acct = AccountBalance {
-                        address: i.address,
-                        balance: i.balance,
-                    };
-                    genesis_accts_borsh.push(acct);
-                }
-                let mut buffer: Vec<u8> = Vec::new();
-                let chain_id: RawU256 = U256::from(chain_id.parse::<u64>().unwrap()).into();
-                let input = BeginChainArgs {
-                    chain_id,
-                    genesis_alloc: genesis_accts_borsh,
-                };
-                input.serialize(&mut buffer)?;
-                let tx_outcome = client
-                    .near_contract_call("begin_chain".into(), buffer)
-                    .await?;
-                println!("{:?}", tx_outcome);
-            } 
-            WriteCommand::Withdraw {
-                recipient_address,
-                amount,
-            } => {
-                let mut buffer: Vec<u8> = Vec::new();
-                let addr = Address::decode(&recipient_address).unwrap();
-                let input = WithdrawCallArgs {
-                    recipient_address: addr,
-                    amount: NEP141Wei::new(u128::from_str(&amount).unwrap()),
-                };
-                input.serialize(&mut buffer)?;
-                let tx_outcome = client
-                    .near_contract_call("withdraw".into(), buffer)
                     .await?;
                 println!("{:?}", tx_outcome);
             }
