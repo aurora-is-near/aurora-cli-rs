@@ -377,7 +377,7 @@ pub async fn execute_command<T: AsRef<str>>(
                     let result = client
                         .near_view_call("get_storage_at".into(), buffer)
                         .await?;
-                    U256::from_big_endian(&result.result).low_u64()
+                    hex::encode(result.result)
                 };
                 println!("{:?}", storage);
             }
