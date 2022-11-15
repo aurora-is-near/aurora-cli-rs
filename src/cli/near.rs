@@ -117,20 +117,6 @@ pub enum ReadCommand {
     GetPausedFlags,
     // get_accounts_counter
     GetAccountsCounter,
-    // ft_total_supply
-    FtTotalSupply,
-    // ft_total_eth_supply_on_near
-    FtTotalSupplyOnNear,
-    // ft_total_eth_supply_on_aurora
-    FtTotalEthSupplyOnAurora,
-    // ft_balance_of
-    FtBalanceOf {
-        account_id: String,
-    },
-    // ft_balance_of_eth
-    FtBalanceOfEth {
-        account_id: String,
-    },
     // storage_balance_of
     StorageBalanceOf {
         account_id: String,
@@ -185,19 +171,9 @@ pub enum WriteCommand {
     DeployCode {
         code_byte_hex: String,
     },
-    // call
-    Call {
-        call_byte_hex: String,
-    },
     // register_relayer
     RegisterRelayer {
         relayer_eth_address_hex: String,
-    },
-    // ft_on_transfer
-    FTOnTransfer {
-        sender_near_id: String,
-        amount: String,
-        msg: String,
     },
     // deploy_erc20_token
     DeployERC20Token {
@@ -208,46 +184,16 @@ pub enum WriteCommand {
         chain_id: String,
         genesis_alloc: String,
     },
-    // begin_block
-    BeginBlock {
-        /// The current block's hash (for replayer use).
-        hash: String,
-        /// The current block's beneficiary address.
-        coinbase: String,
-        /// The current block's timestamp (in seconds since the Unix epoch).
-        timestamp: String,
-        /// The current block's number (the genesis block is number zero).
-        number: String,
-        /// The current block's difficulty.
-        difficulty: String,
-        /// The current block's gas limit.
-        gaslimit: String,
-    },
     // withdraw
     Withdraw {
         recipient_address: String,
         amount: String,
     },
-    /* 
+    
     // deposit
     Deposit {
         raw_proof: String,
-    },
-    */
-    // ft_transfer
-    FTTransfer {
-        receiver_id: String,
-        amount: String,
-        memo: String,
-    },
-    // ft_transfer_call
-    FTTransferCall {
-        receiver_id: String,
-        amount: String,
-        memo: String,
-        msg: String,
-    },
-    // storage_deposit
+    },    // storage_deposit
     StorageDeposit {
         account_id: String,
         registration_only: Option<bool>,
@@ -458,56 +404,6 @@ pub async fn execute_command<T: AsRef<str>>(
                 };
                 println!("{:?}", accounts_counter);
             }
-            ReadCommand::FtTotalSupply => {
-                let ft_total_supply = {
-                    let result = client
-                        .near_view_call("ft_total_supply".into(), vec![])
-                        .await?;
-                    U256::from_big_endian(&result.result).low_u64()
-                };
-                println!("{:?}", ft_total_supply);
-            }
-            ReadCommand::FtTotalSupplyOnNear => {
-                let ft_total_supply_on_near = {
-                    let result = client
-                        .near_view_call("ft_total_supply_on_near".into(), vec![])
-                        .await?;
-                    U256::from_big_endian(&result.result).low_u64()
-                };
-                println!("{:?}", ft_total_supply_on_near);
-            }
-            ReadCommand::FtTotalEthSupplyOnAurora => {
-                let ft_total_eth_supply_on_aurora = {
-                    let result = client
-                        .near_view_call("ft_total_eth_supply_on_aurora".into(), vec![])
-                        .await?;
-                    U256::from_big_endian(&result.result).low_u64()
-                };
-                println!("{:?}", ft_total_eth_supply_on_aurora);
-            }
-            ReadCommand::FtBalanceOf { account_id } => {
-                let obj = json!({ "account_id": account_id });
-                let ft_balance_of = {
-                    let result = client
-                        .near_view_call("ft_balance_of".into(), obj.to_string().as_bytes().to_vec())
-                        .await?;
-                    U256::from_big_endian(&result.result).low_u64()
-                };
-                println!("{:?}", ft_balance_of);
-            }
-            ReadCommand::FtBalanceOfEth { account_id } => {
-                let obj = json!({ "account_id": account_id });
-                let ft_balance_of_eth = {
-                    let result = client
-                        .near_view_call(
-                            "ft_balance_of_eth".into(),
-                            obj.to_string().as_bytes().to_vec(),
-                        )
-                        .await?;
-                    U256::from_big_endian(&result.result).low_u64()
-                };
-                println!("{:?}", ft_balance_of_eth);
-            }
             ReadCommand::StorageBalanceOf { account_id } => {
                 let obj = json!({ "account_id": account_id });
                 let storage_balance_of = {
@@ -613,31 +509,12 @@ pub async fn execute_command<T: AsRef<str>>(
                     .await?;
                 println!("{:?}", tx_outcome);
             }
-            WriteCommand::Call { call_byte_hex } => {
-                let input = hex::decode(call_byte_hex)?;
-                let tx_outcome = client.near_contract_call("call".into(), input).await?;
-                println!("{:?}", tx_outcome);
-            }
             WriteCommand::RegisterRelayer {
                 relayer_eth_address_hex,
             } => {
                 let relayer = hex::decode(relayer_eth_address_hex)?;
                 let tx_outcome = client
                     .near_contract_call("register_relayer".into(), relayer)
-                    .await?;
-                println!("{:?}", tx_outcome);
-            }
-            WriteCommand::FTOnTransfer {
-                sender_near_id,
-                amount,
-                msg,
-            } => {
-                let obj = json!({ "sender_id": sender_near_id, "amount": amount, "msg": msg });
-                let tx_outcome = client
-                    .near_contract_call(
-                        "ft_on_transfer".into(),
-                        obj.to_string().as_bytes().to_vec(),
-                    )
                     .await?;
                 println!("{:?}", tx_outcome);
             }
@@ -678,28 +555,6 @@ pub async fn execute_command<T: AsRef<str>>(
                     .await?;
                 println!("{:?}", tx_outcome);
             } 
-            WriteCommand::BeginBlock { hash, coinbase, timestamp, number, difficulty, gaslimit } => {
-                let mut buffer: Vec<u8> = Vec::new();
-                let hash: RawU256 = U256::from(hash.parse::<u64>().unwrap()).into();
-                let coinbase = Address::decode(&coinbase).unwrap();
-                let timestamp: RawU256 = U256::from(timestamp.parse::<u64>().unwrap()).into();
-                let number: RawU256 = U256::from(number.parse::<u64>().unwrap()).into();
-                let difficulty: RawU256 = U256::from(difficulty.parse::<u64>().unwrap()).into();
-                let gaslimit: RawU256 = U256::from(gaslimit.parse::<u64>().unwrap()).into();
-                let input = BeginBlockArgs {
-                    hash,
-                    coinbase,
-                    timestamp,
-                    number,
-                    difficulty,
-                    gaslimit,
-                };
-                input.serialize(&mut buffer)?;
-                let tx_outcome = client
-                    .near_contract_call("begin_block".into(), buffer)
-                    .await?;
-                println!("{:?}", tx_outcome);
-            }
             WriteCommand::Withdraw {
                 recipient_address,
                 amount,
@@ -716,38 +571,9 @@ pub async fn execute_command<T: AsRef<str>>(
                     .await?;
                 println!("{:?}", tx_outcome);
             }
-            // This only should be done by a bridge
-            /* 
             WriteCommand::Deposit { raw_proof } => {
                 let tx_outcome = client
                     .near_contract_call("deposit".into(), raw_proof.as_bytes().to_vec())
-                    .await?;
-                println!("{:?}", tx_outcome);
-            },
-            */
-            WriteCommand::FTTransfer {
-                receiver_id,
-                amount,
-                memo,
-            } => {
-                let obj = json!({ "receiver_id": receiver_id, "amount": amount, "memo": memo });
-                let tx_outcome = client
-                    .near_contract_call("ft_transfer".into(), obj.to_string().as_bytes().to_vec())
-                    .await?;
-                println!("{:?}", tx_outcome);
-            }
-            WriteCommand::FTTransferCall {
-                receiver_id,
-                amount,
-                memo,
-                msg,
-            } => {
-                let obj = json!({ "receiver_id": receiver_id, "amount": amount, "memo": memo, "msg": msg });
-                let tx_outcome = client
-                    .near_contract_call(
-                        "ft_transfer_call".into(),
-                        obj.to_string().as_bytes().to_vec(),
-                    )
                     .await?;
                 println!("{:?}", tx_outcome);
             },
