@@ -4,32 +4,33 @@
 </p>
 
 <p align="center">
-<strong>An instant, zero-config Aurora blockspace operator</strong>
+<strong>An instant, zero-config Aurora engine operator</strong>
 </p>
 
 <br/>
 
+## What is Engine?
+
+[Aurora](https://doc.aurora.dev/getting-started/aurora-engine/) is an Ethereum Virtual Machine (EVM) project built on the NEAR Protocol, that provides a solution for developers to deploy their apps on an Ethereum-compatible, high-throughput, scalable and future-safe platform, with low transaction costs for their users. Engine is the Aurora's implementation for it.
+
 ## What is Aurora CLI?
-Aurora CLI is a command line interface to bootstrap Aurora blockspace with rapid speed built with rust.
+Aurora CLI is a command line interface to bootstrap Aurora engine with rapid speed built with rust.
 
 Aurora CLI comes preconfiguration with opinionated, sensible defaults for standard testing environments. If other projects mention testing on Aurora, they are referring to the settings defined in this repo.
 
-**Aurora CLI has the following advantages over a public testnet:**
+**Aurora CLI has the following advantages over api:**
 
-- Easily modifiable world states
-- Quick to reset for rapid iterations
-- Simple simulations of different scenarios
+- :pencil: **Easily modifiable EVM states through terminal**
+- :handshake: **Quick to interact for rapid iterations**
 
 See also prior version [aurora-cli](https://github.com/aurora-is-near/aurora-cli).
 
 ## Prerequisites
-- :crab: Rust (*yes, this is what you only need*)
+- :crab: Rust
 
 ## Quickstart
 
 - 📦 Install `aurora-cli-rs` and start interacting with it: 
     *`cargo install aurora-cli-rs`* 
-- 🔍 Check out what each command is for in the official Aurora [docs]()
-- ✋ Have questions? Ask them at the official Aurora [forum]()
-
-## Walkthrough
+- 🔍 Check out what each command is for in the official Aurora [docs](https://doc.aurora.dev/tools/aurora-cli)
+- ✋ Have questions? Ask them at the official Aurora [forum](https://forum.aurora.dev/)
