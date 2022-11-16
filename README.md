@@ -1,6 +1,6 @@
 <p>&nbsp;</p>
 <p align="center">
-<img src="" width=500>
+<img src="https://raw.githubusercontent.com/hskang9/aurora-cli-rs/main/img/aurora-cli-logo.png" width=500>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@ Aurora CLI comes preconfiguration with opinionated, sensible defaults for standa
 - Quick to reset for rapid iterations
 - Simple simulations of different scenarios
 
-See also prior art [aurora-cli](https://github.com/aurora-is-near/aurora-cli).
+See also prior version [aurora-cli](https://github.com/aurora-is-near/aurora-cli).
 
 ## Prerequisites
 - :crab: Rust (*yes, this is what you only need*)
