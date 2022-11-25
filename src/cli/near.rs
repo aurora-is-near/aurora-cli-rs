@@ -5,16 +5,14 @@ use crate::{
     config::Config,
     utils,
 };
-use aurora_engine::fungible_token::FungibleTokenMetadata;
 use aurora_engine::parameters::{DeployErc20TokenArgs, GetStorageAtArgs, PauseEthConnectorCallArgs};
 use aurora_engine_types::{
     parameters::{CrossContractCallArgs, PromiseArgs, PromiseCreateArgs},
     types::{Address, NearGas, Wei, Yocto},
     U256, account_id::AccountId,
 };
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshSerialize;
 use clap::Subcommand;
-use serde_json::json;
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -114,13 +112,6 @@ pub enum ReadCommand {
     },
     // get_paused_flags
     GetPausedFlags,
-    // get_accounts_counter
-    GetAccountsCounter,
-    // storage_balance_of
-    StorageBalanceOf {
-        account_id: String,
-    },
-    FtMetadata
 }
 
 #[derive(Subcommand)]
@@ -182,18 +173,6 @@ pub enum WriteCommand {
     Deposit {
         raw_proof: String,
     },    // storage_deposit
-    StorageDeposit {
-        account_id: String,
-        registration_only: Option<bool>,
-    },
-    // storage_unregister
-    StorageUnregister {
-        force: Option<bool>,
-    },
-    // storage_withdraw
-    StorageWithdraw {
-        amount: String,
-    },
     // set_paused_flags
     SetPausedFlags {
         paused_mask: String,
@@ -332,10 +311,10 @@ pub async fn execute_command<T: AsRef<str>>(
                 let block_hash = {
                     let result = client
                         .near_view_call("get_block_hash".into(), height_serialized.to_le_bytes().to_vec())
-                        .await?;
-                    println!("{:?}", result);
+                        .await?.result;
+                    result
                 };
-                println!("{:?}", block_hash);
+                println!("{:?}", hex::encode(block_hash));
             }
             ReadCommand::GetCode { address_hex } => {
                 let code = client
@@ -387,41 +366,9 @@ pub async fn execute_command<T: AsRef<str>>(
                     .await?
                     .result;
                 println!("{:?}", paused_flags);
-            }
-            ReadCommand::GetAccountsCounter => {
-                let accounts_counter = {let result = client
-                    .near_view_call("get_accounts_counter".into(), vec![])
-                    .await?;
-                    U256::from_big_endian(&result.result).low_u64()
-                };
-                println!("{:?}", accounts_counter);
-            }
-            ReadCommand::StorageBalanceOf { account_id } => {
-                let obj = json!({ "account_id": account_id });
-                let storage_balance_of = {
-                    let result = client
-                        .near_view_call(
-                            "storage_balance_of".into(),
-                            obj.to_string().as_bytes().to_vec(),
-                        )
-                        .await?;
-                    U256::from_big_endian(&result.result).low_u64()
-                };
-                println!("{:?}", storage_balance_of);
-            }
-            ReadCommand::FtMetadata => {
-                let ft_metadata = {
-                    let result = client.near_view_call("ft_metadata".into(), vec![]).await?;
-                    result.result
-                };
-                let ft_metadata_json: FungibleTokenMetadata =
-                    FungibleTokenMetadata::try_from_slice(&ft_metadata).unwrap();
-                println!("{:?}", ft_metadata_json);
             } 
-            // is_used_proof
         },
         Command::Write { subcommand } => match subcommand {
-            // All "submit" engine method
             WriteCommand::EngineXcc {
                 target_near_account,
                 method_name,
@@ -488,7 +435,6 @@ pub async fn execute_command<T: AsRef<str>>(
             WriteCommand::FactoryUpdate { wasm_bytes_path } => {
                 let args = std::fs::read(wasm_bytes_path).unwrap();
                 let tx_outcome = client
-                    // I cannot find this engine method called as "factory_update"
                     .near_contract_call("factory_update".into(), args)
                     .await
                     .unwrap();
@@ -525,39 +471,6 @@ pub async fn execute_command<T: AsRef<str>>(
             WriteCommand::Deposit { raw_proof } => {
                 let tx_outcome = client
                     .near_contract_call("deposit".into(), raw_proof.as_bytes().to_vec())
-                    .await?;
-                println!("{:?}", tx_outcome);
-            },
-            WriteCommand::StorageDeposit {
-                account_id,
-                registration_only,
-            } => {
-                let obj = json!({ "account_id": account_id, "registration_only": registration_only });
-                let tx_outcome = client
-                    .near_contract_call(
-                        "storage_deposit".into(),
-                        obj.to_string().as_bytes().to_vec(),
-                    )
-                    .await?;
-                println!("{:?}", tx_outcome);
-            },
-            WriteCommand::StorageUnregister { force } => {
-                let obj = json!({ "force": force });
-                let tx_outcome = client
-                    .near_contract_call(
-                        "storage_unregister".into(),
-                        obj.to_string().as_bytes().to_vec(),
-                    )
-                    .await?;
-                println!("{:?}", tx_outcome);
-            },
-            WriteCommand::StorageWithdraw { amount } => {
-                let obj = json!({ "amount": amount });
-                let tx_outcome = client
-                    .near_contract_call(
-                        "storage_withdraw".into(),
-                        obj.to_string().as_bytes().to_vec(),
-                    )
                     .await?;
                 println!("{:?}", tx_outcome);
             },
