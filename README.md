@@ -31,6 +31,6 @@ See also prior version [aurora-cli](https://github.com/aurora-is-near/aurora-cli
 ## Quickstart
 
 - 📦 Install `aurora-cli-rs` and start interacting with it: 
-    *`cargo install aurora-cli-rs`* 
+    *`cargo install --git https://github.com/aurora-is-near/aurora-cli-rs.git`* 
 - 🔍 Check out what each command is for in the official Aurora [docs](https://doc.aurora.dev/tools/aurora-cli)
 - ✋ Have questions? Ask them at the official Aurora [forum](https://forum.aurora.dev/)
