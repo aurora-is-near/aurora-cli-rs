@@ -5,19 +5,19 @@ use near_crypto::InMemorySigner;
 use rlp::RlpStream;
 use std::{io, path::Path};
 
-pub(crate) fn hex_to_arr32(h: &str) -> Result<[u8; 32], hex::FromHexError> {
+pub fn hex_to_arr32(h: &str) -> Result<[u8; 32], hex::FromHexError> {
     let mut output = [0u8; 32];
     hex::decode_to_slice(h, &mut output)?;
     Ok(output)
 }
 
-pub(crate) fn address_from_secret_key(sk: &SecretKey) -> Address {
+pub fn address_from_secret_key(sk: &SecretKey) -> Address {
     let pk = PublicKey::from_secret_key(sk);
     let hash = aurora_engine_sdk::keccak(&pk.serialize()[1..]);
     Address::try_from_slice(&hash[12..]).unwrap()
 }
 
-pub(crate) fn sign_transaction(
+pub fn sign_transaction(
     tx: TransactionLegacy,
     chain_id: u64,
     secret_key: &SecretKey,
@@ -28,7 +28,7 @@ pub(crate) fn sign_transaction(
     let message = Message::parse_slice(message_hash.as_bytes()).unwrap();
 
     let (signature, recovery_id) = libsecp256k1::sign(&message, secret_key);
-    let v: u64 = (recovery_id.serialize() as u64) + 2 * chain_id + 35;
+    let v: u64 = (u64::from(recovery_id.serialize())) + 2 * chain_id + 35;
     let r = U256::from_big_endian(&signature.r.b32());
     let s = U256::from_big_endian(&signature.s.b32());
     LegacyEthSignedTransaction {
@@ -39,7 +39,7 @@ pub(crate) fn sign_transaction(
     }
 }
 
-pub(crate) fn read_key_file<P: AsRef<Path>>(path: P) -> io::Result<InMemorySigner> {
+pub fn read_key_file<P: AsRef<Path>>(path: P) -> io::Result<InMemorySigner> {
     let content = std::fs::read_to_string(path)?;
     let key: KeyFile = serde_json::from_str(&content)?;
     Ok(InMemorySigner {
@@ -50,7 +50,7 @@ pub(crate) fn read_key_file<P: AsRef<Path>>(path: P) -> io::Result<InMemorySigne
 }
 
 /// This is copied from the nearcore repo
-/// https://github.com/near/nearcore/blob/5252ba65ce81e187a3ba76dc3db754a596bc16d1/core/crypto/src/key_file.rs#L12
+/// `https://github.com/near/nearcore/blob/5252ba65ce81e187a3ba76dc3db754a596bc16d1/core/crypto/src/key_file.rs#L12`
 /// for the purpose of having the `private_key` serde alias because that change has not yet
 /// been released (as of v0.14.0). We should delete this and use near's type once the new
 /// version is released.

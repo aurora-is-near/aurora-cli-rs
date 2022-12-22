@@ -1,3 +1,5 @@
+#![deny(clippy::pedantic, clippy::nursery)]
+#![allow(clippy::too_many_lines, clippy::module_name_repetitions)]
 mod cli;
 mod client;
 mod config;
@@ -28,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Network::Testnet => (AURORA_TESTNET_ENDPOINT, NEAR_TESTNET_ENDPOINT),
     };
     let client = AuroraClient::new(
-        format!("{}{}", aurora_endpoint, api_key),
+        format!("{aurora_endpoint}{api_key}"),
         near_endpoint,
         config.engine_account_id.clone(),
         config.near_key_path.clone(),
@@ -36,10 +38,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.command {
         Command::Aurora { subcommand } => {
-            cli::aurora::execute_command(subcommand, &client, &config).await?
+            cli::aurora::execute_command(subcommand, &client, &config).await?;
         }
         Command::Near { subcommand } => {
-            cli::near::execute_command(subcommand, &client, &config).await?
+            cli::near::execute_command(subcommand, &client, &config).await?;
         }
         Command::ProcessTxData {
             action,

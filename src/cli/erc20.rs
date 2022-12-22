@@ -130,7 +130,7 @@ impl Erc20 {
 pub struct ParseError(String);
 
 pub fn wrap_error<E: std::fmt::Debug>(e: E) -> ParseError {
-    ParseError(format!("{:?}", e))
+    ParseError(format!("{e:?}"))
 }
 
 impl std::fmt::Display for ParseError {
@@ -153,7 +153,7 @@ mod tests {
             name: "totalSupply".into(),
             inputs: vec![],
             outputs: vec![ethabi::Param {
-                name: "".into(),
+                name: String::new(),
                 kind: ethabi::ParamType::Uint(256),
                 internal_type: None,
             }],
@@ -184,7 +184,7 @@ mod tests {
                 internal_type: None,
             }],
             outputs: vec![ethabi::Param {
-                name: "".into(),
+                name: String::new(),
                 kind: ethabi::ParamType::Uint(256),
                 internal_type: None,
             }],
@@ -230,7 +230,7 @@ mod tests {
                 },
             ],
             outputs: vec![ethabi::Param {
-                name: "".into(),
+                name: String::new(),
                 kind: ethabi::ParamType::Bool,
                 internal_type: None,
             }],
@@ -277,7 +277,7 @@ mod tests {
                 },
             ],
             outputs: vec![ethabi::Param {
-                name: "".into(),
+                name: String::new(),
                 kind: ethabi::ParamType::Uint(256),
                 internal_type: None,
             }],
@@ -327,7 +327,7 @@ mod tests {
                 },
             ],
             outputs: vec![ethabi::Param {
-                name: "".into(),
+                name: String::new(),
                 kind: ethabi::ParamType::Bool,
                 internal_type: None,
             }],
@@ -381,7 +381,7 @@ mod tests {
                 },
             ],
             outputs: vec![ethabi::Param {
-                name: "".into(),
+                name: String::new(),
                 kind: ethabi::ParamType::Bool,
                 internal_type: None,
             }],

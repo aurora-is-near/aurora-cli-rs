@@ -9,6 +9,8 @@
 
 <br/>
 
+[![CI](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml)
+
 ## What is Engine?
 
 [Aurora](https://doc.aurora.dev/getting-started/aurora-engine/) is an Ethereum Virtual Machine (EVM) project built on the NEAR Protocol, that provides a solution for developers to deploy their apps on an Ethereum-compatible, high-throughput, scalable and future-safe platform, with low transaction costs for their users. Engine is the Aurora's implementation for it.

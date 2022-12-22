@@ -47,11 +47,11 @@ pub enum WriteCommand {
     },
 }
 
-pub async fn execute_command<T: AsRef<str>>(
+pub async fn execute_command(
     command: Command,
-    client: &AuroraClient<T>,
+    client: &AuroraClient,
     config: &Config,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), ClientError> {
     match command {
         // Command::Benchmark
         Command::Read { subcommand } => match subcommand {
@@ -59,7 +59,7 @@ pub async fn execute_command<T: AsRef<str>>(
                 let tx_hash =
                     aurora_engine_types::H256::from_slice(&hex::decode(tx_hash_hex).unwrap());
                 let outcome = client.get_transaction_outcome(tx_hash).await?;
-                println!("{:?}", outcome);
+                println!("{outcome:?}");
             }
         },
         Command::Write { subcommand } => match subcommand {
@@ -92,8 +92,7 @@ pub async fn execute_command<T: AsRef<str>>(
                 let target = Address::decode(&target_addr_hex).unwrap();
                 let amount = amount
                     .as_ref()
-                    .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
-                    .unwrap_or_else(Wei::zero);
+                    .map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
                 let input = hex::decode(input_data_hex)?;
                 send_transaction(client, &sk, Some(target), amount, input).await?;
             }
@@ -102,15 +101,15 @@ pub async fn execute_command<T: AsRef<str>>(
     Ok(())
 }
 
-async fn send_transaction<T: AsRef<str>>(
-    client: &AuroraClient<T>,
+async fn send_transaction(
+    client: &AuroraClient,
     sk: &libsecp256k1::SecretKey,
     to: Option<Address>,
     amount: Wei,
     input: Vec<u8>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), ClientError> {
     let source = utils::address_from_secret_key(sk);
-    println!("FROM {:?}", source);
+    println!("FROM {source:?}");
 
     let nonce = client.get_nonce(source).await?;
     let chain_id = client.get_chain_id().await?;
@@ -123,13 +122,13 @@ async fn send_transaction<T: AsRef<str>>(
     loop {
         match client.get_transaction_outcome(tx_hash).await {
             Ok(result) => {
-                println!("{:?}", result);
+                println!("{result:?}");
                 break;
             }
             Err(ClientError::AuroraTransactionNotFound(_)) => {
                 continue;
             }
-            Err(other) => return Err(Box::new(other) as Box<dyn std::error::Error>),
+            Err(other) => return Err(other),
         }
     }
 

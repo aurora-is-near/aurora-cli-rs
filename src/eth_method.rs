@@ -9,7 +9,7 @@ pub enum EthMethod {
 }
 
 impl EthMethod {
-    pub fn name(&self) -> &'static str {
+    pub const fn name(&self) -> &'static str {
         match &self {
             Self::GetChainId => "net_version",
             Self::GetTransactionCount(_) => "eth_getTransactionCount",

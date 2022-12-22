@@ -1,7 +1,5 @@
-use std::str::FromStr;
-
 use crate::{
-    client::AuroraClient,
+    client::{AuroraClient, ClientError},
     config::Config,
     utils,
 };
@@ -13,6 +11,8 @@ use aurora_engine_types::{
 };
 use borsh::BorshSerialize;
 use clap::Subcommand;
+use near_primitives::views::FinalExecutionOutcomeView;
+use std::str::FromStr;
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -180,9 +180,9 @@ pub enum WriteCommand {
 
 }
 
-pub async fn execute_command<T: AsRef<str>>(
+pub async fn execute_command(
     command: Command,
-    client: &AuroraClient<T>,
+    client: &AuroraClient,
     config: &Config,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match command {
@@ -192,7 +192,7 @@ pub async fn execute_command<T: AsRef<str>>(
                 let outcome = client
                     .get_near_receipt_outcome(tx_hash.as_slice().try_into().unwrap())
                     .await?;
-                println!("{:?}", outcome);
+                println!("{outcome:?}");
             }
             ReadCommand::EngineCall {
                 sender_addr_hex,
@@ -201,13 +201,13 @@ pub async fn execute_command<T: AsRef<str>>(
                 input_data_hex,
             } => {
                 let (sender, target, amount) =
-                    parse_read_call_args(sender_addr_hex, target_addr_hex, amount);
+                    parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref());
                 let input = hex::decode(input_data_hex)?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
                     .await
                     .unwrap();
-                println!("{:?}", result);
+                println!("{result:?}");
             }
             ReadCommand::EngineErc20 {
                 erc20,
@@ -216,13 +216,13 @@ pub async fn execute_command<T: AsRef<str>>(
                 sender_addr_hex,
             } => {
                 let (sender, target, amount) =
-                    parse_read_call_args(sender_addr_hex, target_addr_hex, amount);
+                    parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref());
                 let input = erc20.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
                     .await
                     .unwrap();
-                println!("{:?}", result);
+                println!("{result:?}");
             }
             ReadCommand::Solidity {
                 contract_call,
@@ -231,13 +231,13 @@ pub async fn execute_command<T: AsRef<str>>(
                 sender_addr_hex,
             } => {
                 let (sender, target, amount) =
-                    parse_read_call_args(sender_addr_hex, target_addr_hex, amount);
+                    parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref());
                 let input = contract_call.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
                     .await
                     .unwrap();
-                println!("{:?}", result);
+                println!("{result:?}");
             }
             ReadCommand::EngineXccDryRun {
                 target_near_account,
@@ -249,7 +249,7 @@ pub async fn execute_command<T: AsRef<str>>(
                 attached_gas,
             } => {
                 let promise = PromiseArgs::Create(parse_xcc_args(
-                    target_near_account,
+                    &target_near_account,
                     method_name,
                     json_args,
                     json_args_stdin,
@@ -266,18 +266,18 @@ pub async fn execute_command<T: AsRef<str>>(
                         precompile_args.try_to_vec().unwrap(),
                     )
                     .await?;
-                println!("{:?}", result);
+                println!("{result:?}");
             }
             ReadCommand::GetBridgedNep141 { erc_20_address_hex } => {
                 let erc20 = Address::decode(&erc_20_address_hex).unwrap();
                 match client.get_nep141_from_erc20(erc20).await {
-                    Ok(nep_141_account) => println!("{}", nep_141_account),
+                    Ok(nep_141_account) => println!("{nep_141_account}"),
                     Err(e) => {
-                        let error_msg = format!("{:?}", e);
+                        let error_msg = format!("{e:?}");
                         if error_msg.contains("ERC20_NOT_FOUND") {
-                            println!("No NEP-141 account associated with {}", erc_20_address_hex);
+                            println!("No NEP-141 account associated with {erc_20_address_hex}");
                         } else {
-                            panic!("{}", error_msg);
+                            panic!("{error_msg}");
                         }
                     }
                 };
@@ -366,7 +366,7 @@ pub async fn execute_command<T: AsRef<str>>(
                     .await?
                     .result;
                 println!("{:?}", paused_flags);
-            } 
+            }
         },
         Command::Write { subcommand } => match subcommand {
             WriteCommand::EngineXcc {
@@ -381,7 +381,7 @@ pub async fn execute_command<T: AsRef<str>>(
                 let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
                 let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
                 let promise = PromiseArgs::Create(parse_xcc_args(
-                    target_near_account,
+                    &target_near_account,
                     method_name,
                     json_args,
                     json_args_stdin,
@@ -397,40 +397,43 @@ pub async fn execute_command<T: AsRef<str>>(
                     precompile_args.try_to_vec().unwrap(),
                 )
                 .await?;
-                println!("{:?}", result);
+                println!("{result:?}");
             }
             WriteCommand::EngineCall {
                 target_addr_hex,
                 amount,
                 input_data_hex,
             } => {
-                let (sk, target, amount) = parse_write_call_args(config, target_addr_hex, amount);
+                let (sk, target, amount) =
+                    parse_write_call_args(config, &target_addr_hex, amount.as_deref());
                 let input = hex::decode(input_data_hex)?;
                 let result =
                     send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
-                println!("{:?}", result);
+                println!("{result:?}");
             }
             WriteCommand::EngineErc20 {
                 erc20,
                 target_addr_hex,
                 amount,
             } => {
-                let (sk, target, amount) = parse_write_call_args(config, target_addr_hex, amount);
+                let (sk, target, amount) =
+                    parse_write_call_args(config, &target_addr_hex, amount.as_deref());
                 let input = erc20.abi_encode()?;
                 let result =
                     send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
-                println!("{:?}", result);
+                println!("{result:?}");
             }
             WriteCommand::Solidity {
                 contract_call,
                 target_addr_hex,
                 amount,
             } => {
-                let (sk, target, amount) = parse_write_call_args(config, target_addr_hex, amount);
+                let (sk, target, amount) =
+                    parse_write_call_args(config, &target_addr_hex, amount.as_deref());
                 let input = contract_call.abi_encode()?;
                 let result =
                     send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
-                println!("{:?}", result);
+                println!("{result:?}");
             }
             WriteCommand::FactoryUpdate { wasm_bytes_path } => {
                 let args = std::fs::read(wasm_bytes_path).unwrap();
@@ -438,7 +441,7 @@ pub async fn execute_command<T: AsRef<str>>(
                     .near_contract_call("factory_update".into(), args)
                     .await
                     .unwrap();
-                println!("{:?}", tx_outcome);
+                println!("{tx_outcome:?}");
             }
             WriteCommand::DeployCode { code_byte_hex } => {
                 let input = hex::decode(code_byte_hex)?;
@@ -492,48 +495,41 @@ pub async fn execute_command<T: AsRef<str>>(
 
 fn parse_read_call_args(
     sender_addr_hex: Option<String>,
-    target_addr_hex: String,
-    amount: Option<String>,
+    target_addr_hex: &str,
+    amount: Option<&str>,
 ) -> (Address, Address, Wei) {
-    let target = Address::decode(&target_addr_hex).unwrap();
+    let target = Address::decode(target_addr_hex).unwrap();
     let sender = sender_addr_hex
         .map(|x| Address::decode(&x).unwrap())
         .unwrap_or_default();
-    let amount = amount
-        .as_ref()
-        .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
-        .unwrap_or_else(Wei::zero);
+    let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
 
     (sender, target, amount)
 }
 
 fn parse_write_call_args(
     config: &Config,
-    target_addr_hex: String,
-    amount: Option<String>,
+    target_addr_hex: &str,
+    amount: Option<&str>,
 ) -> (libsecp256k1::SecretKey, Address, Wei) {
     let source_private_key_hex = config.get_evm_secret_key();
     let sk_bytes = utils::hex_to_arr32(source_private_key_hex).unwrap();
     let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
-    let target = Address::decode(&target_addr_hex).unwrap();
-    let amount = amount
-        .as_ref()
-        .map(|a| Wei::new(U256::from_dec_str(a).unwrap()))
-        .unwrap_or_else(Wei::zero);
+    let target = Address::decode(target_addr_hex).unwrap();
+    let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
     (sk, target, amount)
 }
 
 fn parse_xcc_args(
-    target_near_account: String,
+    target_near_account: &str,
     method_name: String,
     json_args: Option<String>,
     json_args_stdin: Option<bool>,
     deposit_yocto: Option<String>,
     attached_gas: Option<String>,
 ) -> PromiseCreateArgs {
-    let near_args = match json_args {
-        Some(args) => args.into_bytes(),
-        None => match json_args_stdin {
+    let near_args = json_args.map_or_else(
+        || match json_args_stdin {
             Some(true) => {
                 let mut buf = String::new();
                 std::io::Read::read_to_string(&mut std::io::stdin(), &mut buf).unwrap();
@@ -541,15 +537,15 @@ fn parse_xcc_args(
             }
             None | Some(false) => Vec::new(),
         },
-    };
-    let attached_balance = match deposit_yocto {
-        Some(x) => Yocto::new(x.parse().unwrap()),
-        None => Yocto::new(0),
-    };
-    let attached_gas = match attached_gas {
-        Some(gas) => NearGas::new(gas.parse().unwrap()),
-        None => NearGas::new(30_000_000_000_000),
-    };
+        String::into_bytes,
+    );
+    let attached_balance =
+        deposit_yocto.map_or_else(|| Yocto::new(0), |x| Yocto::new(x.parse().unwrap()));
+    let attached_gas = attached_gas.map_or_else(
+        || NearGas::new(30_000_000_000_000),
+        |gas| NearGas::new(gas.parse().unwrap()),
+    );
+
     PromiseCreateArgs {
         target_account_id: target_near_account.parse().unwrap(),
         method: method_name,
@@ -559,13 +555,13 @@ fn parse_xcc_args(
     }
 }
 
-async fn send_as_near_transaction<T: AsRef<str>>(
-    client: &AuroraClient<T>,
+async fn send_as_near_transaction(
+    client: &AuroraClient,
     sk: &libsecp256k1::SecretKey,
     to: Option<Address>,
     amount: Wei,
     input: Vec<u8>,
-) -> Result<near_primitives::views::FinalExecutionOutcomeView, Box<dyn std::error::Error>> {
+) -> Result<FinalExecutionOutcomeView, ClientError> {
     let sender_address = utils::address_from_secret_key(sk);
     let nonce = {
         let result = client
