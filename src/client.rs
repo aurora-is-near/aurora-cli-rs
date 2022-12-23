@@ -183,12 +183,11 @@ impl AuroraClient {
             let response = self.near_client.call(request).await.unwrap();
             match response.outcome_proof.outcome.status {
                 views::ExecutionStatusView::SuccessValue(result) => {
-                    let result_bytes = base64::decode(result).unwrap();
-                    let result = SubmitResult::try_from_slice(&result_bytes).unwrap();
-                    return Ok(TransactionOutcome::Result(result));
+                    let result = SubmitResult::try_from_slice(&result).unwrap();
+                    break Ok(TransactionOutcome::Result(result));
                 }
                 views::ExecutionStatusView::Failure(e) => {
-                    return Ok(TransactionOutcome::Failure(e))
+                    break Ok(TransactionOutcome::Failure(e));
                 }
                 views::ExecutionStatusView::SuccessReceiptId(id) => {
                     println!("Intermediate receipt_id: {id:?}");
