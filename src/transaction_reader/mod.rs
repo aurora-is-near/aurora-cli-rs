@@ -41,7 +41,7 @@ impl TxData {
 
 pub async fn process_data<A, F>(paths: Vec<String>, filter: &Arc<F>)
 where
-    A: Aggregator,
+    A: Aggregator + Send,
     A::Input: std::fmt::Debug + Send + 'static,
     F: Filter + Send + Sync + 'static,
 {
@@ -71,7 +71,7 @@ where
     let agg_task = aggregator.start();
 
     for t in read_tasks {
-        t.await.unwrap_or_else(|e| println!("ERROR {:?}", e));
+        t.await.unwrap_or_else(|e| println!("ERROR {e:?}"));
     }
 
     let aggregator = agg_task.await.unwrap();
@@ -81,11 +81,11 @@ where
 async fn read_file(path: &str) -> serde_json::Value {
     let bytes = match fs::read(path).await {
         Ok(b) => b,
-        Err(e) => panic!("ERROR on file {}: {:?}", path, e),
+        Err(e) => panic!("ERROR on file {path}: {e:?}"),
     };
     match serde_json::from_slice(&bytes) {
         Ok(x) => x,
-        Err(e) => panic!("ERROR on file {}: {:?}", path, e),
+        Err(e) => panic!("ERROR on file {path}: {e:?}"),
     }
 }
 
@@ -94,18 +94,15 @@ fn get_gas_profile(value: &serde_json::Value) -> Option<HashMap<String, u128>> {
     let total = get_gas_burnt(value)?;
     let result = value.as_object()?.get("result")?;
     let outcomes = result.as_object()?.get("receipts_outcome")?.as_array()?;
-    let outcome = outcomes
-        .iter()
-        .filter_map(|v| {
-            let outcome = v.as_object()?.get("outcome")?.as_object()?;
-            let g = outcome.get("gas_burnt")?.as_u64()?;
-            if (g as u128) == total {
-                Some(outcome)
-            } else {
-                None
-            }
-        })
-        .next()?;
+    let outcome = outcomes.iter().find_map(|v| {
+        let outcome = v.as_object()?.get("outcome")?.as_object()?;
+        let g = outcome.get("gas_burnt")?.as_u64()?;
+        if u128::from(g) == total {
+            Some(outcome)
+        } else {
+            None
+        }
+    })?;
     let profile = get_recursive(outcome.get("metadata")?, &["gas_profile"])?.as_array()?;
     for entry in profile.iter() {
         let entry = entry.as_object()?;
@@ -136,27 +133,25 @@ fn get_eth_tx(value: &serde_json::Value) -> Option<EthTransactionKind> {
 fn get_tx_status(value: &serde_json::Value) -> Option<TxStatus> {
     let result = value.as_object()?.get("result")?;
     let status = result.as_object()?.get("status")?.as_object()?;
-    match status.get("Failure") {
-        Some(failed_status) => {
-            let message = get_recursive(
-                failed_status,
-                &["ActionError", "kind", "FunctionCallError", "ExecutionError"],
-            )?
-            .as_str()?;
-            if message.contains("ERR_INCORRECT_NONCE") {
-                Some(TxStatus::IncorrectNonce)
-            } else if message.contains("Exceeded the maximum amount of gas") {
-                Some(TxStatus::GasLimit)
-            } else {
-                Some(TxStatus::Other(message.to_owned()))
-            }
+
+    if let Some(failed_status) = status.get("Failure") {
+        let message = get_recursive(
+            failed_status,
+            &["ActionError", "kind", "FunctionCallError", "ExecutionError"],
+        )?
+        .as_str()?;
+        if message.contains("ERR_INCORRECT_NONCE") {
+            Some(TxStatus::IncorrectNonce)
+        } else if message.contains("Exceeded the maximum amount of gas") {
+            Some(TxStatus::GasLimit)
+        } else {
+            Some(TxStatus::Other(message.to_owned()))
         }
-        None => {
-            let success_b64 = status.get("SuccessValue")?.as_str()?;
-            let success_bytes = base64::decode(success_b64).ok()?;
-            let result = SubmitResult::try_from_slice(success_bytes.as_slice()).ok()?;
-            Some(TxStatus::Executed(result))
-        }
+    } else {
+        let success_b64 = status.get("SuccessValue")?.as_str()?;
+        let success_bytes = base64::decode(success_b64).ok()?;
+        let result = SubmitResult::try_from_slice(success_bytes.as_slice()).ok()?;
+        Some(TxStatus::Executed(result))
     }
 }
 
@@ -170,7 +165,7 @@ fn get_gas_burnt(value: &serde_json::Value) -> Option<u128> {
             g.as_u64()
         })
         .max()?;
-    Some(max_burnt as u128)
+    Some(u128::from(max_burnt))
 }
 
 fn get_recursive<'a, 'b>(
@@ -178,11 +173,11 @@ fn get_recursive<'a, 'b>(
     path: &'b [&str],
 ) -> Option<&'a serde_json::Value> {
     if path.is_empty() {
-        return Some(v);
+        Some(v)
+    } else {
+        let field = v.as_object()?.get(path[0])?;
+        get_recursive(field, &path[1..])
     }
-
-    let field = v.as_object()?.get(path[0])?;
-    get_recursive(field, &path[1..])
 }
 
 #[derive(Debug)]
@@ -203,7 +198,7 @@ pub enum FlatTxStatus {
 }
 
 impl TxStatus {
-    fn flatten(&self) -> FlatTxStatus {
+    const fn flatten(&self) -> FlatTxStatus {
         match self {
             Self::Executed(result) => match result.status {
                 aurora_engine::parameters::TransactionStatus::Succeed(_) => FlatTxStatus::Succeeded,

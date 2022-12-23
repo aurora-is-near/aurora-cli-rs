@@ -30,20 +30,18 @@ impl Filter for MatchFlatStatus {
 pub struct MinNearGasUsed(pub u128);
 impl Filter for MinNearGasUsed {
     fn pass(&self, data: &TxData) -> bool {
-        match data.gas_profile.get("TOTAL") {
-            None => false,
-            Some(total) => total >= &self.0,
-        }
+        data.gas_profile
+            .get("TOTAL")
+            .map_or(false, |total| total >= &self.0)
     }
 }
 
 pub struct MaxNearGasUsed(pub u128);
 impl Filter for MaxNearGasUsed {
     fn pass(&self, data: &TxData) -> bool {
-        match data.gas_profile.get("TOTAL") {
-            None => false,
-            Some(total) => total <= &self.0,
-        }
+        data.gas_profile
+            .get("TOTAL")
+            .map_or(false, |total| total <= &self.0)
     }
 }
 
@@ -85,25 +83,10 @@ impl Filter for GeneralGasFilter {
             _ => return false,
         };
 
-        self.min_near
-            .as_ref()
-            .map(|g| near_gas_used >= g)
-            .unwrap_or(true)
-            && self
-                .min_evm
-                .as_ref()
-                .map(|g| evm_gas_used >= g)
-                .unwrap_or(true)
-            && self
-                .max_near
-                .as_ref()
-                .map(|g| near_gas_used <= g)
-                .unwrap_or(true)
-            && self
-                .max_evm
-                .as_ref()
-                .map(|g| evm_gas_used <= g)
-                .unwrap_or(true)
+        self.min_near.as_ref().map_or(true, |g| near_gas_used >= g)
+            && self.min_evm.as_ref().map_or(true, |g| evm_gas_used >= g)
+            && self.max_near.as_ref().map_or(true, |g| near_gas_used <= g)
+            && self.max_evm.as_ref().map_or(true, |g| evm_gas_used <= g)
     }
 }
 
@@ -117,8 +100,7 @@ impl Filter for EthTxTo {
                 EthTransactionKind::Eip2930(t) => t.transaction.to.as_ref(),
                 EthTransactionKind::Eip1559(t) => t.transaction.to.as_ref(),
             })
-            .map(|a| a == &self.0)
-            .unwrap_or(false)
+            .map_or(false, |a| a == &self.0)
     }
 }
 
@@ -127,7 +109,7 @@ pub struct And<F1, F2> {
     f2: F2,
 }
 impl<F1, F2> And<F1, F2> {
-    pub fn new(f1: F1, f2: F2) -> Self {
+    pub const fn new(f1: F1, f2: F2) -> Self {
         Self { f1, f2 }
     }
 }
@@ -142,7 +124,7 @@ pub struct Or<F1, F2> {
     f2: F2,
 }
 impl<F1, F2> Or<F1, F2> {
-    pub fn new(f1: F1, f2: F2) -> Self {
+    pub const fn new(f1: F1, f2: F2) -> Self {
         Self { f1, f2 }
     }
 }

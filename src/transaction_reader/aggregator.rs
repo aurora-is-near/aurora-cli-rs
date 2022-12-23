@@ -94,8 +94,8 @@ impl Aggregator for GroupByFlatStatus {
         (
             send_channel,
             Self {
-                receive_channel,
                 counts,
+                receive_channel,
             },
         )
     }
@@ -118,7 +118,7 @@ impl Aggregator for GroupByFlatStatus {
         let mut counts: Vec<(FlatTxStatus, usize)> = self.counts.into_iter().collect();
         counts.sort_unstable_by(|(_, v1), (_, v2)| v2.cmp(v1));
         for (status, count) in counts {
-            println!("{:?} {}", status, count);
+            println!("{status:?} {count}");
         }
     }
 }
@@ -144,8 +144,8 @@ impl Aggregator for GroupByGas {
         (
             send_channel,
             Self {
-                receive_channel,
                 counts,
+                receive_channel,
             },
         )
     }
@@ -173,7 +173,7 @@ impl Aggregator for GroupByGas {
         for i in 0..31 {
             let bucket = i * Self::BUCKET_SIZE;
             let count = self.counts.get(&bucket).unwrap();
-            println!("{} {}", bucket / 1_000_000_000_000, count);
+            println!("{} {count}", bucket / 1_000_000_000_000);
         }
     }
 }
@@ -193,7 +193,7 @@ impl Aggregator for Echo {
     fn start(mut self) -> tokio::task::JoinHandle<Self> {
         tokio::task::spawn(async move {
             while let Some(s) = self.receive_channel.recv().await {
-                println!("{}", s);
+                println!("{s}");
             }
 
             self
@@ -220,9 +220,9 @@ impl Aggregator for AverageGasProfile {
         let total_profile: HashMap<String, u128> = HashMap::new();
         let count: u128 = 0;
         let me = Self {
-            receive_channel,
             total_profile,
             count,
+            receive_channel,
         };
         (send_channel, me)
     }
@@ -253,7 +253,7 @@ impl Aggregator for AverageGasProfile {
         average_profile.sort_unstable_by(|(_, v1), (_, v2)| v2.cmp(v1));
 
         for (k, v) in average_profile {
-            println!("{} {}", k, v);
+            println!("{k} {v}");
         }
     }
 }
@@ -301,7 +301,7 @@ impl Aggregator for GasComparison {
 
     fn finish(self) {
         for (x, y) in self.data_points {
-            println!("{} {}", x, y);
+            println!("{x} {y}");
         }
     }
 }
@@ -360,11 +360,13 @@ where
     }
 
     fn finish(self) {
-        self.a1
-            .map(|a1| a1.finish())
-            .unwrap_or_else(|| println!("WARN Pair finished with no A1 instance"));
-        self.a2
-            .map(|a2| a2.finish())
-            .unwrap_or_else(|| println!("WARN Pair finished with no A2 instance"));
+        self.a1.map_or_else(
+            || println!("WARN Pair finished with no A1 instance"),
+            Aggregator::finish,
+        );
+        self.a2.map_or_else(
+            || println!("WARN Pair finished with no A2 instance"),
+            Aggregator::finish,
+        );
     }
 }

@@ -10,6 +10,7 @@ use libsecp256k1::SecretKey;
 use near_jsonrpc_client::AsUrl;
 use near_primitives::views;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 const NEAR_TRANSACTION_KEY: &str = "nearTransactionHash";
 
@@ -19,17 +20,17 @@ type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
     near_jsonrpc_client::methods::broadcast_tx_commit::RpcTransactionError,
 >;
 
-pub struct AuroraClient<T> {
+pub struct AuroraClient {
     inner: reqwest::Client,
-    aurora_rpc: T,
+    aurora_rpc: String,
     near_client: near_jsonrpc_client::JsonRpcClient,
     engine_account_id: String,
     signer_key_path: Option<String>,
 }
 
-impl<T: AsRef<str>> AuroraClient<T> {
+impl AuroraClient {
     pub fn new<U: AsUrl>(
-        aurora_rpc: T,
+        aurora_rpc: String,
         near_rpc: U,
         engine_account_id: String,
         signer_key_path: Option<String>,
@@ -45,13 +46,13 @@ impl<T: AsRef<str>> AuroraClient<T> {
         }
     }
 
-    pub async fn request<'a, 'b, U: Serialize>(
+    pub async fn request<'a, U: Serialize + Send + Sync>(
         &self,
-        request: &Web3JsonRequest<'a, 'b, U>,
-    ) -> Result<Web3JsonResponse<serde_json::Value>, ClientError> {
+        request: &Web3JsonRequest<'a, U>,
+    ) -> Result<Web3JsonResponse<Value>, ClientError> {
         let resp = self
             .inner
-            .post(self.aurora_rpc.as_ref())
+            .post(&self.aurora_rpc)
             .json(request)
             .send()
             .await?;
@@ -76,7 +77,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
             return Err(e.into());
         }
 
-        let value = response.result.as_ref().and_then(|v| v.as_str()).unwrap();
+        let value = response.result.as_ref().and_then(Value::as_str).unwrap();
         Ok(U256::from_str_radix(value, 16).unwrap())
     }
 
@@ -89,7 +90,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
             return Err(e.into());
         }
 
-        let value = response.result.as_ref().and_then(|v| v.as_str()).unwrap();
+        let value = response.result.as_ref().and_then(Value::as_str).unwrap();
         Ok(value.parse().unwrap())
     }
 
@@ -120,7 +121,7 @@ impl<T: AsRef<str>> AuroraClient<T> {
             return Err(e.into());
         }
 
-        let tx_hash = response.result.as_ref().and_then(|v| v.as_str()).unwrap();
+        let tx_hash = response.result.as_ref().and_then(Value::as_str).unwrap();
         let tx_hash_bytes = tx_hash
             .strip_prefix("0x")
             .and_then(|x| hex::decode(x).ok())
@@ -181,20 +182,19 @@ impl<T: AsRef<str>> AuroraClient<T> {
             };
             let response = self.near_client.call(request).await.unwrap();
             match response.outcome_proof.outcome.status {
-                near_primitives::views::ExecutionStatusView::SuccessValue(result) => {
-                    let result_bytes = base64::decode(result).unwrap();
-                    let result = SubmitResult::try_from_slice(&result_bytes).unwrap();
-                    return Ok(TransactionOutcome::Result(result));
+                views::ExecutionStatusView::SuccessValue(result) => {
+                    let result = SubmitResult::try_from_slice(&result).unwrap();
+                    break Ok(TransactionOutcome::Result(result));
                 }
-                near_primitives::views::ExecutionStatusView::Failure(e) => {
-                    return Ok(TransactionOutcome::Failure(e))
+                views::ExecutionStatusView::Failure(e) => {
+                    break Ok(TransactionOutcome::Failure(e));
                 }
-                near_primitives::views::ExecutionStatusView::SuccessReceiptId(id) => {
-                    println!("Intermediate receipt_id: {:?}", id);
+                views::ExecutionStatusView::SuccessReceiptId(id) => {
+                    println!("Intermediate receipt_id: {id:?}");
                     receipt_id = id;
                 }
-                near_primitives::views::ExecutionStatusView::Unknown => {
-                    panic!("Unknown receipt_id: {:?}", near_receipt_id)
+                views::ExecutionStatusView::Unknown => {
+                    panic!("Unknown receipt_id: {near_receipt_id:?}")
                 }
             }
         }
@@ -318,14 +318,14 @@ pub enum TransactionOutcome {
 }
 
 #[derive(Debug, Serialize)]
-pub struct Web3JsonRequest<'method, 'version, T> {
-    jsonrpc: &'version str,
-    method: &'method str,
+pub struct Web3JsonRequest<'a, T> {
+    jsonrpc: &'a str,
+    method: &'a str,
     id: u32,
     params: T,
 }
 
-impl<'a> Web3JsonRequest<'a, 'static, Vec<String>> {
+impl<'a> Web3JsonRequest<'a, Vec<String>> {
     pub fn from_method(id: u32, method: &'a EthMethod) -> Self {
         Self {
             jsonrpc: "2.0",
@@ -349,7 +349,7 @@ pub struct Web3JsonResponse<T> {
 #[allow(dead_code)]
 pub struct Web3JsonResponseError {
     code: i64,
-    data: serde_json::Value,
+    data: Value,
     message: String,
 }
 
@@ -359,8 +359,8 @@ pub enum ClientError {
     InvalidHex(hex::FromHexError),
     InvalidJson(String),
     ResponseKeyNotFound(String),
-    NotJsonObject(serde_json::Value),
-    NotJsonString(serde_json::Value),
+    NotJsonObject(Value),
+    NotJsonString(Value),
     Rpc(Web3JsonResponseError),
     NearRpc(NearQueryError),
     NearContractCall(NearCallError),
@@ -399,7 +399,7 @@ impl From<NearCallError> for ClientError {
 
 impl std::fmt::Display for ClientError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("ClientError({})", self))
+        f.write_fmt(format_args!("ClientError({self})"))
     }
 }
 

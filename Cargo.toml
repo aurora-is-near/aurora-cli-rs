@@ -1,27 +1,31 @@
 [package]
 name = "aurora-cli-rs"
 version = "0.1.0"
+authors = ["Aurora Labs <hello@aurora.dev>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+homepage = "https://github.com/aurora-is-near/aurora-cli-rs"
+repository = "https://github.com/aurora-is-near/aurora-cli-rs"
+description = "Aurora CLI is a command line interface to bootstrap Aurora engine"
+readme = "README.md"
 
 [dependencies]
-aurora-engine = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std"] }
-aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std"] }
-aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std"] }
-aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std"] }
-aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std", "serde"] }
-base64 = "0.13.0"
+aurora-engine = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.8.1", features = ["std"] }
+aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.8.1", features = ["std"] }
+aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.8.1", features = ["std"] }
+aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.8.1", features = ["std"] }
+aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.8.1", features = ["std", "serde"] }
+
+base64 = "0.20"
 borsh = "0.9.3"
 bs58 = "0.4.0"
-clap = { version = "3.1.6", features = ["derive"] }
-ethabi = "17.1"
+clap = { version = "4", features = ["derive"] }
+ethabi = "18"
 hex = "0.4.3"
 libsecp256k1 = "0.7.0"
-near-crypto = "0.12.0"
-near-jsonrpc-client = "0.3.0"
-near-jsonrpc-primitives = "0.12.0"
-near-primitives = "0.12.0"
+near-crypto = "0.15"
+near-jsonrpc-client = "0.4"
+near-jsonrpc-primitives = "0.15"
+near-primitives = "0.15"
 reqwest = { version = "0.11", features = ["json"] }
 rlp = "0.5.0"
 serde = { version = "1", features = ["derive"] }
@@ -29,4 +33,4 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
-rand = "0.7"
+rand = "0.8"

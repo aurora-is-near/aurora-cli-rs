@@ -1,6 +1,7 @@
 use crate::cli::erc20::{wrap_error, ParseError};
 use aurora_engine_types::{types::Address, U256};
 use clap::Subcommand;
+use serde_json::Value;
 
 #[derive(Subcommand)]
 pub enum Solidity {
@@ -45,10 +46,10 @@ impl Solidity {
                 }
                 let arg_type = &function.inputs.first().unwrap().kind;
                 let arg = read_arg(arg, stdin_arg);
-                let bytes = function
+
+                function
                     .encode_input(&[parse_arg(arg.trim(), arg_type)?])
-                    .map_err(wrap_error)?;
-                Ok(bytes.to_vec())
+                    .map_err(wrap_error)
             }
             Self::CallArgsByName {
                 abi_path,
@@ -64,16 +65,16 @@ impl Solidity {
                     .as_object()
                     .ok_or_else(|| wrap_error("Expected JSON object"))?;
                 let mut tokens = Vec::with_capacity(function.inputs.len());
-                for input in function.inputs.iter() {
+                for input in &function.inputs {
                     let arg = vars_map
                         .get(&input.name)
-                        .and_then(|v| v.as_str())
+                        .and_then(Value::as_str)
                         .ok_or_else(|| wrap_error("Missing variable"))?;
                     let token = parse_arg(arg, &input.kind)?;
                     tokens.push(token);
                 }
-                let bytes = function.encode_input(&tokens).map_err(wrap_error)?;
-                Ok(bytes.to_vec())
+
+                function.encode_input(&tokens).map_err(wrap_error)
             }
         }
     }
@@ -85,9 +86,8 @@ fn read_abi(abi_path: String) -> Result<ethabi::Contract, ParseError> {
 }
 
 fn read_arg(arg: Option<String>, stdin_arg: Option<bool>) -> String {
-    match arg {
-        Some(arg) => arg,
-        None => match stdin_arg {
+    arg.map_or_else(
+        || match stdin_arg {
             Some(true) => {
                 let mut buf = String::new();
                 std::io::Read::read_to_string(&mut std::io::stdin(), &mut buf).unwrap();
@@ -95,7 +95,8 @@ fn read_arg(arg: Option<String>, stdin_arg: Option<bool>) -> String {
             }
             None | Some(false) => String::new(),
         },
-    }
+        |arg| arg,
+    )
 }
 
 fn parse_arg(arg: &str, kind: &ethabi::ParamType) -> Result<ethabi::Token, ParseError> {
@@ -127,7 +128,7 @@ fn parse_arg(arg: &str, kind: &ethabi::ParamType) -> Result<ethabi::Token, Parse
             parse_array(value, arr_kind).map(ethabi::Token::Array)
         }
         ethabi::ParamType::FixedBytes(size) => {
-            let bytes = hex::decode(&arg).map_err(wrap_error)?;
+            let bytes = hex::decode(arg).map_err(wrap_error)?;
             if &bytes.len() != size {
                 return Err(wrap_error("Incorrect FixedBytes length"));
             }

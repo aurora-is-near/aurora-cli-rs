@@ -33,8 +33,13 @@ pub async fn execute_command(action: ProcessTxAction, input_files_list_path: Str
         .unwrap();
     let paths: Vec<String> = paths_contents
         .split('\n')
-        .filter(|line| !line.is_empty())
-        .map(|line| line.to_owned())
+        .filter_map(|line| {
+            if line.is_empty() {
+                None
+            } else {
+                Some(line.to_string())
+            }
+        })
         .collect();
 
     match action {
@@ -44,34 +49,34 @@ pub async fn execute_command(action: ProcessTxAction, input_files_list_path: Str
                 None => {
                     let f = Arc::new(f1);
                     transaction_reader::process_data::<aggregator::AverageGasProfile, _>(paths, &f)
-                        .await
+                        .await;
                 }
                 Some(min_gas) => {
                     let f2 = filter::MinNearGasUsed(min_gas);
                     let f = Arc::new(filter::And::new(f1, f2));
                     transaction_reader::process_data::<aggregator::AverageGasProfile, _>(paths, &f)
-                        .await
+                        .await;
                 }
             }
         }
         ProcessTxAction::FilterTo { target_addr_hex } => {
             let to = Address::decode(&target_addr_hex).unwrap();
             let f = Arc::new(filter::EthTxTo(to));
-            transaction_reader::process_data::<aggregator::Echo, _>(paths, &f).await
+            transaction_reader::process_data::<aggregator::Echo, _>(paths, &f).await;
         }
         ProcessTxAction::GasDistribution => {
             let f1 = filter::MatchFlatStatus(transaction_reader::FlatTxStatus::Succeeded);
             let f2 = filter::MatchFlatStatus(transaction_reader::FlatTxStatus::GasLimit);
             let f = Arc::new(filter::Or::new(f1, f2));
-            transaction_reader::process_data::<aggregator::GroupByGas, _>(paths, &f).await
+            transaction_reader::process_data::<aggregator::GroupByGas, _>(paths, &f).await;
         }
         ProcessTxAction::NearGasVsEvmGas => {
             let f = Arc::new(filter::StatusExecuted);
-            transaction_reader::process_data::<aggregator::GasComparison, _>(paths, &f).await
+            transaction_reader::process_data::<aggregator::GasComparison, _>(paths, &f).await;
         }
         ProcessTxAction::OutcomeDistribution => {
             let f = Arc::new(filter::NoFilter);
-            transaction_reader::process_data::<aggregator::GroupByFlatStatus, _>(paths, &f).await
+            transaction_reader::process_data::<aggregator::GroupByFlatStatus, _>(paths, &f).await;
         }
         ProcessTxAction::FilterGasRange {
             min_near,
@@ -85,11 +90,11 @@ pub async fn execute_command(action: ProcessTxAction, input_files_list_path: Str
                 max_near,
                 max_evm,
             });
-            transaction_reader::process_data::<aggregator::Echo, _>(paths, &f).await
+            transaction_reader::process_data::<aggregator::Echo, _>(paths, &f).await;
         }
         ProcessTxAction::FromToGasUsed => {
             let f = Arc::new(filter::NoFilter);
-            transaction_reader::process_data::<aggregator::FromToGasUsage, _>(paths, &f).await
+            transaction_reader::process_data::<aggregator::FromToGasUsage, _>(paths, &f).await;
         }
     }
 }
