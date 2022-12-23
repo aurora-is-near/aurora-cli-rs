@@ -10,7 +10,7 @@ aurora-engine = { git = "https://github.com/aurora-is-near/aurora-engine.git", t
 aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std"] }
 aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std"] }
 aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std"] }
-aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std"] }
+aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.7.0", features = ["std", "serde"] }
 base64 = "0.13.0"
 borsh = "0.9.3"
 bs58 = "0.4.0"
