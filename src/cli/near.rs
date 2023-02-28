@@ -353,7 +353,9 @@ pub async fn execute_command(
                 key_hex,
             } => {
                 let mut buffer: Vec<u8> = Vec::new();
-                let key_bytes32: [u8; 32] = hex::decode(key_hex)?.try_into().map_err(|_| "Invalid key length")?;
+                let key_bytes32: [u8; 32] = hex::decode(key_hex)?
+                    .try_into()
+                    .map_err(|_| "Invalid key length")?;
                 let input = GetStorageAtArgs {
                     address: Address::decode(&address_hex).unwrap(),
                     key: key_bytes32,
