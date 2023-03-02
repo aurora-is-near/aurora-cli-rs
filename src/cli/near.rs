@@ -190,9 +190,9 @@ pub async fn execute_command(
     match command {
         Command::Read { subcommand } => match subcommand {
             ReadCommand::GetReceiptResult { receipt_id_b58 } => {
-                let tx_hash = bs58::decode(receipt_id_b58.as_str()).into_vec().unwrap();
+                let tx_hash = bs58::decode(receipt_id_b58.as_str()).into_vec()?;
                 let outcome = client
-                    .get_near_receipt_outcome(tx_hash.as_slice().try_into().unwrap())
+                    .get_near_receipt_outcome(tx_hash.as_slice().try_into().expect("tx hash should be 32 bytes"))
                     .await?;
                 println!("{outcome:?}");
             }
@@ -207,8 +207,7 @@ pub async fn execute_command(
                 let input = hex::decode(input_data_hex)?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
-                    .await
-                    .unwrap();
+                    .await?;
                 println!("{result:?}");
             }
             ReadCommand::EngineErc20 {
@@ -222,8 +221,7 @@ pub async fn execute_command(
                 let input = erc20.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
-                    .await
-                    .unwrap();
+                    .await?;
                 println!("{result:?}");
             }
             ReadCommand::Solidity {
@@ -237,8 +235,7 @@ pub async fn execute_command(
                 let input = contract_call.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
-                    .await
-                    .unwrap();
+                    .await?;
                 println!("{result:?}");
             }
             ReadCommand::EngineXccDryRun {
@@ -259,19 +256,19 @@ pub async fn execute_command(
                     attached_gas,
                 ));
                 let precompile_args = CrossContractCallArgs::Eager(promise);
-                let sender = Address::decode(&sender_address_hex).unwrap();
+                let sender = Address::decode(&sender_address_hex).expect("sender address should be valid hex");
                 let result = client
                     .view_contract_call(
                         sender,
                         aurora_engine_precompiles::xcc::cross_contract_call::ADDRESS,
                         Wei::zero(),
-                        precompile_args.try_to_vec().unwrap(),
+                        precompile_args.try_to_vec()?,
                     )
                     .await?;
                 println!("{result:?}");
             }
             ReadCommand::GetBridgedNep141 { erc_20_address_hex } => {
-                let erc20 = Address::decode(&erc_20_address_hex).unwrap();
+                let erc20 = Address::decode(&erc_20_address_hex).expect("erc20 address should be valid hex");
                 match client.get_nep141_from_erc20(erc20).await {
                     Ok(nep_141_account) => println!("{nep_141_account}"),
                     Err(e) => {
@@ -310,7 +307,7 @@ pub async fn execute_command(
                 println!("{upgrade_index:?}");
             }
             ReadCommand::GetBlockHash { block_number } => {
-                let height_serialized: u128 = block_number.parse::<u128>().unwrap();
+                let height_serialized: u128 = block_number.parse::<u128>()?;
                 let block_hash = {
                     let result = client
                         .near_view_call(
@@ -357,7 +354,7 @@ pub async fn execute_command(
                     .try_into()
                     .map_err(|_| "Invalid key length")?;
                 let input = GetStorageAtArgs {
-                    address: Address::decode(&address_hex).unwrap(),
+                    address: Address::decode(&address_hex).expect("address should be valid hex string"),
                     key: key_bytes32,
                 };
                 input.serialize(&mut buffer)?;
@@ -388,7 +385,7 @@ pub async fn execute_command(
             } => {
                 let source_private_key_hex = config.get_evm_secret_key();
                 let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
-                let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
+                let sk = libsecp256k1::SecretKey::parse(&sk_bytes)?;
                 let promise = PromiseArgs::Create(parse_xcc_args(
                     &target_near_account,
                     method_name,
@@ -403,7 +400,7 @@ pub async fn execute_command(
                     &sk,
                     Some(aurora_engine_precompiles::xcc::cross_contract_call::ADDRESS),
                     Wei::zero(),
-                    precompile_args.try_to_vec().unwrap(),
+                    precompile_args.try_to_vec()?,
                 )
                 .await?;
                 println!("{result:?}");
@@ -445,11 +442,10 @@ pub async fn execute_command(
                 println!("{result:?}");
             }
             WriteCommand::FactoryUpdate { wasm_bytes_path } => {
-                let args = std::fs::read(wasm_bytes_path).unwrap();
+                let args = std::fs::read(wasm_bytes_path)?;
                 let tx_outcome = client
                     .near_contract_call("factory_update".into(), args)
-                    .await
-                    .unwrap();
+                    .await?;
                 println!("{tx_outcome:?}");
             }
             WriteCommand::DeployCode { code_byte_hex } => {
@@ -470,7 +466,7 @@ pub async fn execute_command(
             }
             WriteCommand::DeployERC20Token { nep141 } => {
                 let mut buffer: Vec<u8> = Vec::new();
-                let nep141: AccountId = nep141.parse().unwrap();
+                let nep141: AccountId = nep141.parse().expect("input should be a NEAR account ID");
                 let input = DeployErc20TokenArgs { nep141 };
                 input.serialize(&mut buffer)?;
                 let tx_outcome = client
@@ -487,7 +483,7 @@ pub async fn execute_command(
             WriteCommand::SetPausedFlags { paused_mask } => {
                 let mut buffer: Vec<u8> = Vec::new();
                 let input = PauseEthConnectorCallArgs {
-                    paused_mask: u8::from_str(&paused_mask).unwrap(),
+                    paused_mask: u8::from_str(&paused_mask)?,
                 };
                 input.serialize(&mut buffer)?;
                 let tx_outcome = client
@@ -505,11 +501,11 @@ fn parse_read_call_args(
     target_addr_hex: &str,
     amount: Option<&str>,
 ) -> (Address, Address, Wei) {
-    let target = Address::decode(target_addr_hex).unwrap();
+    let target = Address::decode(target_addr_hex).expect("Invalid target address: address should be 20 bytes long");
     let sender = sender_addr_hex
-        .map(|x| Address::decode(&x).unwrap())
+        .map(|x| Address::decode(&x).expect("Invalid sender address: address should be 20 bytes long"))
         .unwrap_or_default();
-    let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
+    let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).expect("amount should be a decimal string")));
 
     (sender, target, amount)
 }
@@ -520,10 +516,10 @@ fn parse_write_call_args(
     amount: Option<&str>,
 ) -> (libsecp256k1::SecretKey, Address, Wei) {
     let source_private_key_hex = config.get_evm_secret_key();
-    let sk_bytes = utils::hex_to_arr32(source_private_key_hex).unwrap();
-    let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
-    let target = Address::decode(target_addr_hex).unwrap();
-    let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
+    let sk_bytes = utils::hex_to_arr32(source_private_key_hex).expect("Private key should be 32 bytes long");
+    let sk = libsecp256k1::SecretKey::parse(&sk_bytes).expect("Invalid private key");
+    let target = Address::decode(target_addr_hex).expect("Target address should be 20 bytes long");
+    let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).expect("amount should be a decimal string")));
     (sk, target, amount)
 }
 
@@ -539,7 +535,7 @@ fn parse_xcc_args(
         || match json_args_stdin {
             Some(true) => {
                 let mut buf = String::new();
-                std::io::Read::read_to_string(&mut std::io::stdin(), &mut buf).unwrap();
+                std::io::Read::read_to_string(&mut std::io::stdin(), &mut buf).expect("stdin should not contain invalid utf-8");
                 buf.into_bytes()
             }
             None | Some(false) => Vec::new(),
@@ -547,14 +543,14 @@ fn parse_xcc_args(
         String::into_bytes,
     );
     let attached_balance =
-        deposit_yocto.map_or_else(|| Yocto::new(0), |x| Yocto::new(x.parse().unwrap()));
+        deposit_yocto.map_or_else(|| Yocto::new(0), |x| Yocto::new(x.parse::<u128>().expect("deposit should be a valid u128")));
     let attached_gas = attached_gas.map_or_else(
         || NearGas::new(30_000_000_000_000),
-        |gas| NearGas::new(gas.parse().unwrap()),
+        |gas| NearGas::new(gas.parse().expect("gas should be a valid u64")),
     );
 
     PromiseCreateArgs {
-        target_account_id: target_near_account.parse().unwrap(),
+        target_account_id: target_near_account.parse().expect("NEAR account id should be valid utf-8"),
         method: method_name,
         args: near_args,
         attached_balance,
