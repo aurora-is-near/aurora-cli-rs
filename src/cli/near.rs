@@ -3,8 +3,12 @@ use crate::{
     config::Config,
     utils,
 };
-use aurora_engine::parameters::{
-    DeployErc20TokenArgs, GetStorageAtArgs, PauseEthConnectorCallArgs,
+use aurora_engine::{
+    fungible_token::{FungibleReferenceHash, FungibleTokenMetadata},
+    parameters::{
+        DeployErc20TokenArgs, GetStorageAtArgs, InitCallArgs, NewCallArgs,
+        PauseEthConnectorCallArgs,
+    },
 };
 use aurora_engine_types::{
     account_id::AccountId,
@@ -12,7 +16,7 @@ use aurora_engine_types::{
     types::{Address, NearGas, Wei, Yocto},
     U256,
 };
-use borsh::BorshSerialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use clap::Subcommand;
 use near_primitives::views::FinalExecutionOutcomeView;
 use std::str::FromStr;
@@ -119,6 +123,36 @@ pub enum ReadCommand {
 
 #[derive(Subcommand)]
 pub enum WriteCommand {
+    /// Deploy and initialize a new instance of the Aurora Engine.
+    /// Uses the `engine_account_id` from the config as the target account.
+    /// `config.near_key_path` must point to a full access key for `engine_account_id`.
+    EngineInit {
+        /// Path to the Wasm artifact for the engine contract.
+        #[clap(short, long)]
+        wasm_path: String,
+        #[clap(short, long)]
+        chain_id: u64,
+        #[clap(short, long)]
+        owner_id: String,
+        /// How many blocks after staging upgrade can deploy it.
+        /// Default value is 0 (i.e. no delay in upgrading).
+        #[clap(short, long)]
+        upgrade_delay_blocks: Option<u64>,
+        /// The account used to check deposit proofs in the ETH connector.
+        /// The default value is equal to the `engine_account_id`.
+        #[clap(short, long)]
+        prover_account: Option<String>,
+        /// The address of the locker on Ethereum for the ETH connector.
+        /// The default value is 0x00.
+        #[clap(short, long)]
+        eth_custodian_address: Option<String>,
+        /// The metadata for the ETH token the connector creates.
+        /// The value is expected to be a value JSON string
+        /// (see https://nomicon.io/Standards/Tokens/FungibleToken/Metadata for fields).
+        /// The default value is 18 decimals with name and symbol equal to "localETH".
+        #[clap(short, long)]
+        ft_metadata: Option<String>,
+    },
     EngineXcc {
         #[clap(short, long)]
         target_near_account: String,
@@ -375,6 +409,63 @@ pub async fn execute_command(
             }
         },
         Command::Write { subcommand } => match subcommand {
+            WriteCommand::EngineInit {
+                wasm_path,
+                chain_id,
+                owner_id,
+                upgrade_delay_blocks,
+                prover_account,
+                eth_custodian_address,
+                ft_metadata,
+            } => {
+                let wasm_bytes = tokio::fs::read(wasm_path).await?;
+                let prover_account: AccountId = {
+                    let prover_account = prover_account
+                        .as_deref()
+                        .unwrap_or(&config.engine_account_id);
+                    prover_account
+                        .parse()
+                        .expect("Prover account is an invalid Near account")
+                };
+                let eth_custodian_address = eth_custodian_address
+                    .as_deref()
+                    .map(utils::hex_to_address)
+                    .transpose()
+                    .expect("Invalid eth_custodian_address")
+                    .unwrap_or_default();
+                let metadata = parse_ft_metadata(ft_metadata);
+
+                let new_args = NewCallArgs {
+                    chain_id: aurora_engine_types::types::u256_to_arr(&U256::from(chain_id)),
+                    owner_id: owner_id.parse().expect("Invalid owner_id"),
+                    bridge_prover_id: prover_account.clone(),
+                    upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
+                };
+
+                let init_args = InitCallArgs {
+                    prover_account,
+                    eth_custodian_address: eth_custodian_address.encode(),
+                    metadata,
+                };
+
+                let deploy_response = client.near_deploy_contract(wasm_bytes).await?;
+                assert_tx_success(&deploy_response);
+
+                let new_response = client
+                    .near_contract_call("new".into(), new_args.try_to_vec().unwrap())
+                    .await?;
+                assert_tx_success(&new_response);
+
+                let init_response = client
+                    .near_contract_call("new_eth_connector".into(), init_args.try_to_vec().unwrap())
+                    .await?;
+                assert_tx_success(&init_response);
+
+                println!(
+                    "Deploy of Engine to {} successful",
+                    config.engine_account_id
+                );
+            }
             WriteCommand::EngineXcc {
                 target_near_account,
                 method_name,
@@ -556,6 +647,60 @@ fn parse_xcc_args(
         args: near_args,
         attached_balance,
         attached_gas,
+    }
+}
+
+fn parse_ft_metadata(input: Option<String>) -> FungibleTokenMetadata {
+    let input = match input {
+        Some(x) => x,
+        None => return default_ft_metadata(),
+    };
+
+    let json: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&input).unwrap();
+    FungibleTokenMetadata {
+        spec: json.get("spec").expect("Missing spec field").to_string(),
+        name: json.get("name").expect("Missing name field").to_string(),
+        symbol: json
+            .get("symbol")
+            .expect("Missing symbol field")
+            .to_string(),
+        icon: json
+            .get("icon")
+            .map(aurora_engine_types::ToString::to_string),
+        reference: json
+            .get("reference")
+            .map(aurora_engine_types::ToString::to_string),
+        reference_hash: json.get("reference_hash").map(|x| {
+            let bytes = base64::decode(x.as_str().expect("reference_hash must be a string"))
+                .expect("reference_hash must be a base64-encoded string");
+            FungibleReferenceHash::try_from_slice(&bytes)
+                .expect("reference_hash must be base64-encoded 32-byte array")
+        }),
+        decimals: serde_json::from_value(
+            json.get("decimals")
+                .expect("Missing decimals field")
+                .clone(),
+        )
+        .expect("decimals field must be a u8 number"),
+    }
+}
+
+fn default_ft_metadata() -> FungibleTokenMetadata {
+    FungibleTokenMetadata {
+        spec: "ft-1.0.0".to_string(),
+        name: "localETH".to_string(),
+        symbol: "localETH".to_string(),
+        icon: None,
+        reference: None,
+        reference_hash: None,
+        decimals: 18,
+    }
+}
+
+fn assert_tx_success(outcome: &FinalExecutionOutcomeView) {
+    if let near_primitives::views::FinalExecutionStatus::SuccessValue(_) = &outcome.status {
+    } else {
+        panic!("Transaction failed: {outcome:?}");
     }
 }
 

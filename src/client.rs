@@ -8,7 +8,7 @@ use aurora_engine_types::{
 use borsh::{BorshDeserialize, BorshSerialize};
 use libsecp256k1::SecretKey;
 use near_jsonrpc_client::AsUrl;
-use near_primitives::views;
+use near_primitives::{transaction::Action, views};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -267,10 +267,35 @@ impl AuroraClient {
         }
     }
 
+    pub async fn near_deploy_contract(
+        &self,
+        wasm_code: Vec<u8>,
+    ) -> Result<views::FinalExecutionOutcomeView, ClientError> {
+        self.near_broadcast_tx(vec![Action::DeployContract(
+            near_primitives::transaction::DeployContractAction { code: wasm_code },
+        )])
+        .await
+    }
+
     pub async fn near_contract_call(
         &self,
         method_name: String,
         args: Vec<u8>,
+    ) -> Result<views::FinalExecutionOutcomeView, ClientError> {
+        self.near_broadcast_tx(vec![Action::FunctionCall(
+            near_primitives::transaction::FunctionCallAction {
+                method_name,
+                args,
+                gas: 300_000_000_000_000,
+                deposit: 0,
+            },
+        )])
+        .await
+    }
+
+    async fn near_broadcast_tx(
+        &self,
+        actions: Vec<Action>,
     ) -> Result<views::FinalExecutionOutcomeView, ClientError> {
         let path = self
             .signer_key_path
@@ -293,15 +318,12 @@ impl AuroraClient {
         };
         let request =
             near_jsonrpc_client::methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest {
-                signed_transaction: near_primitives::transaction::SignedTransaction::call(
+                signed_transaction: near_primitives::transaction::SignedTransaction::from_actions(
                     nonce,
                     signer.account_id.clone(),
                     self.engine_account_id.parse().unwrap(),
                     &signer,
-                    0,
-                    method_name,
-                    args,
-                    300_000_000_000_000,
+                    actions,
                     block_hash,
                 ),
             };
