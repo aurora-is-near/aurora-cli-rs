@@ -24,9 +24,13 @@ impl Config {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Network {
     Mainnet,
     Testnet,
+    Custom {
+        near_rpc: String,
+        aurora_rpc: String,
+    },
 }

@@ -22,12 +22,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
     let config_path = args.config_path.as_deref().unwrap_or("default-config.json");
     let config = config::Config::from_file(config_path)?;
-    let network = config.network;
+    let network = &config.network;
 
     let api_key = config.aurora_api_key.as_deref().unwrap_or_default();
     let (aurora_endpoint, near_endpoint) = match network {
         Network::Mainnet => (AURORA_MAINNET_ENDPOINT, NEAR_MAINNET_ENDPOINT),
         Network::Testnet => (AURORA_TESTNET_ENDPOINT, NEAR_TESTNET_ENDPOINT),
+        Network::Custom {
+            near_rpc,
+            aurora_rpc,
+        } => (aurora_rpc.as_str(), near_rpc.as_str()),
     };
     let client = AuroraClient::new(
         format!("{aurora_endpoint}{api_key}"),
