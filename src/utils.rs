@@ -5,10 +5,18 @@ use near_crypto::InMemorySigner;
 use rlp::RlpStream;
 use std::{io, path::Path};
 
-pub fn hex_to_arr32(h: &str) -> Result<[u8; 32], hex::FromHexError> {
-    let mut output = [0u8; 32];
-    hex::decode_to_slice(h, &mut output)?;
+pub fn hex_to_arr<const N: usize>(h: &str) -> Result<[u8; N], hex::FromHexError> {
+    let mut output = [0u8; N];
+    hex::decode_to_slice(h.strip_prefix("0x").unwrap_or(h), &mut output)?;
     Ok(output)
+}
+
+pub fn hex_to_address(h: &str) -> Result<Address, hex::FromHexError> {
+    hex_to_arr(h).map(Address::from_array)
+}
+
+pub fn hex_to_vec(h: &str) -> Result<Vec<u8>, hex::FromHexError> {
+    hex::decode(h.strip_prefix("0x").unwrap_or(h))
 }
 
 pub fn address_from_secret_key(sk: &SecretKey) -> Address {

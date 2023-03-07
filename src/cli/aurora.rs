@@ -56,8 +56,7 @@ pub async fn execute_command(
         // Command::Benchmark
         Command::Read { subcommand } => match subcommand {
             ReadCommand::GetResult { tx_hash_hex } => {
-                let tx_hash =
-                    aurora_engine_types::H256::from_slice(&hex::decode(tx_hash_hex).unwrap());
+                let tx_hash = aurora_engine_types::H256(utils::hex_to_arr(&tx_hash_hex).unwrap());
                 let outcome = client.get_transaction_outcome(tx_hash).await?;
                 println!("{outcome:?}");
             }
@@ -65,9 +64,9 @@ pub async fn execute_command(
         Command::Write { subcommand } => match subcommand {
             WriteCommand::Deploy { input_data_hex } => {
                 let source_private_key_hex = config.get_evm_secret_key();
-                let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
+                let sk_bytes = utils::hex_to_arr(source_private_key_hex)?;
                 let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
-                let input = hex::decode(input_data_hex)?;
+                let input = utils::hex_to_vec(&input_data_hex)?;
                 send_transaction(client, &sk, None, Wei::zero(), input).await?;
             }
             WriteCommand::Transfer {
@@ -75,9 +74,9 @@ pub async fn execute_command(
                 amount,
             } => {
                 let source_private_key_hex = config.get_evm_secret_key();
-                let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
+                let sk_bytes = utils::hex_to_arr(source_private_key_hex)?;
                 let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
-                let target = Address::decode(&target_addr_hex).unwrap();
+                let target = utils::hex_to_address(&target_addr_hex)?;
                 let amount = Wei::new(U256::from_dec_str(&amount).unwrap());
                 send_transaction(client, &sk, Some(target), amount, Vec::new()).await?;
             }
@@ -87,13 +86,13 @@ pub async fn execute_command(
                 input_data_hex,
             } => {
                 let source_private_key_hex = config.get_evm_secret_key();
-                let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
+                let sk_bytes = utils::hex_to_arr(source_private_key_hex)?;
                 let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
-                let target = Address::decode(&target_addr_hex).unwrap();
+                let target = utils::hex_to_address(&target_addr_hex)?;
                 let amount = amount
                     .as_ref()
                     .map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
-                let input = hex::decode(input_data_hex)?;
+                let input = utils::hex_to_vec(&input_data_hex)?;
                 send_transaction(client, &sk, Some(target), amount, input).await?;
             }
         },

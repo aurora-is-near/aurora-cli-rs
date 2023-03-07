@@ -1,5 +1,7 @@
-use crate::transaction_reader::{self, aggregator, filter};
-use aurora_engine_types::types::Address;
+use crate::{
+    transaction_reader::{self, aggregator, filter},
+    utils,
+};
 use clap::Subcommand;
 use std::sync::Arc;
 
@@ -60,7 +62,7 @@ pub async fn execute_command(action: ProcessTxAction, input_files_list_path: Str
             }
         }
         ProcessTxAction::FilterTo { target_addr_hex } => {
-            let to = Address::decode(&target_addr_hex).unwrap();
+            let to = utils::hex_to_address(&target_addr_hex).unwrap();
             let f = Arc::new(filter::EthTxTo(to));
             transaction_reader::process_data::<aggregator::Echo, _>(paths, &f).await;
         }
