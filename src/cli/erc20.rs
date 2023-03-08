@@ -1,4 +1,5 @@
-use aurora_engine_types::{types::Address, U256};
+use crate::utils;
+use aurora_engine_types::U256;
 use clap::Subcommand;
 
 const APPROVE_SELECTOR: &[u8] = &[0x09, 0x5e, 0xa7, 0xb3];
@@ -50,7 +51,7 @@ impl Erc20 {
                 to_address_hex,
                 amount,
             } => {
-                let to = Address::decode(&to_address_hex).map_err(wrap_error)?;
+                let to = utils::hex_to_address(&to_address_hex).map_err(wrap_error)?;
                 let amount = U256::from_str_radix(&amount, 10).map_err(wrap_error)?;
                 let input = [
                     TRANSFER_SELECTOR,
@@ -66,8 +67,8 @@ impl Erc20 {
                 owner_address_hex,
                 spender_address_hex,
             } => {
-                let spender = Address::decode(&spender_address_hex).map_err(wrap_error)?;
-                let owner = Address::decode(&owner_address_hex).map_err(wrap_error)?;
+                let spender = utils::hex_to_address(&spender_address_hex).map_err(wrap_error)?;
+                let owner = utils::hex_to_address(&owner_address_hex).map_err(wrap_error)?;
                 let input = [
                     ALLOWANCE_SELECTOR,
                     &ethabi::encode(&[
@@ -82,7 +83,7 @@ impl Erc20 {
                 spender_address_hex,
                 amount,
             } => {
-                let spender = Address::decode(&spender_address_hex).map_err(wrap_error)?;
+                let spender = utils::hex_to_address(&spender_address_hex).map_err(wrap_error)?;
                 let amount = U256::from_str_radix(&amount, 10).map_err(wrap_error)?;
                 let input = [
                     APPROVE_SELECTOR,
@@ -95,7 +96,7 @@ impl Erc20 {
                 Ok(input)
             }
             Self::BalanceOf { address_hex } => {
-                let address = Address::decode(&address_hex).map_err(wrap_error)?;
+                let address = utils::hex_to_address(&address_hex).map_err(wrap_error)?;
                 let input = [
                     BALANCE_OF_SELECTOR,
                     &ethabi::encode(&[ethabi::Token::Address(address.raw())]),
@@ -108,8 +109,8 @@ impl Erc20 {
                 amount,
                 from_address_hex,
             } => {
-                let from = Address::decode(&from_address_hex).map_err(wrap_error)?;
-                let to = Address::decode(&to_address_hex).map_err(wrap_error)?;
+                let from = utils::hex_to_address(&from_address_hex).map_err(wrap_error)?;
+                let to = utils::hex_to_address(&to_address_hex).map_err(wrap_error)?;
                 let amount = U256::from_str_radix(&amount, 10).map_err(wrap_error)?;
                 let input = [
                     TRANSFER_FROM_SELECTOR,

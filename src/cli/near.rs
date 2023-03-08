@@ -204,7 +204,7 @@ pub async fn execute_command(
             } => {
                 let (sender, target, amount) =
                     parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref());
-                let input = hex::decode(input_data_hex)?;
+                let input = utils::hex_to_vec(&input_data_hex)?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
                     .await
@@ -259,7 +259,7 @@ pub async fn execute_command(
                     attached_gas,
                 ));
                 let precompile_args = CrossContractCallArgs::Eager(promise);
-                let sender = Address::decode(&sender_address_hex).unwrap();
+                let sender = utils::hex_to_address(&sender_address_hex)?;
                 let result = client
                     .view_contract_call(
                         sender,
@@ -271,7 +271,7 @@ pub async fn execute_command(
                 println!("{result:?}");
             }
             ReadCommand::GetBridgedNep141 { erc_20_address_hex } => {
-                let erc20 = Address::decode(&erc_20_address_hex).unwrap();
+                let erc20 = utils::hex_to_address(&erc_20_address_hex)?;
                 match client.get_nep141_from_erc20(erc20).await {
                     Ok(nep_141_account) => println!("{nep_141_account}"),
                     Err(e) => {
@@ -353,10 +353,9 @@ pub async fn execute_command(
                 key_hex,
             } => {
                 let mut buffer: Vec<u8> = Vec::new();
-                let key_bytes32: [u8; 32] = hex::decode(key_hex).unwrap().try_into().unwrap();
                 let input = GetStorageAtArgs {
-                    address: Address::decode(&address_hex).unwrap(),
-                    key: key_bytes32,
+                    address: utils::hex_to_address(&address_hex)?,
+                    key: utils::hex_to_arr(&key_hex)?,
                 };
                 input.serialize(&mut buffer)?;
                 let storage = {
@@ -385,7 +384,7 @@ pub async fn execute_command(
                 attached_gas,
             } => {
                 let source_private_key_hex = config.get_evm_secret_key();
-                let sk_bytes = utils::hex_to_arr32(source_private_key_hex)?;
+                let sk_bytes = utils::hex_to_arr(source_private_key_hex)?;
                 let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
                 let promise = PromiseArgs::Create(parse_xcc_args(
                     &target_near_account,
@@ -413,7 +412,7 @@ pub async fn execute_command(
             } => {
                 let (sk, target, amount) =
                     parse_write_call_args(config, &target_addr_hex, amount.as_deref());
-                let input = hex::decode(input_data_hex)?;
+                let input = utils::hex_to_vec(&input_data_hex)?;
                 let result =
                     send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
                 println!("{result:?}");
@@ -451,7 +450,7 @@ pub async fn execute_command(
                 println!("{tx_outcome:?}");
             }
             WriteCommand::DeployCode { code_byte_hex } => {
-                let input = hex::decode(code_byte_hex)?;
+                let input = utils::hex_to_vec(&code_byte_hex)?;
                 let tx_outcome = client
                     .near_contract_call("deploy_code".into(), input)
                     .await?;
@@ -460,7 +459,7 @@ pub async fn execute_command(
             WriteCommand::RegisterRelayer {
                 relayer_eth_address_hex,
             } => {
-                let relayer = hex::decode(relayer_eth_address_hex)?;
+                let relayer = utils::hex_to_vec(&relayer_eth_address_hex)?;
                 let tx_outcome = client
                     .near_contract_call("register_relayer".into(), relayer)
                     .await?;
@@ -503,9 +502,9 @@ fn parse_read_call_args(
     target_addr_hex: &str,
     amount: Option<&str>,
 ) -> (Address, Address, Wei) {
-    let target = Address::decode(target_addr_hex).unwrap();
+    let target = utils::hex_to_address(target_addr_hex).unwrap();
     let sender = sender_addr_hex
-        .map(|x| Address::decode(&x).unwrap())
+        .map(|x| utils::hex_to_address(&x).unwrap())
         .unwrap_or_default();
     let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
 
@@ -518,9 +517,9 @@ fn parse_write_call_args(
     amount: Option<&str>,
 ) -> (libsecp256k1::SecretKey, Address, Wei) {
     let source_private_key_hex = config.get_evm_secret_key();
-    let sk_bytes = utils::hex_to_arr32(source_private_key_hex).unwrap();
+    let sk_bytes = utils::hex_to_arr(source_private_key_hex).unwrap();
     let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
-    let target = Address::decode(target_addr_hex).unwrap();
+    let target = utils::hex_to_address(target_addr_hex).unwrap();
     let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
     (sk, target, amount)
 }

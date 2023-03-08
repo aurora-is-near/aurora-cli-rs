@@ -1,5 +1,8 @@
-use crate::cli::erc20::{wrap_error, ParseError};
-use aurora_engine_types::{types::Address, U256};
+use crate::{
+    cli::erc20::{wrap_error, ParseError},
+    utils,
+};
+use aurora_engine_types::U256;
 use clap::Subcommand;
 use serde_json::Value;
 
@@ -102,11 +105,11 @@ fn read_arg(arg: Option<String>, stdin_arg: Option<bool>) -> String {
 fn parse_arg(arg: &str, kind: &ethabi::ParamType) -> Result<ethabi::Token, ParseError> {
     match kind {
         ethabi::ParamType::Address => {
-            let addr = Address::decode(arg).map_err(wrap_error)?;
+            let addr = utils::hex_to_address(arg).map_err(wrap_error)?;
             Ok(ethabi::Token::Address(addr.raw()))
         }
         ethabi::ParamType::Bytes => {
-            let bytes = hex::decode(arg).map_err(wrap_error)?;
+            let bytes = utils::hex_to_vec(arg).map_err(wrap_error)?;
             Ok(ethabi::Token::Bytes(bytes))
         }
         ethabi::ParamType::Int(_) => {
@@ -128,7 +131,7 @@ fn parse_arg(arg: &str, kind: &ethabi::ParamType) -> Result<ethabi::Token, Parse
             parse_array(value, arr_kind).map(ethabi::Token::Array)
         }
         ethabi::ParamType::FixedBytes(size) => {
-            let bytes = hex::decode(arg).map_err(wrap_error)?;
+            let bytes = utils::hex_to_vec(arg).map_err(wrap_error)?;
             if &bytes.len() != size {
                 return Err(wrap_error("Incorrect FixedBytes length"));
             }
