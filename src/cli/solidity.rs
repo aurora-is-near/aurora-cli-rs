@@ -5,6 +5,7 @@ use crate::{
 use aurora_engine_types::U256;
 use clap::Subcommand;
 use serde_json::Value;
+use std::borrow::Cow;
 
 #[derive(Subcommand)]
 pub enum Solidity {
@@ -34,7 +35,26 @@ pub enum Solidity {
 }
 
 impl Solidity {
-    pub fn abi_encode(self) -> Result<Vec<u8>, ParseError> {
+    pub fn abi_decode(&self, output: &[u8]) -> Result<Vec<ethabi::Token>, ParseError> {
+        let (abi, method_name) = match self {
+            Self::UnaryCall {
+                abi_path,
+                method_name,
+                ..
+            }
+            | Self::CallArgsByName {
+                abi_path,
+                method_name,
+                ..
+            } => (read_abi(abi_path)?, method_name),
+        };
+
+        let function = abi.function(method_name).map_err(wrap_error)?;
+        let tokens = function.decode_output(output).map_err(wrap_error)?;
+        Ok(tokens)
+    }
+
+    pub fn abi_encode(&self) -> Result<Vec<u8>, ParseError> {
         match self {
             Self::UnaryCall {
                 abi_path,
@@ -43,12 +63,12 @@ impl Solidity {
                 stdin_arg,
             } => {
                 let abi = read_abi(abi_path)?;
-                let function = abi.function(&method_name).map_err(wrap_error)?;
+                let function = abi.function(method_name).map_err(wrap_error)?;
                 if function.inputs.len() != 1 {
                     return Err(wrap_error("Function must take only one argument"));
                 }
                 let arg_type = &function.inputs.first().unwrap().kind;
-                let arg = read_arg(arg, stdin_arg);
+                let arg = read_arg(arg.as_deref(), *stdin_arg);
 
                 function
                     .encode_input(&[parse_arg(arg.trim(), arg_type)?])
@@ -61,9 +81,10 @@ impl Solidity {
                 stdin_arg,
             } => {
                 let abi = read_abi(abi_path)?;
-                let function = abi.function(&method_name).map_err(wrap_error)?;
+                let function = abi.function(method_name).map_err(wrap_error)?;
                 let arg: serde_json::Value =
-                    serde_json::from_str(&read_arg(arg, stdin_arg)).map_err(wrap_error)?;
+                    serde_json::from_str(read_arg(arg.as_deref(), *stdin_arg).as_ref())
+                        .map_err(wrap_error)?;
                 let vars_map = arg
                     .as_object()
                     .ok_or_else(|| wrap_error("Expected JSON object"))?;
@@ -83,22 +104,22 @@ impl Solidity {
     }
 }
 
-fn read_abi(abi_path: String) -> Result<ethabi::Contract, ParseError> {
+fn read_abi(abi_path: &str) -> Result<ethabi::Contract, ParseError> {
     let reader = std::fs::File::open(abi_path).map_err(wrap_error)?;
     ethabi::Contract::load(reader).map_err(wrap_error)
 }
 
-fn read_arg(arg: Option<String>, stdin_arg: Option<bool>) -> String {
+fn read_arg(arg: Option<&str>, stdin_arg: Option<bool>) -> Cow<str> {
     arg.map_or_else(
         || match stdin_arg {
             Some(true) => {
                 let mut buf = String::new();
                 std::io::Read::read_to_string(&mut std::io::stdin(), &mut buf).unwrap();
-                buf
+                Cow::Owned(buf)
             }
-            None | Some(false) => String::new(),
+            None | Some(false) => Cow::Owned(String::new()),
         },
-        |arg| arg,
+        Cow::Borrowed,
     )
 }
 

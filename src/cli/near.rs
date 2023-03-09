@@ -7,7 +7,7 @@ use aurora_engine::{
     fungible_token::{FungibleReferenceHash, FungibleTokenMetadata},
     parameters::{
         DeployErc20TokenArgs, GetStorageAtArgs, InitCallArgs, NewCallArgs,
-        PauseEthConnectorCallArgs,
+        PauseEthConnectorCallArgs, SubmitResult, TransactionStatus,
     },
 };
 use aurora_engine_types::{
@@ -300,7 +300,12 @@ pub async fn execute_command(
                     .view_contract_call(sender, target, amount, input)
                     .await
                     .unwrap();
-                println!("{result:?}");
+                if let TransactionStatus::Succeed(bytes) = result {
+                    let parsed_output = contract_call.abi_decode(&bytes)?;
+                    println!("{parsed_output:?}");
+                } else {
+                    println!("{result:?}");
+                }
             }
             ReadCommand::EngineXccDryRun {
                 target_near_account,
@@ -582,7 +587,19 @@ pub async fn execute_command(
                 let tx_outcome = client
                     .near_contract_call("deploy_code".into(), input)
                     .await?;
-                println!("{tx_outcome:?}");
+                if let near_primitives::views::FinalExecutionStatus::SuccessValue(bytes) =
+                    tx_outcome.status
+                {
+                    let result = SubmitResult::try_from_slice(&bytes)
+                        .expect("Failed to parse Engine outcome");
+                    if let TransactionStatus::Succeed(bytes) = result.status {
+                        println!("Contact deployed to address: 0x{}", hex::encode(bytes));
+                    } else {
+                        println!("Transaction reverted:\n{result:?}");
+                    }
+                } else {
+                    println!("Transaction failed:\n{tx_outcome:?}");
+                }
             }
             WriteCommand::RegisterRelayer {
                 relayer_eth_address_hex,
