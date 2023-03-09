@@ -1,6 +1,6 @@
 use crate::{
     client::{AuroraClient, ClientError},
-    config::Config,
+    config::{Config, Network},
     utils,
 };
 use aurora_engine::{
@@ -227,9 +227,18 @@ pub enum WriteCommand {
 
 #[derive(Subcommand)]
 pub enum InitCommand {
+    /// Add aurora account to the nearcore genesis file
     Genesis {
         #[clap(short, long)]
         path: String,
+    },
+    /// Modify CLI config to use local nearcore as RPC.
+    /// Optionally change the CLI access key to the one for the aurora account.
+    LocalConfig {
+        #[clap(short, long)]
+        nearcore_config_path: String,
+        #[clap(short, long)]
+        aurora_access_key_path: Option<String>,
     },
 }
 
@@ -237,6 +246,7 @@ pub async fn execute_command(
     command: Command,
     client: &AuroraClient,
     config: &Config,
+    config_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match command {
         Command::Read { subcommand } => match subcommand {
@@ -659,9 +669,45 @@ pub async fn execute_command(
                     .expect("Failed to write Aurora access key file");
                 println!("Aurora access key written to {key_path:?}");
             }
+            InitCommand::LocalConfig {
+                nearcore_config_path,
+                aurora_access_key_path,
+            } => {
+                let nearcore_config: serde_json::Value = {
+                    let data = std::fs::read_to_string(nearcore_config_path)
+                        .expect("Failed to read nearcore config");
+                    serde_json::from_str(&data).expect("Failed to parse nearcore config")
+                };
+                let rpc_addr = extract_rpc_addr(&nearcore_config)
+                    .expect("Failed to parse rpc address from nearcore config");
+                let rpc_addr = format!("http://{rpc_addr}");
+                let mut config = config.clone();
+                config.network = Network::Custom {
+                    near_rpc: rpc_addr,
+                    aurora_rpc: String::new(),
+                };
+
+                if let Some(path) = aurora_access_key_path {
+                    config.near_key_path = Some(path);
+                }
+
+                config
+                    .to_file(config_path)
+                    .expect("Failed to write new CLI config file");
+                println!("Updated CLI config at {config_path}");
+            }
         },
     };
     Ok(())
+}
+
+fn extract_rpc_addr(nearcore_config: &serde_json::Value) -> Option<&str> {
+    nearcore_config
+        .as_object()?
+        .get("rpc")?
+        .as_object()?
+        .get("addr")?
+        .as_str()
 }
 
 fn parse_read_call_args(

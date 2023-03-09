@@ -17,6 +17,12 @@ impl Config {
         Ok(config)
     }
 
+    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), io::Error> {
+        let serialized = serde_json::to_string_pretty(&self)?;
+        std::fs::write(path, serialized)?;
+        Ok(())
+    }
+
     pub fn get_evm_secret_key(&self) -> &str {
         self.evm_secret_key
             .as_deref()

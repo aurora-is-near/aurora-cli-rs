@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             cli::aurora::execute_command(subcommand, &client, &config).await?;
         }
         Command::Near { subcommand } => {
-            cli::near::execute_command(subcommand, &client, &config).await?;
+            cli::near::execute_command(subcommand, &client, &config, config_path).await?;
         }
         Command::ProcessTxData {
             action,
