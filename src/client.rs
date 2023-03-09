@@ -271,9 +271,12 @@ impl AuroraClient {
         &self,
         wasm_code: Vec<u8>,
     ) -> Result<views::FinalExecutionOutcomeView, ClientError> {
-        self.near_broadcast_tx(vec![Action::DeployContract(
-            near_primitives::transaction::DeployContractAction { code: wasm_code },
-        )])
+        self.near_broadcast_tx(
+            vec![Action::DeployContract(
+                near_primitives::transaction::DeployContractAction { code: wasm_code },
+            )],
+            None,
+        )
         .await
     }
 
@@ -282,20 +285,44 @@ impl AuroraClient {
         method_name: String,
         args: Vec<u8>,
     ) -> Result<views::FinalExecutionOutcomeView, ClientError> {
-        self.near_broadcast_tx(vec![Action::FunctionCall(
-            near_primitives::transaction::FunctionCallAction {
-                method_name,
-                args,
-                gas: 300_000_000_000_000,
-                deposit: 0,
-            },
-        )])
+        self.near_broadcast_tx(
+            vec![Action::FunctionCall(
+                near_primitives::transaction::FunctionCallAction {
+                    method_name,
+                    args,
+                    gas: 300_000_000_000_000,
+                    deposit: 0,
+                },
+            )],
+            None,
+        )
+        .await
+    }
+
+    pub async fn near_contract_call_with_nonce(
+        &self,
+        method_name: String,
+        args: Vec<u8>,
+        nonce_override: u64,
+    ) -> Result<views::FinalExecutionOutcomeView, ClientError> {
+        self.near_broadcast_tx(
+            vec![Action::FunctionCall(
+                near_primitives::transaction::FunctionCallAction {
+                    method_name,
+                    args,
+                    gas: 300_000_000_000_000,
+                    deposit: 0,
+                },
+            )],
+            Some(nonce_override),
+        )
         .await
     }
 
     async fn near_broadcast_tx(
         &self,
         actions: Vec<Action>,
+        nonce_override: Option<u64>,
     ) -> Result<views::FinalExecutionOutcomeView, ClientError> {
         let path = self
             .signer_key_path
@@ -312,10 +339,10 @@ impl AuroraClient {
         };
         let response = self.near_client.call(request).await?;
         let block_hash = response.block_hash;
-        let nonce = match response.kind {
+        let nonce = nonce_override.unwrap_or_else(|| match response.kind {
             near_jsonrpc_primitives::types::query::QueryResponseKind::AccessKey(k) => k.nonce + 1,
             _ => unreachable!(),
-        };
+        });
         let request =
             near_jsonrpc_client::methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest {
                 signed_transaction: near_primitives::transaction::SignedTransaction::from_actions(

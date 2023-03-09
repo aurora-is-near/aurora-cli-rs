@@ -18,8 +18,13 @@ use aurora_engine_types::{
 };
 use borsh::{BorshDeserialize, BorshSerialize};
 use clap::Subcommand;
-use near_primitives::views::FinalExecutionOutcomeView;
-use std::str::FromStr;
+use near_primitives::{
+    account::{AccessKey, Account},
+    hash::CryptoHash,
+    state_record::StateRecord,
+    views::FinalExecutionOutcomeView,
+};
+use std::{path::Path, str::FromStr};
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -30,6 +35,10 @@ pub enum Command {
     Write {
         #[clap(subcommand)]
         subcommand: WriteCommand,
+    },
+    Init {
+        #[clap(subcommand)]
+        subcommand: InitCommand,
     },
 }
 
@@ -213,6 +222,14 @@ pub enum WriteCommand {
     // set_paused_flags
     SetPausedFlags {
         paused_mask: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum InitCommand {
+    Genesis {
+        #[clap(short, long)]
+        path: String,
     },
 }
 
@@ -450,14 +467,24 @@ pub async fn execute_command(
 
                 let deploy_response = client.near_deploy_contract(wasm_bytes).await?;
                 assert_tx_success(&deploy_response);
+                let next_nonce = deploy_response.transaction.nonce + 1;
 
                 let new_response = client
-                    .near_contract_call("new".into(), new_args.try_to_vec().unwrap())
+                    .near_contract_call_with_nonce(
+                        "new".into(),
+                        new_args.try_to_vec().unwrap(),
+                        next_nonce,
+                    )
                     .await?;
                 assert_tx_success(&new_response);
+                let next_nonce = new_response.transaction.nonce + 1;
 
                 let init_response = client
-                    .near_contract_call("new_eth_connector".into(), init_args.try_to_vec().unwrap())
+                    .near_contract_call_with_nonce(
+                        "new_eth_connector".into(),
+                        init_args.try_to_vec().unwrap(),
+                        next_nonce,
+                    )
                     .await?;
                 assert_tx_success(&init_response);
 
@@ -582,6 +609,55 @@ pub async fn execute_command(
                     .near_contract_call("set_paused_flags".into(), buffer)
                     .await?;
                 println!("{tx_outcome:?}");
+            }
+        },
+        Command::Init { subcommand } => match subcommand {
+            InitCommand::Genesis { path } => {
+                let mut genesis = near_chain_configs::Genesis::from_file(
+                    &path,
+                    near_chain_configs::GenesisValidationMode::UnsafeFast,
+                );
+                let records = genesis.force_read_records();
+                let aurora_id: near_primitives::account::id::AccountId =
+                    config.engine_account_id.parse().unwrap();
+                let contains_aurora = records.0.iter().any(|record| {
+                    if let StateRecord::AccessKey { account_id, .. } = record {
+                        account_id == &aurora_id
+                    } else {
+                        false
+                    }
+                });
+                if contains_aurora {
+                    println!("Aurora account already present");
+                    return Ok(());
+                }
+                let secret_key = near_crypto::SecretKey::from_random(near_crypto::KeyType::ED25519);
+                let public_key = secret_key.public_key();
+                let aurora_amount = 1_000_000_000_000_000_000_000_000_000_000_000; // 1e9 NEAR
+                let aurora_key_record = StateRecord::AccessKey {
+                    account_id: aurora_id.clone(),
+                    public_key: public_key.clone(),
+                    access_key: AccessKey::full_access(),
+                };
+                let aurora_account_record = StateRecord::Account {
+                    account_id: aurora_id.clone(),
+                    account: Account::new(aurora_amount, 0, CryptoHash::default(), 0),
+                };
+                records.0.push(aurora_key_record);
+                records.0.push(aurora_account_record);
+                genesis.config.total_supply += aurora_amount;
+                genesis.to_file(&path);
+                println!("Aurora account added to {path}");
+                let key_path = Path::new(&path).parent().unwrap().join("aurora_key.json");
+                let key_file = near_crypto::KeyFile {
+                    account_id: aurora_id,
+                    public_key,
+                    secret_key,
+                };
+                key_file
+                    .write_to_file(&key_path)
+                    .expect("Failed to write Aurora access key file");
+                println!("Aurora access key written to {key_path:?}");
             }
         },
     };
