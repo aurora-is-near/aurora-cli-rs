@@ -65,7 +65,7 @@ Note: if you are using `nohup` don't forget to kill the node when you are done w
 Suppose the Aurora Engine Wasm binary is located at a path given by the environment variable `ENGINE_WASM_PATH`. Then we can use this CLI to deploy the engine:
 
 ```
-aurora-cli-rs near write engine-init -w $ENGINE_WASM_PATH -c 1313161556 -o aurora
+aurora-cli-rs near write engine-init -w $ENGINE_WASM_PATH
 ```
 
 ## Using the localnet

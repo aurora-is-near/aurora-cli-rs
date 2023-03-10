@@ -26,6 +26,11 @@ use near_primitives::{
 };
 use std::{path::Path, str::FromStr};
 
+/// Chain ID for Aurora localnet, per the documentation on
+/// <https://doc.aurora.dev/getting-started/network-endpoints>
+#[allow(clippy::unreadable_literal)]
+const AURORA_LOCAL_NET_CHAIN_ID: u64 = 1313161556;
+
 #[derive(Subcommand)]
 pub enum Command {
     Read {
@@ -139,10 +144,15 @@ pub enum WriteCommand {
         /// Path to the Wasm artifact for the engine contract.
         #[clap(short, long)]
         wasm_path: String,
+        /// Unique identifier for the chain. The default value is 1313161556 (Aurora localnet).
+        /// See https://chainlist.org/ for a list of taken chain IDs.
         #[clap(short, long)]
-        chain_id: u64,
+        chain_id: Option<u64>,
+        /// Near account ID for the owner of the Engine contract.
+        /// The owner has special admin privileges such as upgrading the contract code.
+        /// The default value is the Engine Account ID itself.
         #[clap(short, long)]
-        owner_id: String,
+        owner_id: Option<String>,
         /// How many blocks after staging upgrade can deploy it.
         /// Default value is 0 (i.e. no delay in upgrading).
         #[clap(short, long)]
@@ -451,6 +461,8 @@ pub async fn execute_command(
                 ft_metadata,
             } => {
                 let wasm_bytes = tokio::fs::read(wasm_path).await?;
+                let chain_id = chain_id.unwrap_or(AURORA_LOCAL_NET_CHAIN_ID);
+                let owner_id = owner_id.as_deref().unwrap_or(&config.engine_account_id);
                 let prover_account: AccountId = {
                     let prover_account = prover_account
                         .as_deref()
