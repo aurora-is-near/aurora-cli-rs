@@ -22,6 +22,7 @@ clap = { version = "4", features = ["derive"] }
 ethabi = "18"
 hex = "0.4.3"
 libsecp256k1 = "0.7.0"
+near-chain-configs = "0.15"
 near-crypto = "0.15"
 near-jsonrpc-client = "0.4"
 near-jsonrpc-primitives = "0.15"

@@ -17,6 +17,12 @@ impl Config {
         Ok(config)
     }
 
+    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), io::Error> {
+        let serialized = serde_json::to_string_pretty(&self)?;
+        std::fs::write(path, serialized)?;
+        Ok(())
+    }
+
     pub fn get_evm_secret_key(&self) -> &str {
         self.evm_secret_key
             .as_deref()
@@ -24,9 +30,13 @@ impl Config {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Network {
     Mainnet,
     Testnet,
+    Custom {
+        near_rpc: String,
+        aurora_rpc: String,
+    },
 }
