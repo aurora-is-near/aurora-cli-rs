@@ -8,6 +8,15 @@ repository = "https://github.com/aurora-is-near/aurora-cli-rs"
 description = "Aurora CLI is a command line interface to bootstrap Aurora engine"
 readme = "README.md"
 
+[[bin]]
+name = "aurora"
+path = "src/main.rs"
+
+[features]
+default = [ "simple" ]
+simple = []
+advanced = []
+
 [dependencies]
 aurora-engine = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.8.1", features = ["std"] }
 aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.8.1", features = ["std"] }
@@ -15,21 +24,23 @@ aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git
 aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.8.1", features = ["std"] }
 aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "2.8.1", features = ["std", "serde"] }
 
-base64 = "0.20"
-borsh = "0.9.3"
+anyhow = "1"
+base64 = "0.21"
+borsh = "0.9"
 bs58 = "0.4.0"
 clap = { version = "4", features = ["derive"] }
 ethabi = "18"
 hex = "0.4.3"
-libsecp256k1 = "0.7.0"
-near-crypto = "0.15"
-near-jsonrpc-client = "0.4"
-near-jsonrpc-primitives = "0.15"
-near-primitives = "0.15"
+libsecp256k1 = "0.7"
+near-crypto = "0.16"
+near-jsonrpc-client = "0.5"
+near-jsonrpc-primitives = "0.16"
+near-primitives = "0.16"
 reqwest = { version = "0.11", features = ["json"] }
 rlp = "0.5.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]

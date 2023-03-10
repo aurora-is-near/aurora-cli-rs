@@ -1,7 +1,8 @@
-use crate::transaction_reader::{FlatTxStatus, ParsedTx, TxStatus};
 use aurora_engine_types::types::Address;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
+
+use crate::transaction_reader::{FlatTxStatus, ParsedTx, TxStatus};
 
 pub trait Aggregator: Sized {
     type Input;
@@ -13,6 +14,7 @@ pub trait Aggregator: Sized {
 }
 
 type FromToGasUsageEntry = (Address, Option<Address>, u128, u64, u128);
+
 pub struct FromToGasUsage {
     entries: Vec<FromToGasUsageEntry>,
     receive_channel: mpsc::UnboundedReceiver<Option<FromToGasUsageEntry>>,

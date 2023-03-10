@@ -7,6 +7,7 @@ pub trait Filter {
 }
 
 pub struct NoFilter;
+
 impl Filter for NoFilter {
     fn pass(&self, _data: &TxData) -> bool {
         true
@@ -14,6 +15,7 @@ impl Filter for NoFilter {
 }
 
 pub struct StatusExecuted;
+
 impl Filter for StatusExecuted {
     fn pass(&self, data: &TxData) -> bool {
         matches!(data.status, TxStatus::Executed(_))
@@ -21,6 +23,7 @@ impl Filter for StatusExecuted {
 }
 
 pub struct MatchFlatStatus(pub FlatTxStatus);
+
 impl Filter for MatchFlatStatus {
     fn pass(&self, data: &TxData) -> bool {
         data.status.flatten() == self.0
@@ -28,6 +31,7 @@ impl Filter for MatchFlatStatus {
 }
 
 pub struct MinNearGasUsed(pub u128);
+
 impl Filter for MinNearGasUsed {
     fn pass(&self, data: &TxData) -> bool {
         data.gas_profile
@@ -37,6 +41,7 @@ impl Filter for MinNearGasUsed {
 }
 
 pub struct MaxNearGasUsed(pub u128);
+
 impl Filter for MaxNearGasUsed {
     fn pass(&self, data: &TxData) -> bool {
         data.gas_profile
@@ -46,6 +51,7 @@ impl Filter for MaxNearGasUsed {
 }
 
 pub struct MinEvmGasUsed(pub u64);
+
 impl Filter for MinEvmGasUsed {
     fn pass(&self, data: &TxData) -> bool {
         match &data.status {
@@ -56,6 +62,7 @@ impl Filter for MinEvmGasUsed {
 }
 
 pub struct MaxEvmGasUsed(pub u64);
+
 impl Filter for MaxEvmGasUsed {
     fn pass(&self, data: &TxData) -> bool {
         match &data.status {
@@ -74,10 +81,7 @@ pub struct GeneralGasFilter {
 
 impl Filter for GeneralGasFilter {
     fn pass(&self, data: &TxData) -> bool {
-        let near_gas_used = match data.gas_profile.get("TOTAL") {
-            None => return false,
-            Some(total) => total,
-        };
+        let Some(near_gas_used) = data.gas_profile.get("TOTAL") else { return false };
         let evm_gas_used = match &data.status {
             TxStatus::Executed(submit_result) => &submit_result.gas_used,
             _ => return false,
@@ -91,6 +95,7 @@ impl Filter for GeneralGasFilter {
 }
 
 pub struct EthTxTo(pub Address);
+
 impl Filter for EthTxTo {
     fn pass(&self, data: &TxData) -> bool {
         data.eth_tx
@@ -108,11 +113,13 @@ pub struct And<F1, F2> {
     f1: F1,
     f2: F2,
 }
+
 impl<F1, F2> And<F1, F2> {
     pub const fn new(f1: F1, f2: F2) -> Self {
         Self { f1, f2 }
     }
 }
+
 impl<F1: Filter, F2: Filter> Filter for And<F1, F2> {
     fn pass(&self, data: &TxData) -> bool {
         self.f1.pass(data) && self.f2.pass(data)
@@ -123,11 +130,13 @@ pub struct Or<F1, F2> {
     f1: F1,
     f2: F2,
 }
+
 impl<F1, F2> Or<F1, F2> {
     pub const fn new(f1: F1, f2: F2) -> Self {
         Self { f1, f2 }
     }
 }
+
 impl<F1: Filter, F2: Filter> Filter for Or<F1, F2> {
     fn pass(&self, data: &TxData) -> bool {
         self.f1.pass(data) || self.f2.pass(data)

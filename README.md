@@ -1,4 +1,4 @@
-<p>&nbsp;</p>
+<br />
 <p align="center">
 <img src="https://raw.githubusercontent.com/hskang9/aurora-cli-rs/main/img/aurora-cli-logo.png" width=500>
 </p>
@@ -7,7 +7,7 @@
 <strong>An instant, zero-config Aurora engine operator</strong>
 </p>
 
-<br/>
+<br />
 
 [![CI](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml)
 

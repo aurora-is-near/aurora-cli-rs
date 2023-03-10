@@ -1,8 +1,3 @@
-use crate::{
-    client::{AuroraClient, ClientError},
-    config::Config,
-    utils,
-};
 use aurora_engine::parameters::{
     DeployErc20TokenArgs, GetStorageAtArgs, PauseEthConnectorCallArgs,
 };
@@ -10,12 +5,17 @@ use aurora_engine_types::{
     account_id::AccountId,
     parameters::{CrossContractCallArgs, PromiseArgs, PromiseCreateArgs},
     types::{Address, NearGas, Wei, Yocto},
-    U256,
+    H256, U256,
 };
 use borsh::BorshSerialize;
 use clap::Subcommand;
-use near_primitives::views::FinalExecutionOutcomeView;
 use std::str::FromStr;
+
+use crate::{
+    client::NearClient,
+    config::Config,
+    utils::{self, secret_key_from_hex},
+};
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -68,7 +68,7 @@ pub enum ReadCommand {
         #[clap(short, long)]
         amount: Option<String>,
         #[clap(subcommand)]
-        erc20: crate::cli::erc20::Erc20,
+        erc20: super::erc20::Erc20,
     },
     Solidity {
         #[clap(short, long)]
@@ -78,7 +78,7 @@ pub enum ReadCommand {
         #[clap(short, long)]
         amount: Option<String>,
         #[clap(subcommand)]
-        contract_call: crate::cli::solidity::Solidity,
+        contract_call: super::solidity::Solidity,
     },
     // get nep141_from_erc20
     GetBridgedNep141 {
@@ -147,7 +147,7 @@ pub enum WriteCommand {
         #[clap(short, long)]
         amount: Option<String>,
         #[clap(subcommand)]
-        contract_call: crate::cli::solidity::Solidity,
+        contract_call: super::solidity::Solidity,
     },
     EngineErc20 {
         #[clap(short, long)]
@@ -155,7 +155,7 @@ pub enum WriteCommand {
         #[clap(short, long)]
         amount: Option<String>,
         #[clap(subcommand)]
-        erc20: crate::cli::erc20::Erc20,
+        erc20: super::erc20::Erc20,
     },
     FactoryUpdate {
         wasm_bytes_path: String,
@@ -184,15 +184,15 @@ pub enum WriteCommand {
 
 pub async fn execute_command(
     command: Command,
-    client: &AuroraClient,
+    client: &NearClient,
     config: &Config,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> anyhow::Result<()> {
     match command {
         Command::Read { subcommand } => match subcommand {
             ReadCommand::GetReceiptResult { receipt_id_b58 } => {
                 let tx_hash = bs58::decode(receipt_id_b58.as_str()).into_vec().unwrap();
                 let outcome = client
-                    .get_near_receipt_outcome(tx_hash.as_slice().try_into().unwrap())
+                    .get_receipt_outcome(tx_hash.as_slice().try_into().unwrap())
                     .await?;
                 println!("{outcome:?}");
             }
@@ -295,16 +295,14 @@ pub async fn execute_command(
             }
             ReadCommand::GetChainId => {
                 let chain_id = {
-                    let result = client.near_view_call("get_chain_id".into(), vec![]).await?;
+                    let result = client.view_call("get_chain_id", vec![]).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{chain_id:?}");
             }
             ReadCommand::GetUpgradeIndex => {
                 let upgrade_index = {
-                    let result = client
-                        .near_view_call("get_upgrade_index".into(), vec![])
-                        .await?;
+                    let result = client.view_call("get_upgrade_index", vec![]).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{upgrade_index:?}");
@@ -313,10 +311,7 @@ pub async fn execute_command(
                 let height_serialized: u128 = block_number.parse::<u128>().unwrap();
                 let block_hash = {
                     let result = client
-                        .near_view_call(
-                            "get_block_hash".into(),
-                            height_serialized.to_le_bytes().to_vec(),
-                        )
+                        .view_call("get_block_hash", height_serialized.to_le_bytes().to_vec())
                         .await?
                         .result;
                     result
@@ -324,53 +319,45 @@ pub async fn execute_command(
                 println!("{:?}", hex::encode(block_hash));
             }
             ReadCommand::GetCode { address_hex } => {
-                let code = client
-                    .near_view_call("get_code".into(), address_hex.as_bytes().to_vec())
-                    .await?
-                    .result;
-                println!("{code:?}");
+                let address = utils::hex_to_address(&address_hex)?.as_bytes().to_vec();
+                let code = client.view_call("get_code", address).await?.result;
+                let code_hex = hex::encode(code);
+                println!("{code_hex}");
             }
             ReadCommand::GetBalance { address_hex } => {
+                let address = utils::hex_to_address(&address_hex)?.as_bytes().to_vec();
                 let balance = {
-                    let result = client
-                        .near_view_call("get_balance".into(), address_hex.as_bytes().to_vec())
-                        .await?;
+                    let result = client.view_call("get_balance", address).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
-                println!("{balance:?}");
+                println!("{balance}");
             }
             ReadCommand::GetNonce { address_hex } => {
+                let address = utils::hex_to_address(&address_hex)?.as_bytes().to_vec();
                 let nonce = {
-                    let result = client
-                        .near_view_call("get_nonce".into(), address_hex.as_bytes().to_vec())
-                        .await?;
+                    let result = client.view_call("get_nonce", address).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
-                println!("{nonce:?}");
+                println!("{nonce}");
             }
             ReadCommand::GetStorageAt {
                 address_hex,
                 key_hex,
             } => {
-                let mut buffer: Vec<u8> = Vec::new();
                 let input = GetStorageAtArgs {
                     address: utils::hex_to_address(&address_hex)?,
                     key: utils::hex_to_arr(&key_hex)?,
                 };
-                input.serialize(&mut buffer)?;
                 let storage = {
                     let result = client
-                        .near_view_call("get_storage_at".into(), buffer)
+                        .view_call("get_storage_at", input.try_to_vec()?)
                         .await?;
-                    hex::encode(result.result)
+                    H256::from_slice(&result.result)
                 };
-                println!("{storage:?}");
+                println!("{storage}");
             }
             ReadCommand::GetPausedFlags => {
-                let paused_flags = client
-                    .near_view_call("get_paused_flags".into(), vec![])
-                    .await?
-                    .result;
+                let paused_flags = client.view_call("get_paused_flags", vec![]).await?.result;
                 println!("{paused_flags:?}");
             }
         },
@@ -383,7 +370,7 @@ pub async fn execute_command(
                 deposit_yocto,
                 attached_gas,
             } => {
-                let source_private_key_hex = config.get_evm_secret_key();
+                let source_private_key_hex = config.get_evm_secret_key()?;
                 let sk_bytes = utils::hex_to_arr(source_private_key_hex)?;
                 let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
                 let promise = PromiseArgs::Create(parse_xcc_args(
@@ -395,14 +382,14 @@ pub async fn execute_command(
                     attached_gas,
                 ));
                 let precompile_args = CrossContractCallArgs::Eager(promise);
-                let result = send_as_near_transaction(
-                    client,
-                    &sk,
-                    Some(aurora_engine_precompiles::xcc::cross_contract_call::ADDRESS),
-                    Wei::zero(),
-                    precompile_args.try_to_vec().unwrap(),
-                )
-                .await?;
+                let result = client
+                    .send_aurora_transaction(
+                        &sk,
+                        Some(aurora_engine_precompiles::xcc::cross_contract_call::ADDRESS),
+                        Wei::zero(),
+                        precompile_args.try_to_vec().unwrap(),
+                    )
+                    .await?;
                 println!("{result:?}");
             }
             WriteCommand::EngineCall {
@@ -411,10 +398,11 @@ pub async fn execute_command(
                 input_data_hex,
             } => {
                 let (sk, target, amount) =
-                    parse_write_call_args(config, &target_addr_hex, amount.as_deref());
+                    parse_write_call_args(config, &target_addr_hex, amount.as_deref())?;
                 let input = utils::hex_to_vec(&input_data_hex)?;
-                let result =
-                    send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
+                let result = client
+                    .send_aurora_transaction(&sk, Some(target), amount, input)
+                    .await?;
                 println!("{result:?}");
             }
             WriteCommand::EngineErc20 {
@@ -423,10 +411,11 @@ pub async fn execute_command(
                 amount,
             } => {
                 let (sk, target, amount) =
-                    parse_write_call_args(config, &target_addr_hex, amount.as_deref());
+                    parse_write_call_args(config, &target_addr_hex, amount.as_deref())?;
                 let input = erc20.abi_encode()?;
-                let result =
-                    send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
+                let result = client
+                    .send_aurora_transaction(&sk, Some(target), amount, input)
+                    .await?;
                 println!("{result:?}");
             }
             WriteCommand::Solidity {
@@ -435,34 +424,28 @@ pub async fn execute_command(
                 amount,
             } => {
                 let (sk, target, amount) =
-                    parse_write_call_args(config, &target_addr_hex, amount.as_deref());
+                    parse_write_call_args(config, &target_addr_hex, amount.as_deref())?;
                 let input = contract_call.abi_encode()?;
-                let result =
-                    send_as_near_transaction(client, &sk, Some(target), amount, input).await?;
+                let result = client
+                    .send_aurora_transaction(&sk, Some(target), amount, input)
+                    .await?;
                 println!("{result:?}");
             }
             WriteCommand::FactoryUpdate { wasm_bytes_path } => {
                 let args = std::fs::read(wasm_bytes_path).unwrap();
-                let tx_outcome = client
-                    .near_contract_call("factory_update".into(), args)
-                    .await
-                    .unwrap();
+                let tx_outcome = client.contract_call("factory_update", args).await.unwrap();
                 println!("{tx_outcome:?}");
             }
             WriteCommand::DeployCode { code_byte_hex } => {
                 let input = utils::hex_to_vec(&code_byte_hex)?;
-                let tx_outcome = client
-                    .near_contract_call("deploy_code".into(), input)
-                    .await?;
+                let tx_outcome = client.contract_call("deploy_code", input).await?;
                 println!("{tx_outcome:?}");
             }
             WriteCommand::RegisterRelayer {
                 relayer_eth_address_hex,
             } => {
                 let relayer = utils::hex_to_vec(&relayer_eth_address_hex)?;
-                let tx_outcome = client
-                    .near_contract_call("register_relayer".into(), relayer)
-                    .await?;
+                let tx_outcome = client.contract_call("register_relayer", relayer).await?;
                 println!("{tx_outcome:?}");
             }
             WriteCommand::DeployERC20Token { nep141 } => {
@@ -470,14 +453,12 @@ pub async fn execute_command(
                 let nep141: AccountId = nep141.parse().unwrap();
                 let input = DeployErc20TokenArgs { nep141 };
                 input.serialize(&mut buffer)?;
-                let tx_outcome = client
-                    .near_contract_call("deploy_erc20_token".into(), buffer)
-                    .await?;
+                let tx_outcome = client.contract_call("deploy_erc20_token", buffer).await?;
                 println!("{tx_outcome:?}");
             }
             WriteCommand::Deposit { raw_proof } => {
                 let tx_outcome = client
-                    .near_contract_call("deposit".into(), raw_proof.as_bytes().to_vec())
+                    .contract_call("deposit", raw_proof.as_bytes().to_vec())
                     .await?;
                 println!("{tx_outcome:?}");
             }
@@ -487,9 +468,7 @@ pub async fn execute_command(
                     paused_mask: u8::from_str(&paused_mask).unwrap(),
                 };
                 input.serialize(&mut buffer)?;
-                let tx_outcome = client
-                    .near_contract_call("set_paused_flags".into(), buffer)
-                    .await?;
+                let tx_outcome = client.contract_call("set_paused_flags", buffer).await?;
                 println!("{tx_outcome:?}");
             }
         },
@@ -515,13 +494,14 @@ fn parse_write_call_args(
     config: &Config,
     target_addr_hex: &str,
     amount: Option<&str>,
-) -> (libsecp256k1::SecretKey, Address, Wei) {
-    let source_private_key_hex = config.get_evm_secret_key();
-    let sk_bytes = utils::hex_to_arr(source_private_key_hex).unwrap();
-    let sk = libsecp256k1::SecretKey::parse(&sk_bytes).unwrap();
-    let target = utils::hex_to_address(target_addr_hex).unwrap();
-    let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
-    (sk, target, amount)
+) -> anyhow::Result<(libsecp256k1::SecretKey, Address, Wei)> {
+    let source_private_key_hex = config.get_evm_secret_key()?;
+    let secret_key = secret_key_from_hex(source_private_key_hex)?;
+    let target = utils::hex_to_address(target_addr_hex)?;
+    let amount = amount
+        .and_then(|a| U256::from_dec_str(a).ok())
+        .map_or_else(Wei::zero, Wei::new);
+    Ok((secret_key, target, amount))
 }
 
 fn parse_xcc_args(
@@ -557,41 +537,4 @@ fn parse_xcc_args(
         attached_balance,
         attached_gas,
     }
-}
-
-async fn send_as_near_transaction(
-    client: &AuroraClient,
-    sk: &libsecp256k1::SecretKey,
-    to: Option<Address>,
-    amount: Wei,
-    input: Vec<u8>,
-) -> Result<FinalExecutionOutcomeView, ClientError> {
-    let sender_address = utils::address_from_secret_key(sk);
-    let nonce = {
-        let result = client
-            .near_view_call("get_nonce".into(), sender_address.as_bytes().to_vec())
-            .await?;
-        U256::from_big_endian(&result.result)
-    };
-    let tx = aurora_engine_transactions::legacy::TransactionLegacy {
-        nonce,
-        gas_price: U256::zero(),
-        gas_limit: U256::from(u64::MAX),
-        to,
-        value: amount,
-        data: input,
-    };
-    let chain_id = {
-        let result = client
-            .near_view_call("get_chain_id".into(), sender_address.as_bytes().to_vec())
-            .await?;
-        U256::from_big_endian(&result.result).low_u64()
-    };
-    let signed_tx = aurora_engine_transactions::EthTransactionKind::Legacy(
-        utils::sign_transaction(tx, chain_id, sk),
-    );
-    let result = client
-        .near_contract_call("submit".into(), (&signed_tx).into())
-        .await?;
-    Ok(result)
 }

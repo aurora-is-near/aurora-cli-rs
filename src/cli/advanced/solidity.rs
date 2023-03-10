@@ -1,7 +1,4 @@
-use crate::{
-    cli::erc20::{wrap_error, ParseError},
-    utils,
-};
+use crate::utils;
 use aurora_engine_types::U256;
 use clap::Subcommand;
 use serde_json::Value;
@@ -34,7 +31,7 @@ pub enum Solidity {
 }
 
 impl Solidity {
-    pub fn abi_encode(self) -> Result<Vec<u8>, ParseError> {
+    pub fn abi_encode(self) -> anyhow::Result<Vec<u8>> {
         match self {
             Self::UnaryCall {
                 abi_path,
@@ -43,16 +40,16 @@ impl Solidity {
                 stdin_arg,
             } => {
                 let abi = read_abi(abi_path)?;
-                let function = abi.function(&method_name).map_err(wrap_error)?;
+                let function = abi.function(&method_name)?;
                 if function.inputs.len() != 1 {
-                    return Err(wrap_error("Function must take only one argument"));
+                    anyhow::bail!("Function must take only one argument");
                 }
                 let arg_type = &function.inputs.first().unwrap().kind;
                 let arg = read_arg(arg, stdin_arg);
 
                 function
                     .encode_input(&[parse_arg(arg.trim(), arg_type)?])
-                    .map_err(wrap_error)
+                    .map_err(Into::into)
             }
             Self::CallArgsByName {
                 abi_path,
@@ -61,31 +58,31 @@ impl Solidity {
                 stdin_arg,
             } => {
                 let abi = read_abi(abi_path)?;
-                let function = abi.function(&method_name).map_err(wrap_error)?;
-                let arg: serde_json::Value =
-                    serde_json::from_str(&read_arg(arg, stdin_arg)).map_err(wrap_error)?;
+                let function = abi.function(&method_name)?;
+                let arg: Value = serde_json::from_str(&read_arg(arg, stdin_arg))?;
                 let vars_map = arg
                     .as_object()
-                    .ok_or_else(|| wrap_error("Expected JSON object"))?;
+                    .ok_or_else(|| anyhow::anyhow!("Expected JSON object"))?;
                 let mut tokens = Vec::with_capacity(function.inputs.len());
                 for input in &function.inputs {
                     let arg = vars_map
                         .get(&input.name)
                         .and_then(Value::as_str)
-                        .ok_or_else(|| wrap_error("Missing variable"))?;
+                        .ok_or_else(|| anyhow::anyhow!("Missing variable"))?;
                     let token = parse_arg(arg, &input.kind)?;
                     tokens.push(token);
                 }
 
-                function.encode_input(&tokens).map_err(wrap_error)
+                function.encode_input(&tokens).map_err(Into::into)
             }
         }
     }
 }
 
-fn read_abi(abi_path: String) -> Result<ethabi::Contract, ParseError> {
-    let reader = std::fs::File::open(abi_path).map_err(wrap_error)?;
-    ethabi::Contract::load(reader).map_err(wrap_error)
+fn read_abi(abi_path: String) -> anyhow::Result<ethabi::Contract> {
+    std::fs::File::open(abi_path)
+        .map_err(Into::into)
+        .and_then(|reader| ethabi::Contract::load(reader).map_err(Into::into))
 }
 
 fn read_arg(arg: Option<String>, stdin_arg: Option<bool>) -> String {
@@ -102,83 +99,79 @@ fn read_arg(arg: Option<String>, stdin_arg: Option<bool>) -> String {
     )
 }
 
-fn parse_arg(arg: &str, kind: &ethabi::ParamType) -> Result<ethabi::Token, ParseError> {
+fn parse_arg(arg: &str, kind: &ethabi::ParamType) -> anyhow::Result<ethabi::Token> {
     match kind {
         ethabi::ParamType::Address => {
-            let addr = utils::hex_to_address(arg).map_err(wrap_error)?;
+            let addr = utils::hex_to_address(arg)?;
             Ok(ethabi::Token::Address(addr.raw()))
         }
         ethabi::ParamType::Bytes => {
-            let bytes = utils::hex_to_vec(arg).map_err(wrap_error)?;
+            let bytes = utils::hex_to_vec(arg)?;
             Ok(ethabi::Token::Bytes(bytes))
         }
         ethabi::ParamType::Int(_) => {
-            let value = U256::from_dec_str(arg).map_err(wrap_error)?;
+            let value = U256::from_dec_str(arg)?;
             Ok(ethabi::Token::Int(value))
         }
         ethabi::ParamType::Uint(_) => {
-            let value = U256::from_dec_str(arg).map_err(wrap_error)?;
+            let value = U256::from_dec_str(arg)?;
             Ok(ethabi::Token::Uint(value))
         }
         ethabi::ParamType::Bool => match arg.to_lowercase().as_str() {
             "true" => Ok(ethabi::Token::Bool(true)),
             "false" => Ok(ethabi::Token::Bool(false)),
-            _ => Err(wrap_error("Expected true or false")),
+            _ => anyhow::bail!("Expected true or false"),
         },
         ethabi::ParamType::String => Ok(ethabi::Token::String(arg.into())),
         ethabi::ParamType::Array(arr_kind) => {
-            let value: serde_json::Value = serde_json::from_str(arg).map_err(wrap_error)?;
+            let value: Value = serde_json::from_str(arg)?;
             parse_array(value, arr_kind).map(ethabi::Token::Array)
         }
         ethabi::ParamType::FixedBytes(size) => {
-            let bytes = utils::hex_to_vec(arg).map_err(wrap_error)?;
+            let bytes = utils::hex_to_vec(arg)?;
             if &bytes.len() != size {
-                return Err(wrap_error("Incorrect FixedBytes length"));
+                anyhow::bail!("Incorrect FixedBytes length")
             }
             Ok(ethabi::Token::FixedBytes(bytes))
         }
         ethabi::ParamType::FixedArray(arr_kind, size) => {
-            let value: serde_json::Value = serde_json::from_str(arg).map_err(wrap_error)?;
+            let value: Value = serde_json::from_str(arg)?;
             let tokens = parse_array(value, arr_kind)?;
             if &tokens.len() != size {
-                return Err(wrap_error("Incorrect FixedArray length"));
+                anyhow::bail!("Incorrect FixedArray length")
             }
             Ok(ethabi::Token::FixedArray(tokens))
         }
         ethabi::ParamType::Tuple(tuple_kinds) => {
-            let value: serde_json::Value = serde_json::from_str(arg).map_err(wrap_error)?;
-            let values = match value {
-                serde_json::Value::Array(values) => values,
-                _ => {
-                    return Err(wrap_error("Expected Array"));
-                }
-            };
+            let value: Value = serde_json::from_str(arg)?;
+            let Value::Array(values) = value else { anyhow::bail!("Expected Array"); };
             if values.len() != tuple_kinds.len() {
-                return Err(wrap_error("Incorrect number of args for tuple size"));
+                anyhow::bail!("Incorrect number of args for tuple size");
             }
             let mut tokens = Vec::with_capacity(values.len());
+
             for (v, kind) in values.iter().zip(tuple_kinds.iter()) {
                 let token = parse_arg(&serde_json::to_string(v).unwrap(), kind)?;
                 tokens.push(token);
             }
+
             Ok(ethabi::Token::Tuple(tokens))
         }
     }
 }
 
-fn parse_array(
-    value: serde_json::Value,
-    arr_kind: &ethabi::ParamType,
-) -> Result<Vec<ethabi::Token>, ParseError> {
+fn parse_array(value: Value, arr_kind: &ethabi::ParamType) -> anyhow::Result<Vec<ethabi::Token>> {
     match value {
-        serde_json::Value::Array(values) => {
+        Value::Array(values) => {
             let mut tokens = Vec::with_capacity(values.len());
+
             for v in values {
                 let token = parse_arg(&serde_json::to_string(&v).unwrap(), arr_kind)?;
                 tokens.push(token);
             }
+
             Ok(tokens)
         }
-        _ => Err(wrap_error("Expected Array")),
+        _ => anyhow::bail!("Expected Array"),
     }
 }

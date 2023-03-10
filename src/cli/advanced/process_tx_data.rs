@@ -3,7 +3,7 @@ use crate::{
     utils,
 };
 use clap::Subcommand;
-use std::sync::Arc;
+use std::{path::Path, sync::Arc};
 
 #[derive(Subcommand)]
 pub enum ProcessTxAction {
@@ -29,7 +29,10 @@ pub enum ProcessTxAction {
     FromToGasUsed,
 }
 
-pub async fn execute_command(action: ProcessTxAction, input_files_list_path: String) {
+pub async fn execute_command<P: AsRef<Path> + Send>(
+    action: ProcessTxAction,
+    input_files_list_path: P,
+) {
     let paths_contents = tokio::fs::read_to_string(input_files_list_path)
         .await
         .unwrap();
