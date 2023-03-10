@@ -20,6 +20,13 @@ impl Config {
     }
 
     #[cfg(feature = "advanced")]
+    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> anyhow::Result<()> {
+        let serialized = serde_json::to_string_pretty(&self)?;
+        std::fs::write(path, serialized)?;
+        Ok(())
+    }
+
+    #[cfg(feature = "advanced")]
     pub fn get_evm_secret_key(&self) -> anyhow::Result<&str> {
         self.evm_secret_key.as_deref().ok_or_else(|| {
             anyhow::anyhow!("evm_secret_key must be given in config to use this feature")
@@ -27,9 +34,13 @@ impl Config {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Network {
     Mainnet,
     Testnet,
+    Custom {
+        near_rpc: String,
+        aurora_rpc: String,
+    },
 }

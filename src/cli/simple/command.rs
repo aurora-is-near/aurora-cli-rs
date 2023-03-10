@@ -129,7 +129,7 @@ pub async fn deploy_aurora<P: AsRef<Path> + Send>(client: Client, path: P) -> an
     let code = std::fs::read(path)?;
 
     match client.near().deploy_contract(code).await {
-        Ok(result) => println!("{result}"),
+        Ok(result) => println!("{result:?}"),
         Err(e) => eprintln!("{e:?}"),
     }
 

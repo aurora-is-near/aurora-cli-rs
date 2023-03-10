@@ -13,6 +13,7 @@ use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
+use near_primitives::transaction::Action;
 #[cfg(not(feature = "advanced"))]
 use near_primitives::views::FinalExecutionStatus;
 use near_primitives::{
@@ -169,18 +170,57 @@ impl NearClient {
         method_name: &str,
         args: Vec<u8>,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        self.near_broadcast_tx(
+            vec![Action::FunctionCall(
+                near_primitives::transaction::FunctionCallAction {
+                    method_name: method_name.to_string(),
+                    args,
+                    gas: 300_000_000_000_000,
+                    deposit: 0,
+                },
+            )],
+            None,
+        )
+        .await
+    }
+
+    #[cfg(feature = "advanced")]
+    pub async fn contract_call_with_nonce(
+        &self,
+        method_name: &str,
+        args: Vec<u8>,
+        nonce_override: u64,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        self.near_broadcast_tx(
+            vec![Action::FunctionCall(
+                near_primitives::transaction::FunctionCallAction {
+                    method_name: method_name.to_string(),
+                    args,
+                    gas: 300_000_000_000_000,
+                    deposit: 0,
+                },
+            )],
+            Some(nonce_override),
+        )
+        .await
+    }
+
+    async fn near_broadcast_tx(
+        &self,
+        actions: Vec<Action>,
+        nonce_override: Option<u64>,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
         let signer = self.signer()?;
         let (block_hash, nonce) = self.get_nonce(&signer).await?;
+        let nonce = nonce_override.unwrap_or(nonce);
+
         let request = RpcBroadcastTxCommitRequest {
-            signed_transaction: SignedTransaction::call(
+            signed_transaction: SignedTransaction::from_actions(
                 nonce,
                 signer.account_id.clone(),
                 self.engine_account_id.parse().unwrap(),
                 &signer,
-                0,
-                method_name.into(),
-                args,
-                300_000_000_000_000,
+                actions,
                 block_hash,
             ),
         };
@@ -259,8 +299,10 @@ impl NearClient {
     }
 
     /// Deploy WASM contract.
-    #[cfg(not(feature = "advanced"))]
-    pub async fn deploy_contract(&self, code: Vec<u8>) -> anyhow::Result<String> {
+    pub async fn deploy_contract(
+        &self,
+        code: Vec<u8>,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
         let signer = self.signer()?;
         let (block_hash, nonce) = self.get_nonce(&signer).await?;
         let request = RpcBroadcastTxCommitRequest {
@@ -269,23 +311,14 @@ impl NearClient {
                 signer.account_id.clone(),
                 signer.account_id.clone(),
                 &signer,
-                vec![near_primitives::transaction::Action::DeployContract(
+                vec![Action::DeployContract(
                     near_primitives::transaction::DeployContractAction { code },
                 )],
                 block_hash,
             ),
         };
-        let response = self.client.call(request).await?;
 
-        match response.status {
-            FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {
-                anyhow::bail!("Bad tx status")
-            }
-            FinalExecutionStatus::Failure(e) => anyhow::bail!(e),
-            FinalExecutionStatus::SuccessValue(_) => {
-                Ok("Smart contract has been deployed successfully".to_string())
-            }
-        }
+        self.client.call(request).await.map_err(Into::into)
     }
 
     /// Send Aurora EVM transaction via NEAR network.

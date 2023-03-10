@@ -2,6 +2,7 @@ use crate::utils;
 use aurora_engine_types::U256;
 use clap::Subcommand;
 use serde_json::Value;
+use std::borrow::Cow;
 
 #[derive(Subcommand)]
 pub enum Solidity {
@@ -31,7 +32,26 @@ pub enum Solidity {
 }
 
 impl Solidity {
-    pub fn abi_encode(self) -> anyhow::Result<Vec<u8>> {
+    pub fn abi_decode(&self, output: &[u8]) -> anyhow::Result<Vec<ethabi::Token>> {
+        let (abi, method_name) = match self {
+            Self::UnaryCall {
+                abi_path,
+                method_name,
+                ..
+            }
+            | Self::CallArgsByName {
+                abi_path,
+                method_name,
+                ..
+            } => (read_abi(abi_path)?, method_name),
+        };
+
+        let function = abi.function(method_name)?;
+        let tokens = function.decode_output(output)?;
+        Ok(tokens)
+    }
+
+    pub fn abi_encode(&self) -> anyhow::Result<Vec<u8>> {
         match self {
             Self::UnaryCall {
                 abi_path,
@@ -40,12 +60,12 @@ impl Solidity {
                 stdin_arg,
             } => {
                 let abi = read_abi(abi_path)?;
-                let function = abi.function(&method_name)?;
+                let function = abi.function(method_name)?;
                 if function.inputs.len() != 1 {
                     anyhow::bail!("Function must take only one argument");
                 }
                 let arg_type = &function.inputs.first().unwrap().kind;
-                let arg = read_arg(arg, stdin_arg);
+                let arg = read_arg(arg.as_deref(), *stdin_arg);
 
                 function
                     .encode_input(&[parse_arg(arg.trim(), arg_type)?])
@@ -58,8 +78,8 @@ impl Solidity {
                 stdin_arg,
             } => {
                 let abi = read_abi(abi_path)?;
-                let function = abi.function(&method_name)?;
-                let arg: Value = serde_json::from_str(&read_arg(arg, stdin_arg))?;
+                let function = abi.function(method_name)?;
+                let arg: Value = serde_json::from_str(&read_arg(arg.as_deref(), *stdin_arg))?;
                 let vars_map = arg
                     .as_object()
                     .ok_or_else(|| anyhow::anyhow!("Expected JSON object"))?;
@@ -79,23 +99,23 @@ impl Solidity {
     }
 }
 
-fn read_abi(abi_path: String) -> anyhow::Result<ethabi::Contract> {
+fn read_abi(abi_path: &str) -> anyhow::Result<ethabi::Contract> {
     std::fs::File::open(abi_path)
         .map_err(Into::into)
         .and_then(|reader| ethabi::Contract::load(reader).map_err(Into::into))
 }
 
-fn read_arg(arg: Option<String>, stdin_arg: Option<bool>) -> String {
+fn read_arg(arg: Option<&str>, stdin_arg: Option<bool>) -> Cow<str> {
     arg.map_or_else(
         || match stdin_arg {
             Some(true) => {
                 let mut buf = String::new();
                 std::io::Read::read_to_string(&mut std::io::stdin(), &mut buf).unwrap();
-                buf
+                Cow::Owned(buf)
             }
-            None | Some(false) => String::new(),
+            None | Some(false) => Cow::Owned(String::new()),
         },
-        |arg| arg,
+        Cow::Borrowed,
     )
 }
 

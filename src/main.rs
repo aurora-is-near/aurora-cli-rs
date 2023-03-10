@@ -90,12 +90,16 @@ async fn run(args: Cli) -> anyhow::Result<()> {
 async fn run(args: Cli) -> anyhow::Result<()> {
     let config_path = args.config_path.as_deref().unwrap_or("default-config.json");
     let config = config::Config::from_file(config_path)?;
-    let network = config.network;
+    let network = &config.network;
 
     let api_key = config.aurora_api_key.as_deref().unwrap_or_default();
     let (aurora_endpoint, near_endpoint) = match network {
         config::Network::Mainnet => (AURORA_MAINNET_ENDPOINT, NEAR_MAINNET_ENDPOINT),
         config::Network::Testnet => (AURORA_TESTNET_ENDPOINT, NEAR_TESTNET_ENDPOINT),
+        config::Network::Custom {
+            near_rpc,
+            aurora_rpc,
+        } => (aurora_rpc.as_str(), near_rpc.as_str()),
     };
 
     match args.command {
@@ -114,7 +118,7 @@ async fn run(args: Cli) -> anyhow::Result<()> {
                 &config.engine_account_id,
                 config.near_key_path.clone(),
             );
-            cli::near::execute_command(subcommand, &client, &config).await?;
+            cli::near::execute_command(subcommand, &client, &config, config_path).await?;
         }
         Command::ProcessTxData {
             action,

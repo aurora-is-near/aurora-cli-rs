@@ -164,6 +164,7 @@ dependencies = [
  "ethabi",
  "hex",
  "libsecp256k1",
+ "near-chain-configs",
  "near-crypto",
  "near-jsonrpc-client",
  "near-jsonrpc-primitives",
