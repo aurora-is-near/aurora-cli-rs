@@ -10,7 +10,7 @@ use std::str::FromStr;
 use crate::client::TransactionOutcome;
 use crate::{
     client::Client,
-    utils::{address_from_hex, secret_key_from_file},
+    utils::{hex_to_address, hex_to_vec, secret_key_from_file},
 };
 
 pub async fn get_chain_id(client: Client) -> anyhow::Result<()> {
@@ -30,7 +30,7 @@ pub async fn get_bridge_prover(client: Client) -> anyhow::Result<()> {
 }
 
 pub async fn get_nonce(client: Client, address: String) -> anyhow::Result<()> {
-    let address = address_from_hex(&address)?.as_bytes().to_vec();
+    let address = hex_to_vec(&address)?;
     get_number(client, "get_nonce", Some(address)).await
 }
 
@@ -49,7 +49,7 @@ pub async fn get_upgrade_index(client: Client) -> anyhow::Result<()> {
 
 /// Return ETH balance of the address.
 pub async fn get_balance(client: Client, address: String) -> anyhow::Result<()> {
-    let address = address_from_hex(&address)?.as_bytes().to_vec();
+    let address = hex_to_vec(&address)?;
     let result = client.near().view_call("get_balance", address).await?;
     let balance = U256::from_big_endian(&result.result).low_u64();
     println!("{balance}");
@@ -59,7 +59,7 @@ pub async fn get_balance(client: Client, address: String) -> anyhow::Result<()> 
 
 /// Return a hex code of the smart contract.
 pub async fn get_code(client: Client, address: String) -> anyhow::Result<()> {
-    let address = address_from_hex(&address)?.as_bytes().to_vec();
+    let address = hex_to_vec(&address)?;
     let result = client.near().view_call("get_code", address).await?;
     let code = hex::encode(result.result);
     println!("0x{code}");
@@ -168,7 +168,7 @@ pub async fn call(
 ) -> anyhow::Result<()> {
     let key = path_to_sk.ok_or_else(|| anyhow::anyhow!("operation requires secret key"))?;
     let sk = secret_key_from_file(key)?;
-    let target = address_from_hex(&address)?;
+    let target = hex_to_address(&address)?;
     let func = hex::decode(func_hash)?;
 
     let result = client
@@ -194,10 +194,6 @@ pub async fn call(
                     },
                     TransactionOutcome::Failure(e) => format!("bad outcome: {e}"),
                 }
-                // format!(
-                //     "success, tx hash: {}, {}",
-                //     result.transaction.hash.to_string(),
-                // )
             }
         },
         Err(e) => format!("Deploying code error: {e}"),
@@ -221,7 +217,7 @@ pub async fn deploy_upgrade(client: Client) -> anyhow::Result<()> {
 }
 
 pub async fn get_storage_at(client: Client, address: String, key: String) -> anyhow::Result<()> {
-    let address = address_from_hex(&address)?;
+    let address = hex_to_address(&address)?;
     let key = H256::from_str(&key)?;
     let input = GetStorageAtArgs {
         address,

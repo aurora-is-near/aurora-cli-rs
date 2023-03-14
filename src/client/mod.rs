@@ -1,5 +1,5 @@
 use aurora_engine::parameters::SubmitResult;
-#[cfg(not(feature = "advanced"))]
+#[cfg(feature = "simple")]
 use aurora_engine_types::account_id::AccountId;
 #[cfg(feature = "advanced")]
 use aurora_engine_types::H256;
@@ -22,7 +22,7 @@ type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
     near_jsonrpc_client::methods::broadcast_tx_commit::RpcTransactionError,
 >;
 
-#[cfg(not(feature = "advanced"))]
+#[cfg(feature = "simple")]
 pub struct Client {
     near_rpc: String,
     #[cfg(feature = "advanced")]
@@ -31,7 +31,7 @@ pub struct Client {
     signer_key_path: Option<String>,
 }
 
-#[cfg(not(feature = "advanced"))]
+#[cfg(feature = "simple")]
 impl Client {
     pub fn new(near_rpc: &str, engine_account: &str, signer_key_path: Option<String>) -> Self {
         Self {

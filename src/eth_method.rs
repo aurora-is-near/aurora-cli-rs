@@ -3,9 +3,9 @@ use aurora_engine_types::{types::Address, H256};
 
 pub enum EthMethod {
     GetChainId,
-    #[cfg(not(feature = "advanced"))]
+    #[cfg(feature = "simple")]
     GetBalance(Address),
-    #[cfg(not(feature = "advanced"))]
+    #[cfg(feature = "simple")]
     GetCode(Address),
     GetTransactionCount(Address),
     GetTransactionReceipt(H256),
@@ -16,9 +16,9 @@ impl EthMethod {
     pub const fn name(&self) -> &str {
         match &self {
             Self::GetChainId => "net_version",
-            #[cfg(not(feature = "advanced"))]
+            #[cfg(feature = "simple")]
             Self::GetBalance(_) => "eth_getBalance",
-            #[cfg(not(feature = "advanced"))]
+            #[cfg(feature = "simple")]
             Self::GetCode(_) => "eth_getCode",
             Self::GetTransactionCount(_) => "eth_getTransactionCount",
             Self::GetTransactionReceipt(_) => "eth_getTransactionReceipt",
@@ -29,7 +29,7 @@ impl EthMethod {
     pub fn params(&self) -> Vec<String> {
         match &self {
             Self::GetChainId => Vec::new(),
-            #[cfg(not(feature = "advanced"))]
+            #[cfg(feature = "simple")]
             Self::GetBalance(address) | Self::GetCode(address) => {
                 vec![format!("0x{}", address.encode())]
             }

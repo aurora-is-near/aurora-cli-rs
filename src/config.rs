@@ -11,22 +11,20 @@ pub struct Config {
     pub evm_secret_key: Option<String>,
 }
 
+#[cfg(feature = "advanced")]
 impl Config {
-    #[cfg(feature = "advanced")]
     pub fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
         std::fs::File::open(path)
             .map_err(Into::into)
             .and_then(|reader| serde_json::from_reader(reader).map_err(Into::into))
     }
 
-    #[cfg(feature = "advanced")]
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> anyhow::Result<()> {
         let serialized = serde_json::to_string_pretty(&self)?;
         std::fs::write(path, serialized)?;
         Ok(())
     }
 
-    #[cfg(feature = "advanced")]
     pub fn get_evm_secret_key(&self) -> anyhow::Result<&str> {
         self.evm_secret_key.as_deref().ok_or_else(|| {
             anyhow::anyhow!("evm_secret_key must be given in config to use this feature")

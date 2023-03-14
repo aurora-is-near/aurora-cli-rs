@@ -14,13 +14,13 @@ use near_jsonrpc_client::{
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_primitives::transaction::Action;
-#[cfg(not(feature = "advanced"))]
+#[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
 use near_primitives::{
     hash::CryptoHash, transaction::SignedTransaction, types::AccountId, views,
     views::FinalExecutionOutcomeView,
 };
-#[cfg(not(feature = "advanced"))]
+#[cfg(feature = "simple")]
 use std::str::FromStr;
 
 use super::TransactionOutcome;
@@ -147,7 +147,7 @@ impl NearClient {
         }
     }
 
-    #[cfg(not(feature = "advanced"))]
+    #[cfg(feature = "simple")]
     pub async fn view_account(&self, account: &str) -> anyhow::Result<String> {
         let account_id: AccountId = account.parse()?;
         let request = near_jsonrpc_client::methods::query::RpcQueryRequest {
@@ -230,7 +230,7 @@ impl NearClient {
     }
 
     /// Creates new NEAR's account.
-    #[cfg(not(feature = "advanced"))]
+    #[cfg(feature = "simple")]
     pub async fn create_account(&self, account: &str, deposit: f64) -> anyhow::Result<String> {
         let signer = self.signer()?;
         let new_account_id = AccountId::from_str(account)?;
@@ -386,7 +386,7 @@ impl NearClient {
             .and_then(utils::read_key_file)
     }
 
-    #[cfg(not(feature = "advanced"))]
+    #[cfg(feature = "simple")]
     fn contract_id(&self) -> anyhow::Result<AccountId> {
         let server_addr = self.client.server_addr();
 

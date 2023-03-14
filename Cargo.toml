@@ -9,11 +9,11 @@ description = "Aurora CLI is a command line interface to bootstrap Aurora engine
 readme = "README.md"
 
 [[bin]]
-name = "aurora"
+name = "aurora-cli"
 path = "src/main.rs"
 
 [features]
-default = [ "simple" ]
+default = [ "advanced" ]
 simple = []
 advanced = []
 

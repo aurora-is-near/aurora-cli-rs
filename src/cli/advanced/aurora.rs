@@ -1,4 +1,4 @@
-#[cfg(not(feature = "advanced"))]
+#[cfg(feature = "simple")]
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, U256};
 use clap::Subcommand;

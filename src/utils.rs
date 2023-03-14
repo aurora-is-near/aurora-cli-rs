@@ -6,21 +6,15 @@ use rlp::RlpStream;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-#[cfg(not(feature = "advanced"))]
+#[cfg(feature = "simple")]
 pub fn secret_key_from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<SecretKey> {
     std::fs::read_to_string(path)
         .map_err(Into::into)
         .and_then(|key| secret_key_from_hex(&key))
 }
 
-#[cfg(feature = "advanced")]
 pub fn hex_to_address(h: &str) -> anyhow::Result<Address> {
     hex_to_arr(h).map(Address::from_array)
-}
-
-#[cfg(feature = "advanced")]
-pub fn hex_to_vec(h: &str) -> Result<Vec<u8>, hex::FromHexError> {
-    hex::decode(h.strip_prefix("0x").unwrap_or(h))
 }
 
 pub fn address_from_secret_key(sk: &SecretKey) -> anyhow::Result<Address> {
@@ -34,12 +28,6 @@ pub fn secret_key_from_hex(key: &str) -> anyhow::Result<SecretKey> {
     hex_to_arr(key.trim())
         .and_then(|bytes| SecretKey::parse(&bytes).map_err(Into::into))
         .map_err(|e| anyhow::anyhow!("Couldn't create secret key from hex: {e}"))
-}
-
-#[cfg(not(feature = "advanced"))]
-pub fn address_from_hex(address: &str) -> anyhow::Result<Address> {
-    Address::decode(address.trim_start_matches("0x"))
-        .map_err(|e| anyhow::anyhow!("Error decoding address: {e}"))
 }
 
 pub fn sign_transaction(
@@ -82,12 +70,17 @@ pub fn read_key_file<P: AsRef<Path>>(path: P) -> anyhow::Result<InMemorySigner> 
     }
 }
 
+pub fn hex_to_vec(hex: &str) -> anyhow::Result<Vec<u8>> {
+    hex::decode(hex.trim_start_matches("0x"))
+        .map_err(|e| anyhow::anyhow!("Couldn't create vector from the hex: {hex}, {e}"))
+}
+
 pub fn hex_to_arr<const SIZE: usize>(hex: &str) -> anyhow::Result<[u8; SIZE]> {
     let mut output = [0u8; SIZE];
 
-    hex::decode_to_slice(hex, &mut output)
+    hex::decode_to_slice(hex.trim_start_matches("0x"), &mut output)
         .map(|_| output)
-        .map_err(Into::into)
+        .map_err(|e| anyhow::anyhow!("Couldn't create array from the hex: {hex}, {e}"))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -124,18 +117,17 @@ struct KeyFileWithoutPublicKey {
 }
 
 /// Converts NEAR into yocto. 1NEAR == 10^24 yocto.
-#[cfg(not(feature = "advanced"))]
+#[cfg(feature = "simple")]
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn near_to_yocto(near: f64) -> u128 {
     (near * 1_000_000.0) as u128 * 1_000_000_000_000_000_000
 }
 
 #[test]
-#[cfg(not(feature = "advanced"))]
 fn test_address_from_hex() {
-    assert!(address_from_hex("0x1C16948F011686AE74BB2Ba0477aeFA2Ea97084D").is_ok());
-    assert!(address_from_hex("1C16948F011686AE74BB2Ba0477aeFA2Ea97084D").is_ok());
-    assert!(address_from_hex("some_address").is_err());
+    assert!(hex_to_address("0x1C16948F011686AE74BB2Ba0477aeFA2Ea97084D").is_ok());
+    assert!(hex_to_address("1C16948F011686AE74BB2Ba0477aeFA2Ea97084D").is_ok());
+    assert!(hex_to_address("some_address").is_err());
 }
 
 #[test]
@@ -164,7 +156,7 @@ fn test_parsing_key_file() {
 }
 
 #[test]
-#[cfg(not(feature = "advanced"))]
+#[cfg(feature = "simple")]
 fn test_convert_near_to_yocto() {
     assert_eq!(near_to_yocto(1.0), 10_u128.pow(24));
     assert_eq!(near_to_yocto(1.125), 1125 * 10_u128.pow(21));

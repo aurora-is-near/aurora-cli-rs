@@ -132,3 +132,57 @@ impl FromStr for Network {
         }
     }
 }
+
+pub async fn run(args: Cli) -> anyhow::Result<()> {
+    let near_rpc = match args.network {
+        Network::Mainnet => super::NEAR_MAINNET_ENDPOINT,
+        Network::Testnet => super::NEAR_TESTNET_ENDPOINT,
+        Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
+    };
+    let client = crate::client::Client::new(near_rpc, &args.engine, args.near_secret_file);
+
+    match args.command {
+        Command::GetChainId => command::get_chain_id(client).await?,
+        Command::GetUpgradeIndex => command::get_upgrade_index(client).await?,
+        Command::GetVersion => command::get_version(client).await?,
+        Command::GetOwner => command::get_owner(client).await?,
+        Command::GetBridgeProver => command::get_bridge_prover(client).await?,
+        Command::GetNonce { address } => command::get_nonce(client, address).await?,
+        Command::GetCode { address } => command::get_code(client, address).await?,
+        Command::GetBalance { address } => command::get_balance(client, address).await?,
+        Command::Call {
+            address, function, ..
+        } => command::call(client, address, function, args.aurora_secret_key.as_deref()).await?,
+        Command::StageUpgrade => command::stage_upgrade(client).await?,
+        Command::DeployUpgrade => command::deploy_upgrade(client).await?,
+        Command::GetStorageAt { address, key } => {
+            command::get_storage_at(client, address, key).await?;
+        }
+        Command::DeployEvmCode { code } => {
+            command::deploy_evm_code(client, code, args.aurora_secret_key.as_deref()).await?;
+        }
+        Command::DeployAurora { path } => command::deploy_aurora(client, path).await?,
+        Command::CreateAccount { account, balance } => {
+            command::create_account(client, &account, balance).await?;
+        }
+        Command::ViewAccount { account } => command::view_account(client, &account).await?,
+        Command::Init {
+            chain_id,
+            owner_id,
+            bridge_prover_id,
+            upgrade_delay_blocks,
+        } => {
+            command::init(
+                client,
+                chain_id,
+                owner_id,
+                bridge_prover_id,
+                upgrade_delay_blocks,
+            )
+            .await?;
+        }
+        Command::EncodeAddress { account } => command::encode_address(&account),
+    }
+
+    Ok(())
+}

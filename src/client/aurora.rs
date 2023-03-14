@@ -72,7 +72,7 @@ impl AuroraClient {
         Ok(U256::from_str_radix(value, 16).unwrap())
     }
 
-    #[cfg(not(feature = "advanced"))]
+    #[cfg(feature = "simple")]
     pub async fn get_balance(&self, address: Address) -> anyhow::Result<U256> {
         let method = EthMethod::GetBalance(address);
         let request = Web3JsonRequest::from_method(1, &method);
@@ -86,7 +86,7 @@ impl AuroraClient {
         Ok(U256::from_str_radix(value, 16).unwrap())
     }
 
-    #[cfg(not(feature = "advanced"))]
+    #[cfg(feature = "simple")]
     pub async fn get_code(&self, address: Address) -> anyhow::Result<String> {
         let method = EthMethod::GetCode(address);
         let request = Web3JsonRequest::from_method(1, &method);

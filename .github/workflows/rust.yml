@@ -78,9 +78,9 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-targets
+          args: --all-targets --no-default-features -F simple
       - name: Run tests advanced
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-targets --no-default-features -F advanced
+          args: --all-targets

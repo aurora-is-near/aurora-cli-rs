@@ -276,7 +276,7 @@ pub async fn execute_command(
                 input_data_hex,
             } => {
                 let (sender, target, amount) =
-                    parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref());
+                    parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref())?;
                 let input = utils::hex_to_vec(&input_data_hex)?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
@@ -291,7 +291,7 @@ pub async fn execute_command(
                 sender_addr_hex,
             } => {
                 let (sender, target, amount) =
-                    parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref());
+                    parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref())?;
                 let input = erc20.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
@@ -306,7 +306,7 @@ pub async fn execute_command(
                 sender_addr_hex,
             } => {
                 let (sender, target, amount) =
-                    parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref());
+                    parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref())?;
                 let input = contract_call.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
@@ -363,27 +363,29 @@ pub async fn execute_command(
                 };
             }
             ReadCommand::GetAuroraErc20 { nep_141_account } => {
-                println!(
-                    "{:?}",
-                    client.get_erc20_from_nep141(&nep_141_account).await?
-                );
+                let address = client
+                    .get_erc20_from_nep141(&nep_141_account)
+                    .await?
+                    .encode();
+                println!("{address}");
             }
             ReadCommand::GetEngineBridgeProver => {
-                println!("{:?}", client.get_bridge_prover().await?);
+                let bridge_prover = client.get_bridge_prover().await?;
+                println!("{bridge_prover}");
             }
             ReadCommand::GetChainId => {
                 let chain_id = {
                     let result = client.view_call("get_chain_id", vec![]).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
-                println!("{chain_id:?}");
+                println!("{chain_id}");
             }
             ReadCommand::GetUpgradeIndex => {
                 let upgrade_index = {
                     let result = client.view_call("get_upgrade_index", vec![]).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
-                println!("{upgrade_index:?}");
+                println!("{upgrade_index}");
             }
             ReadCommand::GetBlockHash { block_number } => {
                 let height_serialized: u128 = block_number.parse::<u128>().unwrap();
@@ -394,7 +396,8 @@ pub async fn execute_command(
                         .result;
                     result
                 };
-                println!("{:?}", hex::encode(block_hash));
+                let block_hex = hex::encode(block_hash);
+                println!("{block_hex}");
             }
             ReadCommand::GetCode { address_hex } => {
                 let address = utils::hex_to_address(&address_hex)?.as_bytes().to_vec();
@@ -458,19 +461,20 @@ pub async fn execute_command(
                         .unwrap_or(&config.engine_account_id);
                     prover_account
                         .parse()
-                        .expect("Prover account is an invalid Near account")
+                        .map_err(|_| anyhow::anyhow!("Prover account is an invalid Near account"))?
                 };
                 let eth_custodian_address = eth_custodian_address
                     .as_deref()
                     .map(utils::hex_to_address)
-                    .transpose()
-                    .expect("Invalid eth_custodian_address")
+                    .transpose()?
                     .unwrap_or_default();
                 let metadata = parse_ft_metadata(ft_metadata);
 
                 let new_args = NewCallArgs {
                     chain_id: aurora_engine_types::types::u256_to_arr(&U256::from(chain_id)),
-                    owner_id: owner_id.parse().expect("Invalid owner_id"),
+                    owner_id: owner_id
+                        .parse()
+                        .map_err(|_| anyhow::anyhow!("Owner account is an invalid Near account"))?,
                     bridge_prover_id: prover_account.clone(),
                     upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
                 };
@@ -486,7 +490,7 @@ pub async fn execute_command(
                 let next_nonce = deploy_response.transaction.nonce + 1;
 
                 let new_response = client
-                    .contract_call_with_nonce("new", new_args.try_to_vec().unwrap(), next_nonce)
+                    .contract_call_with_nonce("new", new_args.try_to_vec()?, next_nonce)
                     .await?;
                 assert_tx_success(&new_response);
                 let next_nonce = new_response.transaction.nonce + 1;
@@ -720,14 +724,16 @@ fn parse_read_call_args(
     sender_addr_hex: Option<String>,
     target_addr_hex: &str,
     amount: Option<&str>,
-) -> (Address, Address, Wei) {
-    let target = utils::hex_to_address(target_addr_hex).unwrap();
+) -> anyhow::Result<(Address, Address, Wei)> {
+    let target = utils::hex_to_address(target_addr_hex)?;
     let sender = sender_addr_hex
-        .map(|x| utils::hex_to_address(&x).unwrap())
+        .and_then(|x| utils::hex_to_address(&x).ok())
         .unwrap_or_default();
-    let amount = amount.map_or_else(Wei::zero, |a| Wei::new(U256::from_dec_str(a).unwrap()));
+    let amount = amount
+        .and_then(|a| U256::from_dec_str(a).ok())
+        .map_or_else(Wei::zero, Wei::new);
 
-    (sender, target, amount)
+    Ok((sender, target, amount))
 }
 
 fn parse_write_call_args(
