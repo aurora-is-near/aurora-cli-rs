@@ -47,12 +47,12 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets -- -D warnings
+          args: --all-targets --no-default-features -F simple -- -D warnings
       - name: Run clippy advanced
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --no-default-features -F advanced -- -D warnings
+          args: --all-targets -- -D warnings
 
   test:
     name: ${{ matrix.build }}
