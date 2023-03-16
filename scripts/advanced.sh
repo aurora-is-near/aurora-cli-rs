@@ -8,7 +8,7 @@ ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/downlo
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
 USER_BASE_BIN=$(python3 -m site --user-base)/bin
 
-export PATH="$PATH:$USER_BASE_BIN"
+export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
 export NEARCORE_HOME="/tmp/localnet"
 
 # Install `nearup` utility if not installed before.
