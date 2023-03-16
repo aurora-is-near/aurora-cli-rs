@@ -74,3 +74,21 @@ jobs:
         with:
           command: test
           args: --all-targets
+
+  shell_tests:
+    name: Shell Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - name: Install aurora-cli
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --path .
+      - name: Tests
+        run: scripts/advanced.sh
