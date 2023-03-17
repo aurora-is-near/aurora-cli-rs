@@ -4,7 +4,7 @@
 use aurora_engine::parameters::SubmitResult;
 use aurora_engine_transactions::EthTransactionKind;
 use base64::Engine;
-use borsh::BorshDeserialize;
+use near_primitives::borsh::BorshDeserialize;
 use serde_json::Value;
 use std::{collections::HashMap, path::Path, sync::Arc};
 use tokio::fs;

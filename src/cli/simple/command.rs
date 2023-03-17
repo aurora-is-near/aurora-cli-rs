@@ -2,7 +2,7 @@ use aurora_engine::parameters::{GetStorageAtArgs, NewCallArgs, TransactionStatus
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::{types::Wei, H256, U256};
-use borsh::{BorshDeserialize, BorshSerialize};
+use near_primitives::borsh::{BorshDeserialize, BorshSerialize};
 use near_primitives::views::FinalExecutionStatus;
 use std::path::Path;
 use std::str::FromStr;

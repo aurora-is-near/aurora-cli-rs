@@ -26,7 +26,6 @@ aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.g
 
 anyhow = "1"
 base64 = "0.21"
-borsh = "0.9"
 bs58 = "0.4.0"
 clap = { version = "4", features = ["derive"] }
 ethabi = "18"

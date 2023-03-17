@@ -5,14 +5,14 @@ use aurora_engine_types::{
     types::{Address, Wei},
     U256,
 };
-use borsh::BorshDeserialize;
-#[cfg(feature = "advanced")]
-use borsh::BorshSerialize;
 use near_crypto::InMemorySigner;
 use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
+use near_primitives::borsh::BorshDeserialize;
+#[cfg(feature = "advanced")]
+use near_primitives::borsh::BorshSerialize;
 use near_primitives::transaction::Action;
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;

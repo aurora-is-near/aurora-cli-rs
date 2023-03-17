@@ -16,10 +16,10 @@ use aurora_engine_types::{
     H256, U256,
 };
 use base64::Engine;
-use borsh::{BorshDeserialize, BorshSerialize};
 use clap::Subcommand;
 use near_primitives::{
     account::{AccessKey, Account},
+    borsh::{BorshDeserialize, BorshSerialize},
     hash::CryptoHash,
     state_record::StateRecord,
     views::FinalExecutionOutcomeView,
