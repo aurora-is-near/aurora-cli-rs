@@ -17,7 +17,7 @@ ENGINE_ACCOUNT=aurora.node0
 export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
 
 # Install `nearup` utility if not installed before.
-if [[ $(pip3 list | grep nearup > /dev/null) -ne 0 ]]; then
+if [[ $(pip3 list | grep nearup > /dev/null) != 0 ]]; then
   pip3 install --user nearup
 fi
 
