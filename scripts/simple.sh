@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 export NEARCORE_HOME="/tmp/localnet"
 
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
@@ -17,9 +15,7 @@ ENGINE_ACCOUNT=aurora.node0
 export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
 
 # Install `nearup` utility if not installed before.
-if [[ $(pip3 list | grep nearup > /dev/null) != 0 ]]; then
-  pip3 install --user nearup
-fi
+pip3 list | grep nearup > /dev/null || pip3 install --user nearup
 
 start_node() {
   cmd="nearup run localnet --num-nodes 1 --home $NEARCORE_HOME --no-watcher --account-id near"
