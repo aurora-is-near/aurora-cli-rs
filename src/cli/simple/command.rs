@@ -1,16 +1,18 @@
-use aurora_engine::parameters::{GetStorageAtArgs, NewCallArgs, TransactionStatus};
+use aurora_engine::parameters::{GetStorageAtArgs, InitCallArgs, NewCallArgs, TransactionStatus};
 use aurora_engine_sdk::types::near_account_to_evm_address;
-use aurora_engine_types::account_id::AccountId;
+use aurora_engine_types::parameters::engine::SubmitResult;
+use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
-use near_primitives::borsh::{BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_primitives::views::FinalExecutionStatus;
-use std::path::Path;
-use std::str::FromStr;
+use std::{path::Path, str::FromStr};
 
 use crate::client::TransactionOutcome;
+use crate::utils::secret_key_from_hex;
 use crate::{
     client::Client,
-    utils::{hex_to_address, hex_to_vec, secret_key_from_file},
+    utils,
+    utils::{hex_to_address, hex_to_vec},
 };
 
 pub async fn get_chain_id(client: Client) -> anyhow::Result<()> {
@@ -67,6 +69,24 @@ pub async fn get_code(client: Client, address: String) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Deploy Aurora EVM smart contract.
+pub async fn deploy_aurora<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::Result<()> {
+    let code = std::fs::read(path)?;
+    let result = match client.near().deploy_contract(code).await {
+        Ok(outcome) => match outcome.status {
+            FinalExecutionStatus::SuccessValue(_) => {
+                "Aurora EVM has been deployed successfully".to_string()
+            }
+            FinalExecutionStatus::Failure(e) => format!("Error while deployed Aurora EVM: {e}"),
+            _ => "Error: Bad transaction status".to_string(),
+        },
+        Err(e) => format!("{e:?}"),
+    };
+    println!("{result}");
+
+    Ok(())
+}
+
 /// Initialize Aurora EVM smart contract.
 pub async fn init(
     client: Client,
@@ -74,64 +94,113 @@ pub async fn init(
     owner_id: Option<String>,
     bridge_prover: Option<String>,
     upgrade_delay_blocks: Option<u64>,
+    custodian_address: Option<String>,
+    ft_metadata_path: Option<String>,
 ) -> anyhow::Result<()> {
+    let to_account_id = |id: Option<String>| {
+        id.map_or_else(
+            || {
+                client
+                    .near()
+                    .engine_account_id
+                    .to_string()
+                    .parse()
+                    .map_err(|e| anyhow::anyhow!("{e}"))
+            },
+            |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
+        )
+    };
+
+    let owner_id = to_account_id(owner_id)?;
+    let prover_id = to_account_id(bridge_prover)?;
+
+    // Init Aurora EVM.
     let args = NewCallArgs {
         chain_id: H256::from_low_u64_be(chain_id).into(),
-        owner_id: owner_id
-            .and_then(|id| AccountId::try_from(id).ok())
-            .unwrap_or_default(),
-        bridge_prover_id: bridge_prover
-            .and_then(|id| AccountId::try_from(id).ok())
-            .unwrap_or_default(),
+        owner_id,
+        bridge_prover_id: prover_id.clone(),
         upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
     }
     .try_to_vec()?;
 
-    let result = client.near().contract_call("new", args).await;
+    match client.near().contract_call("new", args).await?.status {
+        FinalExecutionStatus::Failure(e) => {
+            anyhow::bail!("Error while initialized Aurora EVM: {e}")
+        }
+        FinalExecutionStatus::Started | FinalExecutionStatus::NotStarted => {
+            anyhow::bail!("Error while initialized Aurora EVM: Bad status of the transaction")
+        }
+        FinalExecutionStatus::SuccessValue(_) => {}
+    }
 
-    println!("{result:?}");
+    // Wait for block committing.
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+    // Init eth-connector
+    let args = InitCallArgs {
+        prover_account: prover_id,
+        eth_custodian_address: custodian_address.map_or_else(
+            || Address::default().encode(),
+            |address| address.trim_start_matches("0x").to_string(),
+        ),
+        metadata: utils::ft_metadata::parse_ft_metadata(
+            ft_metadata_path.and_then(|path| std::fs::read_to_string(path).ok()),
+        )?,
+    }
+    .try_to_vec()?;
+
+    match client
+        .near()
+        .contract_call("new_eth_connector", args)
+        .await?
+        .status
+    {
+        FinalExecutionStatus::Failure(e) => {
+            anyhow::bail!("Error while initialized ETH Connector: {e}")
+        }
+        FinalExecutionStatus::Started | FinalExecutionStatus::NotStarted => {
+            anyhow::bail!("Error while initialized ETH Connector: Bad status of the transaction")
+        }
+        FinalExecutionStatus::SuccessValue(_) => {}
+    }
+
+    println!("Aurora EVM and ETH connector have been initialized successfully");
 
     Ok(())
 }
 
-pub async fn deploy_evm_code(
-    client: Client,
-    code: String,
-    path_to_sk: Option<&str>,
-) -> anyhow::Result<()> {
-    let key = path_to_sk.ok_or_else(|| anyhow::anyhow!("operation requires secret key"))?;
-    let sk = secret_key_from_file(key)?;
+/// Deploy EVM byte code.
+pub async fn deploy_evm_code(client: Client, code: String, sk: Option<&str>) -> anyhow::Result<()> {
+    let sk = sk
+        .ok_or_else(|| anyhow::anyhow!("Deploy EVM code requires Aurora secret key"))
+        .and_then(secret_key_from_hex)?;
     let code = hex::decode(code)?;
 
     let result = client
         .near()
         .send_aurora_transaction(&sk, None, Wei::zero(), code)
-        .await;
-    let output = match result {
-        Ok(result) => match result.status {
-            FinalExecutionStatus::NotStarted => "not_tarted".to_string(),
-            FinalExecutionStatus::Started => "started".to_string(),
-            FinalExecutionStatus::Failure(_) => "failure".to_string(),
-            FinalExecutionStatus::SuccessValue(_) => format!(
-                "code has been deployed successfully, tx hash: {}",
-                result.transaction.hash
-            ),
-        },
-        Err(e) => format!("Deploying code error: {e}"),
+        .await?;
+    let output = match result.status {
+        FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {
+            anyhow::bail!("Error while deploying EVM code: Bad status of the transaction")
+        }
+        FinalExecutionStatus::Failure(e) => {
+            anyhow::bail!("Error while deploying EVM code: {e}")
+        }
+        FinalExecutionStatus::SuccessValue(ref bytes) => {
+            let result = SubmitResult::try_from_slice(bytes)?;
+            if let TransactionStatus::Succeed(bytes) = result.status {
+                format!(
+                    "Contract has been deployed to address: 0x{} successfully",
+                    hex::encode(bytes)
+                )
+            } else {
+                format!("Transaction reverted: {result:?}")
+            }
+        }
     };
 
     println!("{output}");
-
-    Ok(())
-}
-
-pub async fn deploy_aurora<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::Result<()> {
-    let code = std::fs::read(path)?;
-
-    match client.near().deploy_contract(code).await {
-        Ok(result) => println!("{result:?}"),
-        Err(e) => eprintln!("{e:?}"),
-    }
 
     Ok(())
 }
@@ -164,10 +233,11 @@ pub async fn call(
     client: Client,
     address: String,
     func_hash: String,
-    path_to_sk: Option<&str>,
+    sk: Option<&str>,
 ) -> anyhow::Result<()> {
-    let key = path_to_sk.ok_or_else(|| anyhow::anyhow!("operation requires secret key"))?;
-    let sk = secret_key_from_file(key)?;
+    let sk = sk
+        .ok_or_else(|| anyhow::anyhow!("Call contract requires Aurora secret key"))
+        .and_then(secret_key_from_hex)?;
     let target = hex_to_address(&address)?;
     let func = hex::decode(func_hash)?;
 
@@ -237,6 +307,19 @@ pub async fn get_storage_at(client: Client, address: String, key: String) -> any
 pub fn encode_address(account: &str) {
     let result = near_account_to_evm_address(account.as_bytes()).encode();
     println!("0x{result}");
+}
+
+pub fn key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<()> {
+    let (address, sk) = utils::gen_key_pair(random, seed)?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "address": format!("0x{}", address.encode()),
+            "secret_key": hex::encode(sk.serialize()),
+        }))?
+    );
+
+    Ok(())
 }
 
 async fn get_number(

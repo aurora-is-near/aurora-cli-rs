@@ -12,9 +12,7 @@ export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
 export NEARCORE_HOME="/tmp/localnet"
 
 # Install `nearup` utility if not installed before.
-if $(pip3 list | grep nearup > /dev/null); then
-  echo "nearup has been already installed"
-else
+if [[ $(pip3 list | grep nearup > /dev/null) -ne 0 ]]; then
   pip3 install --user nearup
 fi
 

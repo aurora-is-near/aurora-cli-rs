@@ -95,10 +95,18 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ env.RUST_VERSION }}
-      - name: Install aurora-cli
+      - name: Install aurora-cli (Advanced CLI)
         uses: actions-rs/cargo@v1
         with:
           command: install
           args: --path .
-      - name: Tests
+      - name: Tests (Advanced CLI)
         run: scripts/advanced.sh
+      - name: Install aurora-cli (Simple CLI)
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --path . --no-default-features -F simple
+      - name: Tests (Simple CLI)
+        run: scripts/simple.sh
+

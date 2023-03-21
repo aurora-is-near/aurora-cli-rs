@@ -6,6 +6,9 @@ use rlp::RlpStream;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+pub mod ft_metadata;
+
+#[allow(dead_code)]
 #[cfg(feature = "simple")]
 pub fn secret_key_from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<SecretKey> {
     std::fs::read_to_string(path)
@@ -123,6 +126,28 @@ pub fn near_to_yocto(near: f64) -> u128 {
     (near * 1_000_000.0) as u128 * 1_000_000_000_000_000_000
 }
 
+/// Generate `SecretKey` and `Address`.
+#[cfg(feature = "simple")]
+pub fn gen_key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<(Address, SecretKey)> {
+    use rand::RngCore;
+
+    let sk = if random {
+        Ok(SecretKey::random(&mut rand::thread_rng()))
+    } else {
+        seed.map_or_else(
+            || Ok(SecretKey::default()),
+            |seed| {
+                let mut rng: rand::rngs::StdRng = rand::SeedableRng::seed_from_u64(seed);
+                let mut buffer = [0; 32];
+                rng.fill_bytes(&mut buffer);
+                SecretKey::parse(&buffer)
+            },
+        )
+    }?;
+
+    Ok((address_from_secret_key(&sk)?, sk))
+}
+
 #[test]
 fn test_address_from_hex() {
     assert!(hex_to_address("0x1C16948F011686AE74BB2Ba0477aeFA2Ea97084D").is_ok());
@@ -160,4 +185,27 @@ fn test_parsing_key_file() {
 fn test_convert_near_to_yocto() {
     assert_eq!(near_to_yocto(1.0), 10_u128.pow(24));
     assert_eq!(near_to_yocto(1.125), 1125 * 10_u128.pow(21));
+}
+
+#[test]
+#[cfg(feature = "simple")]
+fn test_gen_key_pair() {
+    let (address, sk) = gen_key_pair(false, None).unwrap();
+
+    assert_eq!(sk, SecretKey::default());
+    assert_eq!(
+        address,
+        address_from_secret_key(&SecretKey::default()).unwrap()
+    );
+
+    let (address, sk) = gen_key_pair(false, Some(1_234_567_890)).unwrap();
+    let expected = SecretKey::parse_slice(
+        hex::decode("f1ab777e56aabf2be84200c09d344d322acd31a759720aa173a88329d100dffa")
+            .unwrap()
+            .as_slice(),
+    )
+    .unwrap();
+
+    assert_eq!(sk, expected);
+    assert_eq!(address, address_from_secret_key(&expected).unwrap());
 }

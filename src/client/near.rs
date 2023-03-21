@@ -5,14 +5,14 @@ use aurora_engine_types::{
     types::{Address, Wei},
     U256,
 };
+use borsh::BorshDeserialize;
+#[cfg(feature = "advanced")]
+use borsh::BorshSerialize;
 use near_crypto::InMemorySigner;
 use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
-use near_primitives::borsh::BorshDeserialize;
-#[cfg(feature = "advanced")]
-use near_primitives::borsh::BorshSerialize;
 use near_primitives::transaction::Action;
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
@@ -25,6 +25,8 @@ use std::str::FromStr;
 
 use super::TransactionOutcome;
 use crate::utils;
+
+const NEAR_GAS: u64 = 300_000_000_000_000;
 
 pub struct NearClient {
     client: JsonRpcClient,
@@ -175,7 +177,7 @@ impl NearClient {
                 near_primitives::transaction::FunctionCallAction {
                     method_name: method_name.to_string(),
                     args,
-                    gas: 300_000_000_000_000,
+                    gas: NEAR_GAS,
                     deposit: 0,
                 },
             )],
@@ -196,7 +198,7 @@ impl NearClient {
                 near_primitives::transaction::FunctionCallAction {
                     method_name: method_name.to_string(),
                     args,
-                    gas: 300_000_000_000_000,
+                    gas: NEAR_GAS,
                     deposit: 0,
                 },
             )],
@@ -267,7 +269,7 @@ impl NearClient {
                     })
                     .to_string()
                     .into_bytes(),
-                    300_000_000_000_000,
+                    NEAR_GAS,
                     block_hash,
                 ),
             }
@@ -358,7 +360,7 @@ impl NearClient {
         Ok(result)
     }
 
-    async fn get_nonce(&self, signer: &InMemorySigner) -> anyhow::Result<(CryptoHash, u64)> {
+    pub async fn get_nonce(&self, signer: &InMemorySigner) -> anyhow::Result<(CryptoHash, u64)> {
         let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
             block_reference: near_primitives::types::Finality::Final.into(),
             request: views::QueryRequest::ViewAccessKey {
@@ -377,11 +379,13 @@ impl NearClient {
     }
 
     fn signer(&self) -> anyhow::Result<InMemorySigner> {
-        self.signer_key_path
+        std::env::var("NEAR_KEY_PATH")
+            .ok()
             .as_ref()
+            .or(self.signer_key_path.as_ref())
             .map(std::path::Path::new)
             .ok_or_else(|| {
-                anyhow::anyhow!("Path to the signer key must be provided to use this functionality")
+                anyhow::anyhow!("Path to the key file must be provided to use this functionality")
             })
             .and_then(utils::read_key_file)
     }
