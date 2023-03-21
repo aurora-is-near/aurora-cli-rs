@@ -17,7 +17,13 @@ if [[ $(pip3 list | grep nearup > /dev/null) -ne 0 ]]; then
 fi
 
 start_node() {
-  nearup run localnet --num-nodes 1 --home $NEARCORE_HOME --no-watcher > /dev/null 2>&1
+  cmd="nearup run localnet --num-nodes 1 --home $NEARCORE_HOME --no-watcher --account-id near"
+
+  if [[ $(uname -m) == "arm64" ]]; then # Check for local execution
+    cmd="$cmd --binary-path $HOME/.nearup/near/localnet"
+  fi
+
+  $cmd > /dev/null 2>&1
 }
 
 finish() {

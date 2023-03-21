@@ -115,7 +115,7 @@ pub async fn init(
     let prover_id = to_account_id(bridge_prover)?;
 
     // Init Aurora EVM.
-    let args = NewCallArgs {
+    let aurora_init_args = NewCallArgs {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
         bridge_prover_id: prover_id.clone(),
@@ -123,21 +123,7 @@ pub async fn init(
     }
     .try_to_vec()?;
 
-    match client.near().contract_call("new", args).await?.status {
-        FinalExecutionStatus::Failure(e) => {
-            anyhow::bail!("Error while initialized Aurora EVM: {e}")
-        }
-        FinalExecutionStatus::Started | FinalExecutionStatus::NotStarted => {
-            anyhow::bail!("Error while initialized Aurora EVM: Bad status of the transaction")
-        }
-        FinalExecutionStatus::SuccessValue(_) => {}
-    }
-
-    // Wait for block committing.
-    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-
-    // Init eth-connector
-    let args = InitCallArgs {
+    let eth_connector_init_args = InitCallArgs {
         prover_account: prover_id,
         eth_custodian_address: custodian_address.map_or_else(
             || Address::default().encode(),
@@ -149,22 +135,22 @@ pub async fn init(
     }
     .try_to_vec()?;
 
-    match client
-        .near()
-        .contract_call("new_eth_connector", args)
-        .await?
-        .status
-    {
+    let batch = vec![
+        ("new".to_string(), aurora_init_args),
+        ("new_eth_connector".to_string(), eth_connector_init_args),
+    ];
+
+    match client.near().contract_call_batch(batch).await?.status {
         FinalExecutionStatus::Failure(e) => {
-            anyhow::bail!("Error while initialized ETH Connector: {e}")
+            anyhow::bail!("Error while initialized Aurora EVM: {e}")
         }
         FinalExecutionStatus::Started | FinalExecutionStatus::NotStarted => {
-            anyhow::bail!("Error while initialized ETH Connector: Bad status of the transaction")
+            anyhow::bail!("Error while initialized Aurora EVM: Bad status of the transaction")
         }
         FinalExecutionStatus::SuccessValue(_) => {}
     }
 
-    println!("Aurora EVM and ETH connector have been initialized successfully");
+    println!("Aurora EVM have been initialized successfully");
 
     Ok(())
 }

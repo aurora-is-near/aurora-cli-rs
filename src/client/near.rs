@@ -186,6 +186,27 @@ impl NearClient {
         .await
     }
 
+    #[cfg(feature = "simple")]
+    pub async fn contract_call_batch(
+        &self,
+        batch: Vec<(String, Vec<u8>)>,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        let gas = NEAR_GAS / u64::try_from(batch.len())?;
+        let actions = batch
+            .into_iter()
+            .map(|(method_name, args)| {
+                Action::FunctionCall(near_primitives::transaction::FunctionCallAction {
+                    method_name,
+                    args,
+                    gas,
+                    deposit: 0,
+                })
+            })
+            .collect();
+
+        self.near_broadcast_tx(actions, None).await
+    }
+
     #[cfg(feature = "advanced")]
     pub async fn contract_call_with_nonce(
         &self,

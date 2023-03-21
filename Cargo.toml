@@ -18,11 +18,11 @@ simple = []
 advanced = []
 
 [dependencies]
-aurora-engine = { git = "https://github.com/aurora-is-near/aurora-engine.git", branch = "develop", features = ["std"] }
-aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", branch = "develop", features = ["std"] }
-aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", branch = "develop", features = ["std"] }
-aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", branch = "develop", features = ["std"] }
-aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", branch = "develop", features = ["std", "impl-serde"] }
+aurora-engine = { git = "https://github.com/aurora-is-near/aurora-engine.git", rev = "817c0783960518d79fc830297b5949c76f28b321", features = ["std"] }
+aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", rev = "817c0783960518d79fc830297b5949c76f28b321", features = ["std"] }
+aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", rev = "817c0783960518d79fc830297b5949c76f28b321", features = ["std"] }
+aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", rev = "817c0783960518d79fc830297b5949c76f28b321", features = ["std"] }
+aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", rev = "817c0783960518d79fc830297b5949c76f28b321", features = ["std", "impl-serde"] }
 
 anyhow = "1"
 borsh = "0.10"
