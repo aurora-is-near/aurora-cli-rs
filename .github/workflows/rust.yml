@@ -14,13 +14,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: rustfmt
-          profile: minimal
-          override: true
       - name: Run rustfmt
         uses: actions-rs/cargo@v1
         with:
@@ -33,13 +26,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: clippy
-          profile: minimal
-          override: true
       - name: Run clippy simple
         uses: actions-rs/clippy-check@v1
         with:
@@ -67,10 +53,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
       - name: Run tests simple
         uses: actions-rs/cargo@v1
         with:
@@ -88,10 +70,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
       - name: Install aurora-cli (Advanced CLI)
         uses: actions-rs/cargo@v1
         with:
