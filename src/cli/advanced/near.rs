@@ -385,13 +385,10 @@ pub async fn execute_command(
             }
             ReadCommand::GetBlockHash { block_number } => {
                 let height_serialized: u128 = block_number.parse::<u128>().unwrap();
-                let block_hash = {
-                    let result = client
-                        .view_call("get_block_hash", height_serialized.to_le_bytes().to_vec())
-                        .await?
-                        .result;
-                    result
-                };
+                let block_hash = client
+                    .view_call("get_block_hash", height_serialized.to_le_bytes().to_vec())
+                    .await?
+                    .result;
                 let block_hex = hex::encode(block_hash);
                 println!("{block_hex}");
             }
@@ -632,7 +629,7 @@ pub async fn execute_command(
                 let mut genesis = near_chain_configs::Genesis::from_file(
                     &path,
                     near_chain_configs::GenesisValidationMode::UnsafeFast,
-                );
+                )?;
                 let records = genesis.force_read_records();
                 let aurora_id: near_primitives::account::id::AccountId =
                     config.engine_account_id.parse().unwrap();

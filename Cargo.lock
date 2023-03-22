@@ -1795,11 +1795,10 @@ dependencies = [
 
 [[package]]
 name = "near-jsonrpc-client"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d24877edc9cda92f76903b4ba40714733314438ed0462ba9c3b11324b50c7fa"
+version = "0.0.0"
+source = "git+https://github.com/aleksuss/near-jsonrpc-client-rs?rev=7f64a1e#7f64a1e8a14f89b2ebe2bfdd38a46a49fd49560f"
 dependencies = [
- "borsh 0.9.3",
+ "borsh 0.10.2",
  "lazy_static",
  "log",
  "near-chain-configs",
@@ -1814,9 +1813,9 @@ dependencies = [
 
 [[package]]
 name = "near-jsonrpc-primitives"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "510900763eb45e52037c9e1ff6c00b1bcd48bdab5ec4cd43726c087f45dc5a09"
+checksum = "f0968cc71825e020d75f5a1f3577ac0379859ec7b14351ed5754fef1cc89e0d7"
 dependencies = [
  "arbitrary",
  "near-chain-configs",
