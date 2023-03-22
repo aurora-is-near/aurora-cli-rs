@@ -144,7 +144,7 @@ checksum = "86ea188f25f0255d8f92797797c97ebf5631fa88178beb1a46fdf5622c9a00e4"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -728,7 +728,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "scratch",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -745,7 +745,7 @@ checksum = "631569015d0d8d54e6c241733f944042623ab6df7bc3be7466874b05fcdb1c5f"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -1404,16 +1404,16 @@ dependencies = [
 
 [[package]]
 name = "iana-time-zone"
-version = "0.1.53"
+version = "0.1.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64c122667b287044802d6ce17ee2ddf13207ed924c712de9a66a5814d5b64765"
+checksum = "0c17cc76786e99f8d2f055c11159e7f0091c42474dcc3189fbab96072e873e6d"
 dependencies = [
  "android_system_properties",
  "core-foundation-sys",
  "iana-time-zone-haiku",
  "js-sys",
  "wasm-bindgen",
- "winapi",
+ "windows",
 ]
 
 [[package]]
@@ -1723,20 +1723,20 @@ dependencies = [
 
 [[package]]
 name = "near-account-id"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d622858e0e2717ad1f32a19edaa9f9db7c8e8ce83993bd2a97717800c2f311e3"
+checksum = "12791d0f273e04609010d68deb6e1cd940659ad420edfa2e48238117154f1d5b"
 dependencies = [
  "arbitrary",
- "borsh 0.9.3",
+ "borsh 0.10.2",
  "serde",
 ]
 
 [[package]]
 name = "near-chain-configs"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac1129d5755234986fd402a3fd8c16b0c2fbf0e2d662d20c68b0ed2103507586"
+checksum = "84781ba3321e28640c5f0453d4d84305135db6edc399c51b7ee405ebb9381eaa"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1756,21 +1756,24 @@ dependencies = [
 
 [[package]]
 name = "near-config-utils"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "983f97adc4ff870436005d8af9b8fde2c3dc575abe7b6043cc8504c9add3fe30"
+checksum = "137b6bbd477dc0ff1149e22c5e1f3f168a1f37d9d67f1519f058a5db81df3506"
 dependencies = [
+ "anyhow",
  "json_comments",
+ "thiserror",
+ "tracing",
 ]
 
 [[package]]
 name = "near-crypto"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "755c64f602298a79046804f2047f317f3ae629e37c506eec2fa619b60682f677"
+checksum = "659a96750c4d933e4f00a50c66ba9948a32b862e5ecd6a952beee881b1cd2aaf"
 dependencies = [
  "blake2",
- "borsh 0.9.3",
+ "borsh 0.10.2",
  "bs58",
  "c2-chacha",
  "curve25519-dalek",
@@ -1827,9 +1830,9 @@ dependencies = [
 
 [[package]]
 name = "near-o11y"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e7cf8061a5752132480327a7b8ecc6154068143f21054fea8ae8baa81705eea"
+checksum = "445cbd86499dbabf68d34d95d9a45c680da5446e226f4982ce488fcf8556b23f"
 dependencies = [
  "actix",
  "atty",
@@ -1853,12 +1856,12 @@ dependencies = [
 
 [[package]]
 name = "near-primitives"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bffe400b364ead6c942bfa6a0e0e5079cada75b9813218dfe6bf358f037865c1"
+checksum = "c4c030f28e8f988698145e7753b83bb54c05838c3afdd44835cc7c32c327ea1e"
 dependencies = [
  "arbitrary",
- "borsh 0.9.3",
+ "borsh 0.10.2",
  "bytesize",
  "cfg-if 1.0.0",
  "chrono",
@@ -1883,18 +1886,20 @@ dependencies = [
  "smart-default",
  "strum",
  "thiserror",
+ "time 0.3.20",
+ "tokio",
  "tracing",
 ]
 
 [[package]]
 name = "near-primitives-core"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a07b4055d890a96efd2bf47739a1351b229facc461f77687020950388514c36a"
+checksum = "fe2059d16efc42ef7f9514f30910d32b67c01fee9b70c1fd28d50545ca145d88"
 dependencies = [
  "arbitrary",
  "base64 0.13.1",
- "borsh 0.9.3",
+ "borsh 0.10.2",
  "bs58",
  "derive_more",
  "enum-map",
@@ -1909,9 +1914,9 @@ dependencies = [
 
 [[package]]
 name = "near-rpc-error-core"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7c867980c023741a39509a58fffe3f700f18de7600b08be54299c2fc4abc52c"
+checksum = "28f8f38dcfeba3d0d3bc60ce292ddb1f76a428a590e32de7fc3d5d431b9635ea"
 dependencies = [
  "quote",
  "serde",
@@ -1920,9 +1925,9 @@ dependencies = [
 
 [[package]]
 name = "near-rpc-error-macro"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e7120da984232a9b8cbda7ddf48ba28c66f045ffb369fed85c0b9ce147398bb"
+checksum = "78ca4e8d6887b344f3e2f8281c1ad2cc93dcbcb683b546726a4ce1ab1dfa623a"
 dependencies = [
  "fs2",
  "near-rpc-error-core",
@@ -1932,17 +1937,17 @@ dependencies = [
 
 [[package]]
 name = "near-stdx"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c05ded9a90c087aaebfafdf01f2801f5d31817f9a3514ce09aed270001d650e"
+checksum = "bc1279be274b9a49c2cb4b62541241a1ff6745cb77ca81ece7f949cfbc229bff"
 
 [[package]]
 name = "near-vm-errors"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02a29e5ae456dbd4f1f7078a9cf438de523ef0825e548ad1fe073d4f7a22b902"
+checksum = "8b2d3eab1e050fdc3e036c803784cf45582661ae2dd07bac3bd373ba9c049715"
 dependencies = [
- "borsh 0.9.3",
+ "borsh 0.10.2",
  "near-account-id",
  "near-rpc-error-macro",
  "serde",
@@ -2365,9 +2370,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.52"
+version = "1.0.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d0e1ae9e836cc3beddd63db0df682593d7e2d3d891ae8c9083d2113e1744224"
+checksum = "ba466839c78239c09faf015484e5cc04860f88242cff4d03eb038f04b4699b73"
 dependencies = [
  "unicode-ident",
 ]
@@ -2552,9 +2557,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.7.1"
+version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48aaa5748ba571fb95cd2c85c09f629215d3a6ece942baa100950af03a34f733"
+checksum = "cce168fea28d3e05f158bda4576cf0c844d5045bc2cc3620fa0292ed5bb5814c"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -2572,9 +2577,9 @@ dependencies = [
 
 [[package]]
 name = "regex-syntax"
-version = "0.6.28"
+version = "0.6.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
+checksum = "f162c6dd7b008981e4d40210aca20b4bd0f9b60ca9271061b07f78537722f2e1"
 
 [[package]]
 name = "reqwest"
@@ -2796,7 +2801,7 @@ checksum = "e801c1712f48475582b7696ac71e0ca34ebb30e09338425384269d9717c62cad"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -2818,7 +2823,7 @@ checksum = "bcec881020c684085e55a25f7fd888954d56609ef363479dc5a1305eb0d40cab"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -2999,9 +3004,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.4"
+version = "2.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c622ae390c9302e214c31013517c2061ecb2699935882c60a9b37f82f8625ae"
+checksum = "89c2d1c76a26822187a1fbb5964e3fff108bc208f02e820ab9dac1234f6b388a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3071,7 +3076,7 @@ checksum = "f9456a42c5b0d803c8cd86e73dd7cc9edd429499f37a3550d286d5e86720569f"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.4",
+ "syn 2.0.5",
 ]
 
 [[package]]
@@ -3700,6 +3705,15 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "windows"
+version = "0.46.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdacb41e6a96a052c6cb63a144f24900236121c6f63f4f8219fef5977ecb0c25"
+dependencies = [
+ "windows-targets",
+]
 
 [[package]]
 name = "windows-sys"

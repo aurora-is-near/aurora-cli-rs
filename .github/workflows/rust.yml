@@ -7,9 +7,6 @@ on:
       - develop
   pull_request:
 
-env:
-  RUST_VERSION: 1.67.1
-
 jobs:
   fmt:
     name: Formatting
