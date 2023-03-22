@@ -30,14 +30,14 @@ pub enum Command {
         #[arg(action)]
         path: String,
     },
-    /// Create new NEAR account.
+    /// Create new NEAR account
     CreateAccount {
         #[arg(long)]
         account: String,
         #[arg(long)]
         balance: f64,
     },
-    /// View new NEAR account.
+    /// View new NEAR account
     ViewAccount {
         #[arg(action)]
         account: String,
