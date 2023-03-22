@@ -10,6 +10,7 @@
 <br />
 
 [![CI](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml)
+![rust 1.68.0+ required](https://img.shields.io/badge/rust-1.68.0+-blue.svg?label=MSRV)
 
 ## What is Engine?
 

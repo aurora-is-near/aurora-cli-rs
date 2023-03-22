@@ -3,8 +3,7 @@
 
 use aurora_engine::parameters::SubmitResult;
 use aurora_engine_transactions::EthTransactionKind;
-use base64::Engine;
-use near_primitives::borsh::BorshDeserialize;
+use borsh::BorshDeserialize;
 use serde_json::Value;
 use std::{collections::HashMap, path::Path, sync::Arc};
 use tokio::fs;
@@ -125,9 +124,7 @@ fn get_eth_tx(value: &Value) -> Option<EthTransactionKind> {
     for action in actions.as_array()? {
         if let Some(fn_call) = action.as_object().and_then(|a| a.get("FunctionCall")) {
             let args = fn_call.as_object()?.get("args")?.as_str()?;
-            let bytes = base64::engine::general_purpose::STANDARD
-                .decode(args)
-                .ok()?;
+            let bytes = aurora_engine_sdk::base64::decode(args).ok()?;
             return bytes.as_slice().try_into().ok();
         }
     }
@@ -153,9 +150,7 @@ fn get_tx_status(value: &Value) -> Option<TxStatus> {
         }
     } else {
         let success_b64 = status.get("SuccessValue")?.as_str()?;
-        let success_bytes = base64::engine::general_purpose::STANDARD
-            .decode(success_b64)
-            .ok()?;
+        let success_bytes = aurora_engine_sdk::base64::decode(success_b64).ok()?;
         let result = SubmitResult::try_from_slice(success_bytes.as_slice()).ok()?;
         Some(TxStatus::Executed(result))
     }

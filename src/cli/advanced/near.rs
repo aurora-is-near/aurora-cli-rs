@@ -2,12 +2,9 @@ use crate::{
     config::{Config, Network},
     utils,
 };
-use aurora_engine::{
-    fungible_token::{FungibleReferenceHash, FungibleTokenMetadata},
-    parameters::{
-        DeployErc20TokenArgs, GetStorageAtArgs, InitCallArgs, NewCallArgs,
-        PauseEthConnectorCallArgs, SubmitResult, TransactionStatus,
-    },
+use aurora_engine::parameters::{
+    DeployErc20TokenArgs, GetStorageAtArgs, InitCallArgs, NewCallArgs, PauseEthConnectorCallArgs,
+    SubmitResult, TransactionStatus,
 };
 use aurora_engine_types::{
     account_id::AccountId,
@@ -15,11 +12,10 @@ use aurora_engine_types::{
     types::{Address, NearGas, Wei, Yocto},
     H256, U256,
 };
-use base64::Engine;
+use borsh::{BorshDeserialize, BorshSerialize};
 use clap::Subcommand;
 use near_primitives::{
     account::{AccessKey, Account},
-    borsh::{BorshDeserialize, BorshSerialize},
     hash::CryptoHash,
     state_record::StateRecord,
     views::FinalExecutionOutcomeView,
@@ -389,13 +385,10 @@ pub async fn execute_command(
             }
             ReadCommand::GetBlockHash { block_number } => {
                 let height_serialized: u128 = block_number.parse::<u128>().unwrap();
-                let block_hash = {
-                    let result = client
-                        .view_call("get_block_hash", height_serialized.to_le_bytes().to_vec())
-                        .await?
-                        .result;
-                    result
-                };
+                let block_hash = client
+                    .view_call("get_block_hash", height_serialized.to_le_bytes().to_vec())
+                    .await?
+                    .result;
                 let block_hex = hex::encode(block_hash);
                 println!("{block_hex}");
             }
@@ -468,7 +461,7 @@ pub async fn execute_command(
                     .map(utils::hex_to_address)
                     .transpose()?
                     .unwrap_or_default();
-                let metadata = parse_ft_metadata(ft_metadata);
+                let metadata = utils::ft_metadata::parse_ft_metadata(ft_metadata)?;
 
                 let new_args = NewCallArgs {
                     chain_id: aurora_engine_types::types::u256_to_arr(&U256::from(chain_id)),
@@ -636,7 +629,7 @@ pub async fn execute_command(
                 let mut genesis = near_chain_configs::Genesis::from_file(
                     &path,
                     near_chain_configs::GenesisValidationMode::UnsafeFast,
-                );
+                )?;
                 let records = genesis.force_read_records();
                 let aurora_id: near_primitives::account::id::AccountId =
                     config.engine_account_id.parse().unwrap();
@@ -782,50 +775,6 @@ fn parse_xcc_args(
         args: near_args,
         attached_balance,
         attached_gas,
-    }
-}
-
-fn parse_ft_metadata(input: Option<String>) -> FungibleTokenMetadata {
-    let Some(input) = input else { return default_ft_metadata(); };
-    let json: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&input).unwrap();
-    FungibleTokenMetadata {
-        spec: json.get("spec").expect("Missing spec field").to_string(),
-        name: json.get("name").expect("Missing name field").to_string(),
-        symbol: json
-            .get("symbol")
-            .expect("Missing symbol field")
-            .to_string(),
-        icon: json
-            .get("icon")
-            .map(aurora_engine_types::ToString::to_string),
-        reference: json
-            .get("reference")
-            .map(aurora_engine_types::ToString::to_string),
-        reference_hash: json.get("reference_hash").map(|x| {
-            let bytes = base64::engine::general_purpose::STANDARD_NO_PAD
-                .decode(x.as_str().expect("reference_hash must be a string"))
-                .expect("reference_hash must be a base64-encoded string");
-            FungibleReferenceHash::try_from_slice(&bytes)
-                .expect("reference_hash must be base64-encoded 32-byte array")
-        }),
-        decimals: serde_json::from_value(
-            json.get("decimals")
-                .expect("Missing decimals field")
-                .clone(),
-        )
-        .expect("decimals field must be a u8 number"),
-    }
-}
-
-fn default_ft_metadata() -> FungibleTokenMetadata {
-    FungibleTokenMetadata {
-        spec: "ft-1.0.0".to_string(),
-        name: "localETH".to_string(),
-        symbol: "localETH".to_string(),
-        icon: None,
-        reference: None,
-        reference_hash: None,
-        decimals: 18,
     }
 }
 

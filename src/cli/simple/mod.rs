@@ -8,17 +8,14 @@ pub mod command;
 #[command(author, version, long_about = None)]
 pub struct Cli {
     /// NEAR network ID
-    #[arg(long, value_name = "network", default_value = "localnet")]
+    #[arg(long, default_value = "localnet")]
     pub network: Network,
     /// Aurora EVM account
-    #[arg(long, value_name = "account", default_value = "aurora")]
+    #[arg(long, value_name = "ACCOUNT_ID", default_value = "aurora")]
     pub engine: String,
     /// Path to file with NEAR account id and secret key in JSON format
     #[arg(long)]
-    pub near_secret_file: Option<String>,
-    /// Path to file with Aurora EVM secret key
-    #[arg(long)]
-    pub aurora_secret_key: Option<String>,
+    pub near_key_path: Option<String>,
     /// Aurora API key
     #[arg(long)]
     pub aurora_api_key: Option<String>,
@@ -28,16 +25,43 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
-    /// Init Aurora EVM
+    /// Deploy Aurora EVM smart contract
+    DeployAurora {
+        #[arg(action)]
+        path: String,
+    },
+    /// Create new NEAR account
+    CreateAccount {
+        #[arg(long)]
+        account: String,
+        #[arg(long)]
+        balance: f64,
+    },
+    /// View new NEAR account
+    ViewAccount {
+        #[arg(action)]
+        account: String,
+    },
+    /// Initialize Aurora EVM and ETH connector
     Init {
         /// Chain ID
+        #[arg(long, default_value = "1313161556")]
         chain_id: u64,
         /// Owner of the Aurora EVM
+        #[arg(long)]
         owner_id: Option<String>,
         /// Account of the bridge prover
+        #[arg(long)]
         bridge_prover_id: Option<String>,
         /// How many blocks after staging upgrade can deploy it
+        #[arg(long)]
         upgrade_delay_blocks: Option<u64>,
+        /// Custodian ETH address
+        #[arg(long)]
+        custodian_address: Option<String>,
+        /// Path to the file with the metadata of the fungible token
+        #[arg(long)]
+        ft_metadata_path: Option<String>,
     },
     /// Return chain ID
     GetChainId,
@@ -55,7 +79,7 @@ pub enum Command {
     DeployUpgrade,
     /// Return next nonce for address
     GetNonce {
-        #[arg(action, value_name = "address")]
+        #[arg(action)]
         address: String,
     },
     /// Return smart contract's code for contract address
@@ -65,51 +89,50 @@ pub enum Command {
     },
     /// Return balance for address
     GetBalance {
-        #[arg(action, value_name = "address")]
+        #[arg(action)]
         address: String,
     },
     /// Call method of a smart contract
     Call {
-        #[arg(action, value_name = "address")]
+        #[arg(long)]
         address: String,
-        #[arg(action, value_name = "function")]
+        #[arg(long)]
         function: String,
-        #[arg(action, value_name = "input")]
+        #[arg(long)]
         input: String,
+        /// Aurora EVM secret key
+        #[arg(long)]
+        aurora_secret_key: Option<String>,
     },
     /// Return a value from storage at address with key
     GetStorageAt {
-        #[arg(action, value_name = "address")]
+        #[arg(long)]
         address: String,
-        #[arg(action, value_name = "key")]
+        #[arg(long)]
         key: String,
     },
     /// Deploy EVM smart contract's code in hex
     DeployEvmCode {
-        #[arg(action, value_name = "code")]
+        /// Code in HEX to deploy
+        #[arg(long)]
         code: String,
-    },
-    /// Deploy Aurora EVM smart contract
-    DeployAurora {
-        #[arg(action, value_name = "path")]
-        path: String,
-    },
-    /// Create new NEAR's account.
-    CreateAccount {
-        #[arg(action, value_name = "account")]
-        account: String,
-        #[arg(action, value_name = "balance")]
-        balance: f64,
-    },
-    /// View new NEAR's account.
-    ViewAccount {
-        #[arg(action, value_name = "account")]
-        account: String,
+        /// Aurora EVM secret key
+        #[arg(long)]
+        aurora_secret_key: Option<String>,
     },
     /// Encode address
     EncodeAddress {
         /// Account ID
         account: String,
+    },
+    /// Return Public and Secret ED25519 keys
+    KeyPair {
+        /// Random
+        #[arg(long, default_value = "false")]
+        random: bool,
+        /// From seed
+        #[arg(long)]
+        seed: Option<u64>,
     },
 }
 
@@ -139,7 +162,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Network::Testnet => super::NEAR_TESTNET_ENDPOINT,
         Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
     };
-    let client = crate::client::Client::new(near_rpc, &args.engine, args.near_secret_file);
+    let client = crate::client::Client::new(near_rpc, &args.engine, args.near_key_path);
 
     match args.command {
         Command::GetChainId => command::get_chain_id(client).await?,
@@ -151,15 +174,21 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::GetCode { address } => command::get_code(client, address).await?,
         Command::GetBalance { address } => command::get_balance(client, address).await?,
         Command::Call {
-            address, function, ..
-        } => command::call(client, address, function, args.aurora_secret_key.as_deref()).await?,
+            address,
+            function,
+            input: _,
+            aurora_secret_key,
+        } => command::call(client, address, function, aurora_secret_key.as_deref()).await?,
         Command::StageUpgrade => command::stage_upgrade(client).await?,
         Command::DeployUpgrade => command::deploy_upgrade(client).await?,
         Command::GetStorageAt { address, key } => {
             command::get_storage_at(client, address, key).await?;
         }
-        Command::DeployEvmCode { code } => {
-            command::deploy_evm_code(client, code, args.aurora_secret_key.as_deref()).await?;
+        Command::DeployEvmCode {
+            code,
+            aurora_secret_key,
+        } => {
+            command::deploy_evm_code(client, code, aurora_secret_key.as_deref()).await?;
         }
         Command::DeployAurora { path } => command::deploy_aurora(client, path).await?,
         Command::CreateAccount { account, balance } => {
@@ -171,6 +200,8 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             owner_id,
             bridge_prover_id,
             upgrade_delay_blocks,
+            custodian_address,
+            ft_metadata_path,
         } => {
             command::init(
                 client,
@@ -178,10 +209,13 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
                 owner_id,
                 bridge_prover_id,
                 upgrade_delay_blocks,
+                custodian_address,
+                ft_metadata_path,
             )
             .await?;
         }
         Command::EncodeAddress { account } => command::encode_address(&account),
+        Command::KeyPair { random, seed } => command::key_pair(random, seed)?,
     }
 
     Ok(())
