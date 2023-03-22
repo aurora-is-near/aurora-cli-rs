@@ -114,7 +114,6 @@ pub async fn init(
     let owner_id = to_account_id(owner_id)?;
     let prover_id = to_account_id(bridge_prover)?;
 
-    // Init Aurora EVM.
     let aurora_init_args = NewCallArgs {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
@@ -142,10 +141,10 @@ pub async fn init(
 
     match client.near().contract_call_batch(batch).await?.status {
         FinalExecutionStatus::Failure(e) => {
-            anyhow::bail!("Error while initialized Aurora EVM: {e}")
+            anyhow::bail!("Error while initializing Aurora EVM: {e}")
         }
         FinalExecutionStatus::Started | FinalExecutionStatus::NotStarted => {
-            anyhow::bail!("Error while initialized Aurora EVM: Bad status of the transaction")
+            anyhow::bail!("Error while initializing Aurora EVM: Bad status of the transaction")
         }
         FinalExecutionStatus::SuccessValue(_) => {}
     }
@@ -191,7 +190,7 @@ pub async fn deploy_evm_code(client: Client, code: String, sk: Option<&str>) -> 
     Ok(())
 }
 
-/// Creates new NEAR's account.
+/// Creates new NEAR account.
 pub async fn create_account(
     client: Client,
     account: &str,
@@ -205,7 +204,7 @@ pub async fn create_account(
     Ok(())
 }
 
-/// View new NEAR's account.
+/// View new NEAR account.
 pub async fn view_account(client: Client, account: &str) -> anyhow::Result<()> {
     match client.near().view_account(account).await {
         Ok(result) => println!("{result}"),

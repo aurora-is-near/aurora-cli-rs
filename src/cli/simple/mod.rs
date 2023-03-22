@@ -8,10 +8,10 @@ pub mod command;
 #[command(author, version, long_about = None)]
 pub struct Cli {
     /// NEAR network ID
-    #[arg(long, value_name = "network", default_value = "localnet")]
+    #[arg(long, default_value = "localnet")]
     pub network: Network,
     /// Aurora EVM account
-    #[arg(long, value_name = "account", default_value = "aurora")]
+    #[arg(long, value_name = "ACCOUNT_ID", default_value = "aurora")]
     pub engine: String,
     /// Path to file with NEAR account id and secret key in JSON format
     #[arg(long)]
@@ -27,40 +27,40 @@ pub struct Cli {
 pub enum Command {
     /// Deploy Aurora EVM smart contract
     DeployAurora {
-        #[arg(action, value_name = "path")]
+        #[arg(action)]
         path: String,
     },
-    /// Create new NEAR's account.
+    /// Create new NEAR account.
     CreateAccount {
-        #[arg(long, value_name = "account")]
+        #[arg(long)]
         account: String,
-        #[arg(long, value_name = "balance")]
+        #[arg(long)]
         balance: f64,
     },
-    /// View new NEAR's account.
+    /// View new NEAR account.
     ViewAccount {
-        #[arg(action, value_name = "account")]
+        #[arg(action)]
         account: String,
     },
     /// Initialize Aurora EVM and ETH connector
     Init {
         /// Chain ID
-        #[arg(long, value_name = "chain-id", default_value = "1313161556")]
+        #[arg(long, default_value = "1313161556")]
         chain_id: u64,
         /// Owner of the Aurora EVM
-        #[arg(long, value_name = "owner-id")]
+        #[arg(long)]
         owner_id: Option<String>,
         /// Account of the bridge prover
-        #[arg(long, value_name = "bridge-prover-id")]
+        #[arg(long)]
         bridge_prover_id: Option<String>,
         /// How many blocks after staging upgrade can deploy it
-        #[arg(long, value_name = "upgrade-delay-blocks")]
+        #[arg(long)]
         upgrade_delay_blocks: Option<u64>,
         /// Custodian ETH address
-        #[arg(long, value_name = "custodian-address")]
+        #[arg(long)]
         custodian_address: Option<String>,
         /// Path to the file with the metadata of the fungible token
-        #[arg(long, value_name = "ft-metadata-path")]
+        #[arg(long)]
         ft_metadata_path: Option<String>,
     },
     /// Return chain ID
@@ -79,7 +79,7 @@ pub enum Command {
     DeployUpgrade,
     /// Return next nonce for address
     GetNonce {
-        #[arg(action, value_name = "address")]
+        #[arg(action)]
         address: String,
     },
     /// Return smart contract's code for contract address
@@ -89,35 +89,35 @@ pub enum Command {
     },
     /// Return balance for address
     GetBalance {
-        #[arg(action, value_name = "address")]
+        #[arg(action)]
         address: String,
     },
     /// Call method of a smart contract
     Call {
-        #[arg(action, value_name = "address")]
+        #[arg(long)]
         address: String,
-        #[arg(action, value_name = "function")]
+        #[arg(long)]
         function: String,
-        #[arg(action, value_name = "input")]
+        #[arg(long)]
         input: String,
         /// Aurora EVM secret key
-        #[arg(long, value_name = "aurora-secret-key")]
+        #[arg(long)]
         aurora_secret_key: Option<String>,
     },
     /// Return a value from storage at address with key
     GetStorageAt {
-        #[arg(action, value_name = "address")]
+        #[arg(long)]
         address: String,
-        #[arg(action, value_name = "key")]
+        #[arg(long)]
         key: String,
     },
     /// Deploy EVM smart contract's code in hex
     DeployEvmCode {
         /// Code in HEX to deploy
-        #[arg(long, value_name = "code")]
+        #[arg(long)]
         code: String,
         /// Aurora EVM secret key
-        #[arg(long, value_name = "aurora-secret-key")]
+        #[arg(long)]
         aurora_secret_key: Option<String>,
     },
     /// Encode address
