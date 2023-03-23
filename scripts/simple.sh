@@ -36,7 +36,19 @@ finish() {
   stop_node
   # Cleanup
   rm -rf $NEARCORE_HOME
-  exit
+
+  if [[ -z "$1" ]]; then
+    exit 0
+  else
+    exit "$1"
+  fi
+}
+
+assert_eq() {
+  if [[ $1 != $2 ]]; then
+    echo "Unexpected result, should be $1 but actual is $2"
+    finish 1
+  fi
 }
 
 # Start NEAR node.
@@ -51,23 +63,54 @@ export NEAR_KEY_PATH=$NODE_KEY_PATH
 aurora-cli create-account --account $ENGINE_ACCOUNT --balance 100 > $AURORA_KEY_PATH || finish
 sleep 2
 # View info of created account.
-aurora-cli view-account $ENGINE_ACCOUNT || finish
+aurora-cli view-account --account $ENGINE_ACCOUNT || finish
 sleep 2
 # Deploy Aurora EVM.
 export NEAR_KEY_PATH=$AURORA_KEY_PATH
 aurora-cli deploy-aurora $ENGINE_WASM_PATH || finish
 sleep 2
 # Init Aurora EVM.
-aurora-cli --engine $ENGINE_ACCOUNT init || finish
-#  --chain-id 1313161556 \
-#  --owner-id $ENGINE_ACCOUNT \
-#  --bridge-prover-id "prover" \
-#  --upgrade-delay-blocks 5 \
-#  --custodian-address 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D \
-#  --ft-metadata-path /path/to/metadata.json || finish
+aurora-cli --engine $ENGINE_ACCOUNT init \
+  --chain-id 1313161556 \
+  --owner-id $ENGINE_ACCOUNT \
+  --bridge-prover-id "prover" \
+  --upgrade-delay-blocks 5 \
+  --custodian-address 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || finish
+#  --ft-metadata-path /path/to/metadata.json || finish # TODO: Add a file with metadata.
 sleep 2
-# Deploy EVM code.
+
+# Deploy Hello World EVM code.
 aurora-cli --engine $ENGINE_ACCOUNT deploy-evm-code --code $EVM_CODE --aurora-secret-key $AURORA_SECRET_KEY || finish
+sleep 2
+result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f greet \
+  --abi-path $ABI_PATH || finish)
+assert_eq "$result" "Hello, World!"
+sleep 2
+
+# Deploy Counter EVM code.
+EVM_CODE=$(cat docs/res/Counter.hex)
+ABI_PATH=docs/res/Counter.abi
+aurora-cli --engine $ENGINE_ACCOUNT deploy-evm-code --code $EVM_CODE --aurora-secret-key $AURORA_SECRET_KEY || finish
+sleep 2
+result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
+  --abi-path $ABI_PATH || finish)
+assert_eq "$result" "0"
+sleep 2
+aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f increment \
+  --abi-path $ABI_PATH \
+  --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || finish
+sleep 2
+result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
+  --abi-path $ABI_PATH || finish)
+assert_eq "$result" "1"
+sleep 2
+aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f decrement \
+  --abi-path $ABI_PATH \
+  --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || finish
+sleep 2
+result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
+  --abi-path $ABI_PATH || finish)
+assert_eq "$result" "0"
 sleep 2
 
 aurora-cli --engine $ENGINE_ACCOUNT get-chain-id || finish
@@ -75,7 +118,7 @@ aurora-cli --engine $ENGINE_ACCOUNT get-version || finish
 aurora-cli --engine $ENGINE_ACCOUNT get-owner || finish
 aurora-cli --engine $ENGINE_ACCOUNT get-bridge-prover || finish
 aurora-cli --engine $ENGINE_ACCOUNT get-upgrade-index || finish
-aurora-cli --engine $ENGINE_ACCOUNT get-balance 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || finish
+aurora-cli --engine $ENGINE_ACCOUNT get-balance 0x04b678962787ccd195a8e324d4c6bc4d5727f82b || finish
 aurora-cli --engine $ENGINE_ACCOUNT get-code 0xa3078bf607d2e859dca0b1a13878ec2e607f30de || finish
 aurora-cli key-pair --seed 1
 

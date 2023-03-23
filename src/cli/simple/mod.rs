@@ -27,25 +27,29 @@ pub struct Cli {
 pub enum Command {
     /// Deploy Aurora EVM smart contract
     DeployAurora {
+        /// Path to the WASM file
         #[arg(action)]
         path: String,
     },
     /// Create new NEAR account
     CreateAccount {
-        #[arg(long)]
+        /// AccountId
+        #[arg(long, short)]
         account: String,
-        #[arg(long)]
+        /// Initial account balance in NEAR  
+        #[arg(long, short)]
         balance: f64,
     },
-    /// View new NEAR account
+    /// View NEAR account
     ViewAccount {
-        #[arg(action)]
+        /// AccountId
+        #[arg(action, long, short)]
         account: String,
     },
     /// Initialize Aurora EVM and ETH connector
     Init {
         /// Chain ID
-        #[arg(long, default_value = "1313161556")]
+        #[arg(long, default_value_t = 1313161556)]
         chain_id: u64,
         /// Owner of the Aurora EVM
         #[arg(long)]
@@ -92,14 +96,35 @@ pub enum Command {
         #[arg(action)]
         address: String,
     },
-    /// Call method of a smart contract
-    Call {
-        #[arg(long)]
+    /// Call a view method of the smart contract
+    ViewCall {
+        /// Address of the smart contract
+        #[arg(long, short)]
         address: String,
-        #[arg(long)]
+        /// Name of the function to call
+        #[arg(long, short)]
         function: String,
+        /// Arguments with value in JSON
         #[arg(long)]
-        input: String,
+        args: Option<String>,
+        /// Path to ABI of the contract
+        #[arg(long)]
+        abi_path: String,
+    },
+    /// Call a modified method of the smart contract
+    Call {
+        /// Address of the smart contract
+        #[arg(long, short)]
+        address: String,
+        /// Name of the function to call
+        #[arg(long, short)]
+        function: String,
+        /// Arguments with value in JSON
+        #[arg(long)]
+        args: Option<String>,
+        /// Path to ABI of the contract
+        #[arg(long)]
+        abi_path: String,
         /// Aurora EVM secret key
         #[arg(long)]
         aurora_secret_key: Option<String>,
@@ -176,9 +201,26 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::Call {
             address,
             function,
-            input: _,
+            args,
+            abi_path,
             aurora_secret_key,
-        } => command::call(client, address, function, aurora_secret_key.as_deref()).await?,
+        } => {
+            command::call(
+                client,
+                address,
+                function,
+                args,
+                abi_path,
+                aurora_secret_key.as_deref(),
+            )
+            .await?;
+        }
+        Command::ViewCall {
+            address,
+            function,
+            args,
+            abi_path,
+        } => command::view_call(client, address, function, args, abi_path).await?,
         Command::StageUpgrade => command::stage_upgrade(client).await?,
         Command::DeployUpgrade => command::deploy_upgrade(client).await?,
         Command::GetStorageAt { address, key } => {
