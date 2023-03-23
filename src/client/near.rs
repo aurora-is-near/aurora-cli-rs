@@ -1,3 +1,4 @@
+#[cfg(feature = "advanced")]
 use aurora_engine::parameters::SubmitResult;
 use aurora_engine::parameters::TransactionStatus;
 use aurora_engine_types::{
@@ -20,6 +21,7 @@ use near_primitives::{
 #[cfg(feature = "simple")]
 use std::str::FromStr;
 
+#[cfg(feature = "advanced")]
 use super::TransactionOutcome;
 use crate::utils;
 
@@ -41,6 +43,7 @@ impl NearClient {
         }
     }
 
+    #[cfg(feature = "advanced")]
     pub async fn get_receipt_outcome(
         &self,
         near_receipt_id: CryptoHash,

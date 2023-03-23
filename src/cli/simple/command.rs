@@ -4,11 +4,10 @@ use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
 use borsh::{BorshDeserialize, BorshSerialize};
-use near_primitives::views::{ExecutionStatusView, FinalExecutionStatus};
+use near_primitives::views::FinalExecutionStatus;
 use serde_json::Value;
 use std::{path::Path, str::FromStr};
 
-use crate::client::TransactionOutcome;
 use crate::utils::secret_key_from_hex;
 use crate::{
     client::Client,
@@ -277,27 +276,19 @@ pub async fn call(
         FinalExecutionStatus::Failure(e) => {
             anyhow::bail!("Error while calling EVM transaction: {e}")
         }
-        FinalExecutionStatus::SuccessValue(_) => match result.transaction_outcome.outcome.status {
-            ExecutionStatusView::Unknown => anyhow::bail!("FinalExecutionStatus: unknown"),
-            ExecutionStatusView::Failure(e) => anyhow::bail!("FinalExecutionStatus: failure {e}"),
-            ExecutionStatusView::SuccessValue(_) => {
-                anyhow::bail!("Transaction successful but is not Aurora transaction")
-            }
-            ExecutionStatusView::SuccessReceiptId(id) => {
-                tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
-                match client.near().get_receipt_outcome(id).await? {
-                    TransactionOutcome::Result(result) => match result.status {
-                        TransactionStatus::Succeed(_) => (result.gas_used, "successful"),
-                        TransactionStatus::Revert(_) => (result.gas_used, "reverted"),
-                        TransactionStatus::OutOfGas => (result.gas_used, "out_of_gas"),
-                        TransactionStatus::OutOfFund => (result.gas_used, "out_of_fund"),
-                        TransactionStatus::OutOfOffset => (result.gas_used, "out_of_offset"),
-                        TransactionStatus::CallTooDeep => (result.gas_used, "call_too_deep"),
-                    },
-                    TransactionOutcome::Failure(e) => anyhow::bail!("Bad transaction outcome: {e}"),
-                }
-            }
-        },
+        FinalExecutionStatus::SuccessValue(bytes) => {
+            let result = SubmitResult::try_from_slice(&bytes)?;
+            let status = match result.status {
+                TransactionStatus::Succeed(_) => "successful",
+                TransactionStatus::Revert(_) => "reverted",
+                TransactionStatus::OutOfGas => "out_of_gas",
+                TransactionStatus::OutOfFund => "out_of_fund",
+                TransactionStatus::OutOfOffset => "out_of_offset",
+                TransactionStatus::CallTooDeep => "call_too_deep",
+            };
+
+            (result.gas_used, status)
+        }
     };
 
     println!("Aurora transaction status: {status}, gas used: {gas}");

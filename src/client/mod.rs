@@ -1,3 +1,4 @@
+#[cfg(feature = "advanced")]
 use aurora_engine::parameters::SubmitResult;
 #[cfg(feature = "simple")]
 use aurora_engine_types::account_id::AccountId;
@@ -50,6 +51,7 @@ impl Client {
     }
 }
 
+#[cfg(feature = "advanced")]
 #[derive(Debug)]
 pub enum TransactionOutcome {
     Result(SubmitResult),
