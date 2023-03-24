@@ -80,7 +80,7 @@ aurora-cli --engine $ENGINE_ACCOUNT init \
 sleep 2
 
 # Deploy Hello World EVM code.
-aurora-cli --engine $ENGINE_ACCOUNT deploy-evm-code --code $EVM_CODE --aurora-secret-key $AURORA_SECRET_KEY || finish
+aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --aurora-secret-key $AURORA_SECRET_KEY || finish
 sleep 2
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f greet \
   --abi-path $ABI_PATH || finish)
@@ -90,11 +90,12 @@ sleep 2
 # Deploy Counter EVM code.
 EVM_CODE=$(cat docs/res/Counter.hex)
 ABI_PATH=docs/res/Counter.abi
-aurora-cli --engine $ENGINE_ACCOUNT deploy-evm-code --code $EVM_CODE --aurora-secret-key $AURORA_SECRET_KEY || finish
+aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --abi-path $ABI_PATH --args '{"init_value":"5"}' \
+  --aurora-secret-key $AURORA_SECRET_KEY || finish
 sleep 2
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
   --abi-path $ABI_PATH || finish)
-assert_eq "$result" "0"
+assert_eq "$result" "5"
 sleep 2
 aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f increment \
   --abi-path $ABI_PATH \
@@ -102,7 +103,7 @@ aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904
 sleep 2
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
   --abi-path $ABI_PATH || finish)
-assert_eq "$result" "1"
+assert_eq "$result" "6"
 sleep 2
 aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f decrement \
   --abi-path $ABI_PATH \
@@ -110,7 +111,7 @@ aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904
 sleep 2
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
   --abi-path $ABI_PATH || finish)
-assert_eq "$result" "0"
+assert_eq "$result" "5"
 sleep 2
 
 aurora-cli --engine $ENGINE_ACCOUNT get-chain-id || finish

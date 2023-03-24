@@ -1,6 +1,12 @@
 [
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "int256",
+        "name": "init_value",
+        "type": "int256"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "constructor"
   },

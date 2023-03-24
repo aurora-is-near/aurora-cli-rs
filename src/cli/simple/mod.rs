@@ -104,7 +104,7 @@ pub enum Command {
         /// Name of the function to call
         #[arg(long, short)]
         function: String,
-        /// Arguments with value in JSON
+        /// Arguments with values in JSON
         #[arg(long)]
         args: Option<String>,
         /// Path to ABI of the contract
@@ -119,7 +119,7 @@ pub enum Command {
         /// Name of the function to call
         #[arg(long, short)]
         function: String,
-        /// Arguments with value in JSON
+        /// Arguments with values in JSON
         #[arg(long)]
         args: Option<String>,
         /// Path to ABI of the contract
@@ -137,10 +137,16 @@ pub enum Command {
         key: String,
     },
     /// Deploy EVM smart contract's code in hex
-    DeployEvmCode {
+    Deploy {
         /// Code in HEX to deploy
         #[arg(long)]
         code: String,
+        /// Constructor arguments with values in JSON
+        #[arg(long)]
+        args: Option<String>,
+        /// Path to ABI of the contract
+        #[arg(long)]
+        abi_path: Option<String>,
         /// Aurora EVM secret key
         #[arg(long)]
         aurora_secret_key: Option<String>,
@@ -226,11 +232,14 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::GetStorageAt { address, key } => {
             command::get_storage_at(client, address, key).await?;
         }
-        Command::DeployEvmCode {
+        Command::Deploy {
             code,
+            abi_path,
+            args,
             aurora_secret_key,
         } => {
-            command::deploy_evm_code(client, code, aurora_secret_key.as_deref()).await?;
+            command::deploy_evm_code(client, code, abi_path, args, aurora_secret_key.as_deref())
+                .await?;
         }
         Command::DeployAurora { path } => command::deploy_aurora(client, path).await?,
         Command::CreateAccount { account, balance } => {

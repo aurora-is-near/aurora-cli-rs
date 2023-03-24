@@ -1,5 +1,5 @@
 use aurora_engine_types::U256;
-use ethabi::{Function, Token};
+use ethabi::Token;
 use serde_json::Value;
 use std::path::Path;
 
@@ -9,7 +9,7 @@ pub fn read_contract<P: AsRef<Path>>(abi_path: P) -> anyhow::Result<ethabi::Cont
         .and_then(|reader| ethabi::Contract::load(reader).map_err(Into::into))
 }
 
-pub fn parse_args(function: &Function, args: &Value) -> anyhow::Result<Vec<Token>> {
+pub fn parse_args(inputs: &[ethabi::Param], args: &Value) -> anyhow::Result<Vec<Token>> {
     if matches!(args, Value::Null) {
         return Ok(vec![]);
     }
@@ -17,9 +17,9 @@ pub fn parse_args(function: &Function, args: &Value) -> anyhow::Result<Vec<Token
     let vars_map = args
         .as_object()
         .ok_or_else(|| anyhow::anyhow!("Expected JSON object"))?;
-    let mut tokens = Vec::with_capacity(function.inputs.len());
+    let mut tokens = Vec::with_capacity(inputs.len());
 
-    for input in &function.inputs {
+    for input in inputs {
         let arg = vars_map
             .get(&input.name)
             .and_then(Value::as_str)

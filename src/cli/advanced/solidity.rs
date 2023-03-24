@@ -79,7 +79,7 @@ impl Solidity {
                 let contract = utils::abi::read_contract(abi_path)?;
                 let function = contract.function(method_name)?;
                 let args: Value = serde_json::from_str(&read_arg(arg.as_deref(), *stdin_arg))?;
-                let tokens = utils::abi::parse_args(function, &args)?;
+                let tokens = utils::abi::parse_args(&function.inputs, &args)?;
 
                 function.encode_input(&tokens).map_err(Into::into)
             }

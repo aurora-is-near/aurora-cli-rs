@@ -155,15 +155,33 @@ pub async fn init(
 }
 
 /// Deploy EVM byte code.
-pub async fn deploy_evm_code(client: Client, code: String, sk: Option<&str>) -> anyhow::Result<()> {
+pub async fn deploy_evm_code(
+    client: Client,
+    code: String,
+    abi_path: Option<String>,
+    args: Option<String>,
+    sk: Option<&str>,
+) -> anyhow::Result<()> {
     let sk = sk
         .ok_or_else(|| anyhow::anyhow!("Deploy EVM code requires Aurora secret key"))
         .and_then(secret_key_from_hex)?;
-    let code = hex::decode(code)?;
+    let input =
+        if let Some((abi_path, args)) = abi_path.and_then(|path| args.map(|args| (path, args))) {
+            let contract = utils::abi::read_contract(abi_path)?;
+            let constructor = contract
+                .constructor()
+                .ok_or_else(|| anyhow::anyhow!("No constructor definition"))?;
+            let args: Value = serde_json::from_str(&args)?;
+            let tokens = utils::abi::parse_args(&constructor.inputs, &args)?;
+            let code = hex::decode(code)?;
+            constructor.encode_input(code, &tokens)?
+        } else {
+            hex::decode(code)?
+        };
 
     let result = client
         .near()
-        .send_aurora_transaction(&sk, None, Wei::zero(), code)
+        .send_aurora_transaction(&sk, None, Wei::zero(), input)
         .await?;
     let output = match result.status {
         FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {
@@ -225,7 +243,7 @@ pub async fn view_call(
     let contract = utils::abi::read_contract(abi_path)?;
     let func = contract.function(&function)?;
     let args: Value = args.map_or(Ok(Value::Null), |args| serde_json::from_str(&args))?;
-    let tokens = utils::abi::parse_args(func, &args)?;
+    let tokens = utils::abi::parse_args(&func.inputs, &args)?;
     let input = func.encode_input(&tokens)?;
     let result = client
         .near()
@@ -262,7 +280,7 @@ pub async fn call(
     let contract = utils::abi::read_contract(abi_path)?;
     let func = contract.function(&function)?;
     let args: Value = args.map_or(Ok(Value::Null), |args| serde_json::from_str(&args))?;
-    let tokens = utils::abi::parse_args(func, &args)?;
+    let tokens = utils::abi::parse_args(&func.inputs, &args)?;
     let input = func.encode_input(&tokens)?;
     let result = client
         .near()
