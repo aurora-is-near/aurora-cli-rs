@@ -6,6 +6,7 @@ use rlp::RlpStream;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+pub mod abi;
 pub mod ft_metadata;
 
 #[allow(dead_code)]

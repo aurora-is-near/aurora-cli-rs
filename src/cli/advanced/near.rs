@@ -259,9 +259,14 @@ pub async fn execute_command(
     match command {
         Command::Read { subcommand } => match subcommand {
             ReadCommand::GetReceiptResult { receipt_id_b58 } => {
-                let tx_hash = bs58::decode(receipt_id_b58.as_str()).into_vec().unwrap();
+                let tx_hash = bs58::decode(receipt_id_b58.as_str()).into_vec()?;
                 let outcome = client
-                    .get_receipt_outcome(tx_hash.as_slice().try_into().unwrap())
+                    .get_receipt_outcome(
+                        tx_hash
+                            .as_slice()
+                            .try_into()
+                            .map_err(|e| anyhow::anyhow!("{e}"))?,
+                    )
                     .await?;
                 println!("{outcome:?}");
             }
@@ -276,8 +281,7 @@ pub async fn execute_command(
                 let input = utils::hex_to_vec(&input_data_hex)?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
-                    .await
-                    .unwrap();
+                    .await?;
                 println!("{result:?}");
             }
             ReadCommand::EngineErc20 {
@@ -291,8 +295,7 @@ pub async fn execute_command(
                 let input = erc20.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
-                    .await
-                    .unwrap();
+                    .await?;
                 println!("{result:?}");
             }
             ReadCommand::Solidity {
@@ -306,8 +309,7 @@ pub async fn execute_command(
                 let input = contract_call.abi_encode()?;
                 let result = client
                     .view_contract_call(sender, target, amount, input)
-                    .await
-                    .unwrap();
+                    .await?;
                 if let TransactionStatus::Succeed(bytes) = result {
                     let parsed_output = contract_call.abi_decode(&bytes)?;
                     println!("{parsed_output:?}");
@@ -601,11 +603,9 @@ pub async fn execute_command(
                 println!("{tx_outcome:?}");
             }
             WriteCommand::DeployERC20Token { nep141 } => {
-                let mut buffer: Vec<u8> = Vec::new();
                 let nep141: AccountId = nep141.parse().unwrap();
-                let input = DeployErc20TokenArgs { nep141 };
-                input.serialize(&mut buffer)?;
-                let tx_outcome = client.contract_call("deploy_erc20_token", buffer).await?;
+                let input = DeployErc20TokenArgs { nep141 }.try_to_vec()?;
+                let tx_outcome = client.contract_call("deploy_erc20_token", input).await?;
                 println!("{tx_outcome:?}");
             }
             WriteCommand::Deposit { raw_proof } => {
@@ -615,12 +615,11 @@ pub async fn execute_command(
                 println!("{tx_outcome:?}");
             }
             WriteCommand::SetPausedFlags { paused_mask } => {
-                let mut buffer: Vec<u8> = Vec::new();
                 let input = PauseEthConnectorCallArgs {
                     paused_mask: u8::from_str(&paused_mask).unwrap(),
-                };
-                input.serialize(&mut buffer)?;
-                let tx_outcome = client.contract_call("set_paused_flags", buffer).await?;
+                }
+                .try_to_vec()?;
+                let tx_outcome = client.contract_call("set_paused_flags", input).await?;
                 println!("{tx_outcome:?}");
             }
         },

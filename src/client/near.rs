@@ -1,13 +1,11 @@
-use aurora_engine::parameters::SubmitResult;
 #[cfg(feature = "advanced")]
+use aurora_engine::parameters::SubmitResult;
 use aurora_engine::parameters::TransactionStatus;
 use aurora_engine_types::{
     types::{Address, Wei},
     U256,
 };
-use borsh::BorshDeserialize;
-#[cfg(feature = "advanced")]
-use borsh::BorshSerialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_crypto::InMemorySigner;
 use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
@@ -23,6 +21,7 @@ use near_primitives::{
 #[cfg(feature = "simple")]
 use std::str::FromStr;
 
+#[cfg(feature = "advanced")]
 use super::TransactionOutcome;
 use crate::utils;
 
@@ -44,6 +43,7 @@ impl NearClient {
         }
     }
 
+    #[cfg(feature = "advanced")]
     pub async fn get_receipt_outcome(
         &self,
         near_receipt_id: CryptoHash,
@@ -109,7 +109,6 @@ impl NearClient {
         Ok(String::from_utf8_lossy(&result.result).into_owned())
     }
 
-    #[cfg(feature = "advanced")]
     pub async fn view_contract_call(
         &self,
         sender: Address,
@@ -123,8 +122,8 @@ impl NearClient {
             amount: amount.to_bytes(),
             input,
         };
-        let result = self.view_call("view", args.try_to_vec().unwrap()).await?;
-        let status = TransactionStatus::try_from_slice(&result.result).unwrap();
+        let result = self.view_call("view", args.try_to_vec()?).await?;
+        let status = TransactionStatus::try_from_slice(&result.result)?;
         Ok(status)
     }
 
@@ -252,7 +251,7 @@ impl NearClient {
         Ok(response)
     }
 
-    /// Creates new NEAR's account.
+    /// Creates new NEAR account.
     #[cfg(feature = "simple")]
     pub async fn create_account(&self, account: &str, deposit: f64) -> anyhow::Result<String> {
         let signer = self.signer()?;

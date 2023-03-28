@@ -5,9 +5,9 @@ use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
 use borsh::{BorshDeserialize, BorshSerialize};
 use near_primitives::views::FinalExecutionStatus;
+use serde_json::Value;
 use std::{path::Path, str::FromStr};
 
-use crate::client::TransactionOutcome;
 use crate::utils::secret_key_from_hex;
 use crate::{
     client::Client,
@@ -149,21 +149,39 @@ pub async fn init(
         FinalExecutionStatus::SuccessValue(_) => {}
     }
 
-    println!("Aurora EVM have been initialized successfully");
+    println!("Aurora EVM has been initialized successfully");
 
     Ok(())
 }
 
 /// Deploy EVM byte code.
-pub async fn deploy_evm_code(client: Client, code: String, sk: Option<&str>) -> anyhow::Result<()> {
+pub async fn deploy_evm_code(
+    client: Client,
+    code: String,
+    abi_path: Option<String>,
+    args: Option<String>,
+    sk: Option<&str>,
+) -> anyhow::Result<()> {
     let sk = sk
         .ok_or_else(|| anyhow::anyhow!("Deploy EVM code requires Aurora secret key"))
         .and_then(secret_key_from_hex)?;
-    let code = hex::decode(code)?;
+    let input =
+        if let Some((abi_path, args)) = abi_path.and_then(|path| args.map(|args| (path, args))) {
+            let contract = utils::abi::read_contract(abi_path)?;
+            let constructor = contract
+                .constructor()
+                .ok_or_else(|| anyhow::anyhow!("No constructor definition"))?;
+            let args: Value = serde_json::from_str(&args)?;
+            let tokens = utils::abi::parse_args(&constructor.inputs, &args)?;
+            let code = hex::decode(code)?;
+            constructor.encode_input(code, &tokens)?
+        } else {
+            hex::decode(code)?
+        };
 
     let result = client
         .near()
-        .send_aurora_transaction(&sk, None, Wei::zero(), code)
+        .send_aurora_transaction(&sk, None, Wei::zero(), input)
         .await?;
     let output = match result.status {
         FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {
@@ -214,47 +232,84 @@ pub async fn view_account(client: Client, account: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+pub async fn view_call(
+    client: Client,
+    address: String,
+    function: String,
+    args: Option<String>,
+    abi_path: String,
+) -> anyhow::Result<()> {
+    let target = hex_to_address(&address)?;
+    let contract = utils::abi::read_contract(abi_path)?;
+    let func = contract.function(&function)?;
+    let args: Value = args.map_or(Ok(Value::Null), |args| serde_json::from_str(&args))?;
+    let tokens = utils::abi::parse_args(&func.inputs, &args)?;
+    let input = func.encode_input(&tokens)?;
+    let result = client
+        .near()
+        .view_contract_call(Address::default(), target, Wei::zero(), input)
+        .await?;
+
+    if let TransactionStatus::Succeed(bytes) = result {
+        let parsed_output = func.decode_output(&bytes)?;
+        let result = parsed_output
+            .iter()
+            .map(ethabi::Token::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        println!("{result}");
+    } else {
+        println!("{result:?}");
+    }
+
+    Ok(())
+}
+
 pub async fn call(
     client: Client,
     address: String,
-    func_hash: String,
+    function: String,
+    args: Option<String>,
+    abi_path: String,
     sk: Option<&str>,
 ) -> anyhow::Result<()> {
     let sk = sk
         .ok_or_else(|| anyhow::anyhow!("Call contract requires Aurora secret key"))
         .and_then(secret_key_from_hex)?;
     let target = hex_to_address(&address)?;
-    let func = hex::decode(func_hash)?;
-
+    let contract = utils::abi::read_contract(abi_path)?;
+    let func = contract.function(&function)?;
+    let args: Value = args.map_or(Ok(Value::Null), |args| serde_json::from_str(&args))?;
+    let tokens = utils::abi::parse_args(&func.inputs, &args)?;
+    let input = func.encode_input(&tokens)?;
     let result = client
         .near()
-        .send_aurora_transaction(&sk, Some(target), Wei::zero(), func)
-        .await;
-    let output = match result {
-        Ok(result) => match result.status {
-            FinalExecutionStatus::NotStarted => "not_tarted".to_string(),
-            FinalExecutionStatus::Started => "started".to_string(),
-            FinalExecutionStatus::Failure(_) => "failure".to_string(),
-            FinalExecutionStatus::SuccessValue(_) => {
-                let outcome = client
-                    .near()
-                    .get_receipt_outcome(result.transaction_outcome.id)
-                    .await?;
-                match outcome {
-                    TransactionOutcome::Result(result) => match result.status {
-                        TransactionStatus::Succeed(data) => {
-                            format!("transaction successful, result: {data:?}")
-                        }
-                        _ => String::from_utf8_lossy(result.status.as_ref()).to_string(),
-                    },
-                    TransactionOutcome::Failure(e) => format!("bad outcome: {e}"),
-                }
-            }
-        },
-        Err(e) => format!("Deploying code error: {e}"),
+        .send_aurora_transaction(&sk, Some(target), Wei::zero(), input)
+        .await?;
+
+    let (gas, status) = match result.status {
+        FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {
+            anyhow::bail!("Error while calling EVM transaction: Bad status of the transaction")
+        }
+        FinalExecutionStatus::Failure(e) => {
+            anyhow::bail!("Error while calling EVM transaction: {e}")
+        }
+        FinalExecutionStatus::SuccessValue(bytes) => {
+            let result = SubmitResult::try_from_slice(&bytes)?;
+            let status = match result.status {
+                TransactionStatus::Succeed(_) => "successful",
+                TransactionStatus::Revert(_) => "reverted",
+                TransactionStatus::OutOfGas => "out_of_gas",
+                TransactionStatus::OutOfFund => "out_of_fund",
+                TransactionStatus::OutOfOffset => "out_of_offset",
+                TransactionStatus::CallTooDeep => "call_too_deep",
+            };
+
+            (result.gas_used, status)
+        }
     };
 
-    println!("{output}");
+    println!("Aurora transaction status: {status}, gas used: {gas}");
 
     Ok(())
 }
