@@ -135,16 +135,16 @@ assert_eq "$block_hash" "0xd31857e9ce14083a7a74092b71f9ac48b8c0d4988ad40074182c1
 aurora-cli --engine $ENGINE_ACCOUNT register-relayer 0xf644ad75e048eaeb28844dd75bd384984e8cd508 || error_exit
 sleep 1
 
-# Set a new owner
-aurora-cli --engine $ENGINE_ACCOUNT set-owner node0 || error_exit
-sleep 1
-owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
-assert_eq "$owner" node0
-export NEAR_KEY_PATH=$NODE_KEY_PATH
-aurora-cli --engine $ENGINE_ACCOUNT set-owner aurora.node0 || error_exit
-sleep 1
-owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
-assert_eq "$owner" $ENGINE_ACCOUNT
+# Set a new owner. The functionality has not been released yet.
+#aurora-cli --engine $ENGINE_ACCOUNT set-owner node0 || error_exit
+#sleep 1
+#owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
+#assert_eq "$owner" node0
+#export NEAR_KEY_PATH=$NODE_KEY_PATH
+#aurora-cli --engine $ENGINE_ACCOUNT set-owner aurora.node0 || error_exit
+#sleep 1
+#owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
+#assert_eq "$owner" $ENGINE_ACCOUNT
 
 # Check pausing precompiles. Not working on the current release because of
 # hardcoded aurora account in EngineAuthorizer.
