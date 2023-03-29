@@ -16,21 +16,12 @@ pub struct Cli {
     /// Path to file with NEAR account id and secret key in JSON format
     #[arg(long)]
     pub near_key_path: Option<String>,
-    /// Aurora API key
-    #[arg(long)]
-    pub aurora_api_key: Option<String>,
     #[clap(subcommand)]
     pub command: Command,
 }
 
 #[derive(Subcommand)]
 pub enum Command {
-    /// Deploy Aurora EVM smart contract
-    DeployAurora {
-        /// Path to the WASM file
-        #[arg(action)]
-        path: String,
-    },
     /// Create new NEAR account
     CreateAccount {
         /// AccountId
@@ -43,8 +34,12 @@ pub enum Command {
     /// View NEAR account
     ViewAccount {
         /// AccountId
-        #[arg(action, long, short)]
         account: String,
+    },
+    /// Deploy Aurora EVM smart contract
+    DeployAurora {
+        /// Path to the WASM file
+        path: String,
     },
     /// Initialize Aurora EVM and ETH connector
     Init {
@@ -67,34 +62,59 @@ pub enum Command {
         #[arg(long)]
         ft_metadata_path: Option<String>,
     },
-    /// Return chain ID
+    /// Return chain id of the network
     GetChainId,
-    /// Upgrade index
+    /// Return next nonce for address
+    GetNonce { address: String },
+    /// Return block hash of the specified height
+    GetBlockHash { height: u64 },
+    /// Return smart contract's code for contract address
+    GetCode { address: String },
+    /// Return balance for address
+    GetBalance { address: String },
+    /// Return a height for a staged upgrade
     GetUpgradeIndex,
     /// Return Aurora EVM version
     GetVersion,
     /// Return Aurora EVM owner
     GetOwner,
+    /// Set a new owner of Aurora EVM
+    SetOwner { account_id: String },
     /// Return bridge prover
     GetBridgeProver,
-    /// Stage upgrade
-    StageUpgrade,
-    /// Deploy upgrade
+    /// Return a value from storage at address with key
+    GetStorageAt {
+        #[arg(short, long)]
+        address: String,
+        #[arg(short, long)]
+        key: String,
+    },
+    /// Register relayer address
+    RegisterRelayer { address: String },
+    /// Pause precompiles
+    PausePrecompiles { mask: u32 },
+    /// Resume precompiles
+    ResumePrecompiles { mask: u32 },
+    /// Return paused precompiles
+    PausedPrecompiles,
+    /// Stage a new code for upgrade
+    StageUpgrade { path: String },
+    /// Deploy staged upgrade
     DeployUpgrade,
-    /// Return next nonce for address
-    GetNonce {
-        #[arg(action)]
-        address: String,
-    },
-    /// Return smart contract's code for contract address
-    GetCode {
-        #[arg(action, value_name = "address")]
-        address: String,
-    },
-    /// Return balance for address
-    GetBalance {
-        #[arg(action)]
-        address: String,
+    /// Deploy EVM smart contract's code in hex
+    Deploy {
+        /// Code in HEX to deploy
+        #[arg(long)]
+        code: String,
+        /// Constructor arguments with values in JSON
+        #[arg(long)]
+        args: Option<String>,
+        /// Path to ABI of the contract
+        #[arg(long)]
+        abi_path: Option<String>,
+        /// Aurora EVM secret key
+        #[arg(long)]
+        aurora_secret_key: Option<String>,
     },
     /// Call a view method of the smart contract
     ViewCall {
@@ -129,33 +149,8 @@ pub enum Command {
         #[arg(long)]
         aurora_secret_key: Option<String>,
     },
-    /// Return a value from storage at address with key
-    GetStorageAt {
-        #[arg(long)]
-        address: String,
-        #[arg(long)]
-        key: String,
-    },
-    /// Deploy EVM smart contract's code in hex
-    Deploy {
-        /// Code in HEX to deploy
-        #[arg(long)]
-        code: String,
-        /// Constructor arguments with values in JSON
-        #[arg(long)]
-        args: Option<String>,
-        /// Path to ABI of the contract
-        #[arg(long)]
-        abi_path: Option<String>,
-        /// Aurora EVM secret key
-        #[arg(long)]
-        aurora_secret_key: Option<String>,
-    },
     /// Encode address
-    EncodeAddress {
-        /// Account ID
-        account: String,
-    },
+    EncodeAddress { account: String },
     /// Return Public and Secret ED25519 keys
     KeyPair {
         /// Random
@@ -197,13 +192,15 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
 
     match args.command {
         Command::GetChainId => command::get_chain_id(client).await?,
-        Command::GetUpgradeIndex => command::get_upgrade_index(client).await?,
         Command::GetVersion => command::get_version(client).await?,
         Command::GetOwner => command::get_owner(client).await?,
+        Command::SetOwner { account_id } => command::set_owner(client, account_id).await?,
+        Command::RegisterRelayer { address } => command::register_relayer(client, address).await?,
         Command::GetBridgeProver => command::get_bridge_prover(client).await?,
         Command::GetNonce { address } => command::get_nonce(client, address).await?,
         Command::GetCode { address } => command::get_code(client, address).await?,
         Command::GetBalance { address } => command::get_balance(client, address).await?,
+        Command::GetBlockHash { height } => command::get_block_hash(client, height).await?,
         Command::Call {
             address,
             function,
@@ -227,7 +224,11 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             args,
             abi_path,
         } => command::view_call(client, address, function, args, abi_path).await?,
-        Command::StageUpgrade => command::stage_upgrade(client).await?,
+        Command::PausePrecompiles { mask } => command::pause_precompiles(client, mask).await?,
+        Command::ResumePrecompiles { mask } => command::resume_precompiles(client, mask).await?,
+        Command::PausedPrecompiles => command::paused_precompiles(client).await?,
+        Command::GetUpgradeIndex => command::get_upgrade_index(client).await?,
+        Command::StageUpgrade { path } => command::stage_upgrade(client, path).await?,
         Command::DeployUpgrade => command::deploy_upgrade(client).await?,
         Command::GetStorageAt { address, key } => {
             command::get_storage_at(client, address, key).await?;

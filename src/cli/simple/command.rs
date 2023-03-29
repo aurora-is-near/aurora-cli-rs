@@ -1,72 +1,69 @@
-use aurora_engine::parameters::{GetStorageAtArgs, InitCallArgs, NewCallArgs, TransactionStatus};
+use aurora_engine::parameters::{
+    GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
+    TransactionStatus,
+};
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
 use borsh::{BorshDeserialize, BorshSerialize};
-use near_primitives::views::FinalExecutionStatus;
+use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
+use std::fmt::{Display, Formatter};
 use std::{path::Path, str::FromStr};
 
-use crate::utils::secret_key_from_hex;
 use crate::{
     client::Client,
-    utils,
-    utils::{hex_to_address, hex_to_vec},
+    utils::{self, hex_to_address, hex_to_vec, secret_key_from_hex},
 };
 
+/// Return `chain_id` of the current network.
 pub async fn get_chain_id(client: Client) -> anyhow::Result<()> {
-    get_number(client, "get_chain_id", None).await
+    get_value::<U256>(client, "get_chain_id", None).await
 }
 
+/// Return version of the Aurora EVM.
 pub async fn get_version(client: Client) -> anyhow::Result<()> {
-    get_string(client, "get_version", None).await
+    get_value::<String>(client, "get_version", None).await
 }
 
+/// Return owner of the Aurora EVM.
 pub async fn get_owner(client: Client) -> anyhow::Result<()> {
-    get_string(client, "get_owner", None).await
+    get_value::<String>(client, "get_owner", None).await
 }
 
+/// Return bridge prover of the Aurora EVM.
 pub async fn get_bridge_prover(client: Client) -> anyhow::Result<()> {
-    get_string(client, "get_bridge_prover", None).await
+    get_value::<String>(client, "get_bridge_prover", None).await
 }
 
+/// Return nonce for the address.
 pub async fn get_nonce(client: Client, address: String) -> anyhow::Result<()> {
     let address = hex_to_vec(&address)?;
-    get_number(client, "get_nonce", Some(address)).await
+    get_value::<U256>(client, "get_nonce", Some(address)).await
 }
 
+/// Return a height, after which an upgrade could be done.
 pub async fn get_upgrade_index(client: Client) -> anyhow::Result<()> {
-    // TODO: Check for correctness.
-    let index = client
-        .near()
-        .view_call("get_upgrade_index", vec![])
-        .await
-        .map(|result| u64::try_from_slice(&result.result).unwrap_or_default())
-        .unwrap_or_default();
-    println!("{index}");
-
-    Ok(())
+    get_value::<u64>(client, "get_upgrade_index", None).await
 }
 
 /// Return ETH balance of the address.
 pub async fn get_balance(client: Client, address: String) -> anyhow::Result<()> {
     let address = hex_to_vec(&address)?;
-    let result = client.near().view_call("get_balance", address).await?;
-    let balance = U256::from_big_endian(&result.result).low_u64();
-    println!("{balance}");
-
-    Ok(())
+    get_value::<U256>(client, "get_balance", Some(address)).await
 }
 
 /// Return a hex code of the smart contract.
 pub async fn get_code(client: Client, address: String) -> anyhow::Result<()> {
     let address = hex_to_vec(&address)?;
-    let result = client.near().view_call("get_code", address).await?;
-    let code = hex::encode(result.result);
-    println!("0x{code}");
+    get_value::<HexString>(client, "get_code", Some(address)).await
+}
 
-    Ok(())
+/// Return a block hash of the specified height.
+pub async fn get_block_hash(client: Client, height: u64) -> anyhow::Result<()> {
+    let height = height.to_le_bytes().to_vec();
+    get_value::<HexString>(client, "get_block_hash", Some(height)).await
 }
 
 /// Deploy Aurora EVM smart contract.
@@ -232,6 +229,7 @@ pub async fn view_account(client: Client, account: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Read-only call of the EVM smart contract.
 pub async fn view_call(
     client: Client,
     address: String,
@@ -265,6 +263,7 @@ pub async fn view_call(
     Ok(())
 }
 
+/// Modifying call of the EVM smart contract.
 pub async fn call(
     client: Client,
     address: String,
@@ -314,41 +313,79 @@ pub async fn call(
     Ok(())
 }
 
-pub async fn stage_upgrade(client: Client) -> anyhow::Result<()> {
-    let _result = client.near().view_call("stage_upgrade", vec![]).await?;
+/// Stage code for delayed upgrade.
+pub async fn stage_upgrade<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::Result<()> {
+    let code = std::fs::read(path)?;
 
-    Ok(())
+    ContractCall {
+        method: "stage_upgrade",
+        success_message: "The code has been saved for staged upgrade successfully",
+        error_message: "Error while staging code for upgrade",
+    }
+    .proceed(client, code)
+    .await
 }
 
+/// Deploy staged upgrade.
 pub async fn deploy_upgrade(client: Client) -> anyhow::Result<()> {
-    let _result = client.near().view_call("deploy_upgrade", vec![]).await?;
-
-    Ok(())
+    ContractCall {
+        method: "deploy_upgrade",
+        success_message: "The upgrade has been applied successfully",
+        error_message: "Error while deploying upgrade",
+    }
+    .proceed(client, vec![])
+    .await
 }
 
+/// Set a new owner of the Aurora EVM.
+pub async fn set_owner(client: Client, account_id: String) -> anyhow::Result<()> {
+    let args = SetOwnerArgs {
+        new_owner: account_id.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
+    }
+    .try_to_vec()?;
+
+    ContractCall {
+        method: "set_owner",
+        success_message: "The owner has been changed successfully",
+        error_message: "Error while setting a new owner",
+    }
+    .proceed(client, args)
+    .await
+}
+
+/// Register relayer address.
+pub async fn register_relayer(client: Client, address: String) -> anyhow::Result<()> {
+    let args = hex_to_vec(&address)?;
+
+    ContractCall {
+        method: "register_relayer",
+        success_message: "The new relayer has been registered successfully",
+        error_message: "Error while registering a new relayer",
+    }
+    .proceed(client, args)
+    .await
+}
+
+/// Return value in storage for key at address.
 pub async fn get_storage_at(client: Client, address: String, key: String) -> anyhow::Result<()> {
     let address = hex_to_address(&address)?;
     let key = H256::from_str(&key)?;
     let input = GetStorageAtArgs {
         address,
         key: key.0,
-    };
-    let result = client
-        .near()
-        .view_call("get_storage_at", input.try_to_vec()?)
-        .await?;
-    let storage = H256::from_slice(&result.result);
+    }
+    .try_to_vec()?;
 
-    println!("{storage}");
-
-    Ok(())
+    get_value::<H256>(client, "get_storage_at", Some(input)).await
 }
 
+/// Return EVM address from NEAR account.
 pub fn encode_address(account: &str) {
     let result = near_account_to_evm_address(account.as_bytes()).encode();
     println!("0x{result}");
 }
 
+/// Return an address and corresponding private key in JSON format.
 pub fn key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<()> {
     let (address, sk) = utils::gen_key_pair(random, seed)?;
     println!(
@@ -362,7 +399,38 @@ pub fn key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn get_number(
+/// Pause precompiles with mask.
+pub async fn pause_precompiles(client: Client, mask: u32) -> anyhow::Result<()> {
+    let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
+
+    ContractCall {
+        method: "pause_precompiles",
+        success_message: "The precompiles have been paused successfully",
+        error_message: "Error while pausing precompiles",
+    }
+    .proceed(client, args)
+    .await
+}
+
+/// Resume precompiles with mask.
+pub async fn resume_precompiles(client: Client, mask: u32) -> anyhow::Result<()> {
+    let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
+
+    ContractCall {
+        method: "resume_precompiles",
+        success_message: "The precompiles have been resumed successfully",
+        error_message: "Error while resuming precompiles",
+    }
+    .proceed(client, args)
+    .await
+}
+
+/// Return paused precompiles.
+pub async fn paused_precompiles(client: Client) -> anyhow::Result<()> {
+    get_value::<u32>(client, "paused_precompiles", None).await
+}
+
+async fn get_value<T: FromCallResult + Display>(
     client: Client,
     method_name: &str,
     args: Option<Vec<u8>>,
@@ -371,23 +439,89 @@ async fn get_number(
         .near()
         .view_call(method_name, args.unwrap_or_default())
         .await?;
-    let output = U256::from_big_endian(&result.result);
+    let output = T::from_result(result)?;
     println!("{output}");
 
     Ok(())
 }
 
-async fn get_string(
-    client: Client,
-    method_name: &str,
-    args: Option<Vec<u8>>,
-) -> anyhow::Result<()> {
-    let result = client
-        .near()
-        .view_call(method_name, args.unwrap_or_default())
-        .await?;
-    let output = String::from_utf8(result.result)?;
-    println!("{}", output.trim());
+struct HexString(String);
 
-    Ok(())
+trait FromCallResult {
+    fn from_result(result: CallResult) -> anyhow::Result<Self>
+    where
+        Self: Sized;
+}
+
+impl FromCallResult for H256 {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        Ok(Self::from_slice(&result.result))
+    }
+}
+
+impl FromCallResult for U256 {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        Ok(Self::from_big_endian(&result.result))
+    }
+}
+
+impl FromCallResult for u64 {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        let mut buffer = [0; 8];
+        buffer.copy_from_slice(&result.result);
+        Ok(Self::from_le_bytes(buffer))
+    }
+}
+
+impl FromCallResult for u32 {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        let mut buffer = [0; 4];
+        buffer.copy_from_slice(&result.result);
+        Ok(Self::from_le_bytes(buffer))
+    }
+}
+
+impl FromCallResult for String {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        let output = Self::from_utf8(result.result)?;
+        Ok(output.trim().to_string())
+    }
+}
+
+impl FromCallResult for HexString {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        Ok(Self(hex::encode(result.result)))
+    }
+}
+
+impl Display for HexString {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "0x{}", self.0)
+    }
+}
+
+struct ContractCall<'a> {
+    method: &'a str,
+    success_message: &'a str,
+    error_message: &'a str,
+}
+
+impl ContractCall<'_> {
+    async fn proceed(&self, client: Client, args: Vec<u8>) -> anyhow::Result<()> {
+        let result = client.near().contract_call(self.method, args).await?;
+
+        match result.status {
+            FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {
+                anyhow::bail!("{}: Bad transaction status", self.error_message)
+            }
+            FinalExecutionStatus::Failure(e) => {
+                anyhow::bail!("{}: {e}", self.error_message)
+            }
+            FinalExecutionStatus::SuccessValue(_) => {
+                println!("{}", self.success_message);
+            }
+        }
+
+        Ok(())
+    }
 }
