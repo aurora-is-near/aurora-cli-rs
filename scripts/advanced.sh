@@ -13,7 +13,7 @@ export NEARCORE_HOME="/tmp/localnet"
 pip3 list | grep nearup > /dev/null || pip3 install --user nearup
 
 start_node() {
-  cmd="nearup run localnet --num-nodes 1 --home $NEARCORE_HOME --no-watcher --account-id near"
+  cmd="nearup run localnet --home $NEARCORE_HOME"
 
   if [[ $(uname -m) == "arm64" ]]; then # Check for local execution
     cmd="$cmd --binary-path $HOME/.nearup/near/localnet"

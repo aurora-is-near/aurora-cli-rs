@@ -13,7 +13,7 @@ name = "aurora-cli"
 path = "src/main.rs"
 
 [features]
-default = [ "advanced" ]
+default = [ "simple" ]
 simple = []
 advanced = []
 

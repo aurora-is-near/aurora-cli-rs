@@ -30,12 +30,12 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --no-default-features -F simple -- -D warnings
+          args: --all-targets -- -D warnings
       - name: Run clippy advanced
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets -- -D warnings
+          args: --all-targets --no-default-features -F advanced -- -D warnings
 
   test:
     name: ${{ matrix.build }}
@@ -57,12 +57,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-targets --no-default-features -F simple
+          args: --all-targets
       - name: Run tests advanced
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-targets
+          args: --all-targets --no-default-features -F advanced
 
   shell_tests:
     name: Shell Tests
@@ -74,14 +74,14 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --path .
+          args: --path . --no-default-features -F advanced
       - name: Tests (Advanced CLI)
         run: scripts/advanced.sh
       - name: Install aurora-cli (Simple CLI)
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --path . --no-default-features -F simple
+          args: --path .
       - name: Tests (Simple CLI)
         run: scripts/simple.sh
 

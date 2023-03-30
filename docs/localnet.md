@@ -18,8 +18,8 @@ directly in the EVM on your localnet then you will need to build the Engine your
 
 ### 3. Build the CLI
 
-From the root of this repository (aurora-cli-rs) run the command `cargo build --release`.
-This requires having Rust installed.
+From the root of this repository (aurora-cli-rs) run the command `cargo build -r --no-default-features -F advanced`.
+This requires having Rust 1.68.0 or newer installed.
 
 ## Setup localnet
 
@@ -27,7 +27,7 @@ This requires having Rust installed.
 
 Choose any directory you like and set the `NEARCORE_HOME` environment variable. For example:
 
-```
+```shell
 export NEARCORE_HOME=/home/$USER/.near/localnet/
 ```
 
@@ -35,7 +35,7 @@ export NEARCORE_HOME=/home/$USER/.near/localnet/
 
 Using the `neard` binary you obtained in the prerequisites:
 
-```
+```shell
 neard --home $NEARCORE_HOME localnet --validators 1
 ```
 
@@ -43,7 +43,7 @@ neard --home $NEARCORE_HOME localnet --validators 1
 
 Use the `aurora-cli` binary you built in the perquisites:
 
-```
+```shell
 aurora-cli near init genesis --path $NEARCORE_HOME/node0/genesis.json
 ```
 
@@ -51,7 +51,7 @@ aurora-cli near init genesis --path $NEARCORE_HOME/node0/genesis.json
 
 Use the `aurora-cli` binary again:
 
-```
+```shell
 aurora-cli near init local-config -n $NEARCORE_HOME/node0/config.json -a $NEARCORE_HOME/node0/aurora_key.json
 ```
 
@@ -59,7 +59,7 @@ aurora-cli near init local-config -n $NEARCORE_HOME/node0/config.json -a $NEARCO
 
 Using the `neard` binary again:
 
-```
+```shell
 nohup neard --home $NEARCORE_HOME/node0/ run > node.log &
 ```
 
@@ -73,7 +73,7 @@ Note: if you are using `nohup` don't forget to kill the node when you are done w
 Suppose the Aurora Engine Wasm binary is located at a path given by the environment variable `ENGINE_WASM_PATH`.
 Then we can use this CLI to deploy the engine:
 
-```
+```shell
 aurora-cli near write engine-init -w $ENGINE_WASM_PATH
 ```
     
@@ -83,8 +83,8 @@ After completing the setup above you can use this CLI to interact with it just l
 
 For example, suppose you wanted to deploy a simple "Hello, World!" contract:
 
-```
-$ aurora-cli near \
+```shell
+aurora-cli near \
     write \
     deploy-code \
     $(cat docs/res/HelloWorld.hex)
@@ -92,8 +92,8 @@ $ aurora-cli near \
 Contact deployed to address: 0x592186c059e3d9564cac6b1ada6f2dc7ff1d78e9
 ```
 
-```
-$ aurora-cli near \
+```shell
+aurora-cli near \
     read \
     solidity -t 0x592186c059e3d9564cac6b1ada6f2dc7ff1d78e9 \
     call-args-by-name \
