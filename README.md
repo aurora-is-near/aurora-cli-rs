@@ -108,8 +108,8 @@ Initialize Aurora EVM:
 aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/auora_key.json init --chain-id 1313161556 --owner-id aurora.node0
 ```
 
-And now we can deploy EVM smart contract. In our example, it will be a simple counter that can return its current value
-and increment and decrement its value.
+And now we can deploy the EVM smart contract. In our example, it will be a simple counter that can return its current
+value and increment and decrement its value.
 
 But before we need to generate private key to have possibility to sign transactions:
 ```shell
@@ -122,7 +122,7 @@ The response should be similar to this:
   "secret_key": "3fac6dca1c6fc056b971a4e9090afbbfbdf3bc443e9cda595facb653cb1c01e1"
 }
 ```
-**_NOTE:_** The key could be used for the demonstration only. 
+**_NOTE:_** The key should be used for the demonstration only. 
 
 Deploy EVM smart contract:
 ```shell
