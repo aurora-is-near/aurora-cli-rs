@@ -21,24 +21,17 @@ pub struct AuroraClient {
     url: String,
     near_url: String,
     engine_account_id: AccountId,
-    _signer_key_path: Option<String>,
 }
 
 impl AuroraClient {
     #[allow(clippy::used_underscore_binding)]
-    pub fn new(
-        url: &str,
-        near_url: &str,
-        engine_account: &str,
-        _signer_key_path: Option<String>,
-    ) -> Self {
+    pub fn new(url: &str, near_url: &str, engine_account: &str) -> Self {
         let inner = reqwest::Client::new();
         Self {
             inner,
             url: url.to_string(),
             near_url: near_url.to_string(),
             engine_account_id: engine_account.parse().expect("couldn't parse engine id"),
-            _signer_key_path,
         }
     }
 

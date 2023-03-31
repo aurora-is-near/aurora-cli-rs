@@ -60,7 +60,6 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
                 &format!("{aurora_endpoint}{api_key}"),
                 near_endpoint,
                 &config.engine_account_id,
-                config.near_key_path.clone(),
             );
             aurora::execute_command(subcommand, &client, &config).await?;
         }

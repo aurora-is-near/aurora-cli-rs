@@ -25,6 +25,7 @@ use std::str::FromStr;
 use super::TransactionOutcome;
 use crate::utils;
 
+// The maximum amount of prepaid NEAR gas required for paying for a transaction.
 const NEAR_GAS: u64 = 300_000_000_000_000;
 
 pub struct NearClient {
