@@ -70,7 +70,7 @@ Start NEAR node:
 nearup run localnet --home /tmp/localnet
 ```
 
-After that we need to prepare an account and create a file with private key for the Aurora EVM and .
+After that we need to prepare an account and create a file with private key for the Aurora EVM.
 
 ```shell
 aurora-cli --near-key-path /tmp/localnet/node0/validator_key.json create-account \
