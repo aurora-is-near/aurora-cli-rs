@@ -2,9 +2,10 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
+AURORA_VERSION="2.9.0"
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
-ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/latest/aurora-mainnet.wasm"
+ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_VERSION/aurora-mainnet.wasm"
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
 USER_BASE_BIN=$(python3 -m site --user-base)/bin
 NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
@@ -122,7 +123,9 @@ sleep 1
 
 # Check read operations.
 aurora-cli --engine $ENGINE_ACCOUNT get-chain-id || error_exit
-aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit
+version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
+assert_eq "$version" $AURORA_VERSION
+echo "$version"
 aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT get-bridge-prover || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT get-balance 0x04b678962787ccd195a8e324d4c6bc4d5727f82b || error_exit
@@ -136,33 +139,33 @@ aurora-cli --engine $ENGINE_ACCOUNT register-relayer 0xf644ad75e048eaeb28844dd75
 sleep 1
 
 # Set a new owner. The functionality has not been released yet.
-#aurora-cli --engine $ENGINE_ACCOUNT set-owner node0 || error_exit
-#sleep 1
-#owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
-#assert_eq "$owner" node0
-#export NEAR_KEY_PATH=$NODE_KEY_PATH
-#aurora-cli --engine $ENGINE_ACCOUNT set-owner aurora.node0 || error_exit
-#sleep 1
-#owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
-#assert_eq "$owner" $ENGINE_ACCOUNT
+aurora-cli --engine $ENGINE_ACCOUNT set-owner node0 || error_exit
+sleep 1
+owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
+assert_eq "$owner" node0
+export NEAR_KEY_PATH=$NODE_KEY_PATH
+aurora-cli --engine $ENGINE_ACCOUNT set-owner aurora.node0 || error_exit
+sleep 1
+owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
+assert_eq "$owner" $ENGINE_ACCOUNT
 
 # Check pausing precompiles. Not working on the current release because of
 # hardcoded aurora account in EngineAuthorizer.
-#export NEAR_KEY_PATH=$AURORA_KEY_PATH
-#mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-#assert_eq "$mask" 0
-#aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 1 || error_exit
-#sleep 1
-#mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-#assert_eq "$mask" 1
-#aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 2 || error_exit
-#sleep 1
-#mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-#assert_eq "$mask" 3
-#aurora-cli --engine $ENGINE_ACCOUNT resume-precompiles 3 || error_exit
-#sleep 1
-#mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-#assert_eq "$mask" 0
+export NEAR_KEY_PATH=$AURORA_KEY_PATH
+mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
+assert_eq "$mask" 0
+aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 1 || error_exit
+sleep 1
+mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
+assert_eq "$mask" 1
+aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 2 || error_exit
+sleep 1
+mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
+assert_eq "$mask" 3
+aurora-cli --engine $ENGINE_ACCOUNT resume-precompiles 3 || error_exit
+sleep 1
+mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
+assert_eq "$mask" 0
 
 # Stop NEAR node and clean up.
 finish
