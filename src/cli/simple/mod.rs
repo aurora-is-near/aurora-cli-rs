@@ -145,6 +145,9 @@ pub enum Command {
         /// Path to ABI of the contract
         #[arg(long)]
         abi_path: String,
+        /// Value sending in EVM transaction
+        #[arg(long)]
+        value: Option<String>,
         /// Aurora EVM secret key
         #[arg(long)]
         aurora_secret_key: Option<String>,
@@ -206,6 +209,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             function,
             args,
             abi_path,
+            value,
             aurora_secret_key,
         } => {
             command::call(
@@ -214,6 +218,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
                 function,
                 args,
                 abi_path,
+                value,
                 aurora_secret_key.as_deref(),
             )
             .await?;

@@ -270,6 +270,7 @@ pub async fn call(
     function: String,
     args: Option<String>,
     abi_path: String,
+    value: Option<String>,
     sk: Option<&str>,
 ) -> anyhow::Result<()> {
     let sk = sk
@@ -281,9 +282,13 @@ pub async fn call(
     let args: Value = args.map_or(Ok(Value::Null), |args| serde_json::from_str(&args))?;
     let tokens = utils::abi::parse_args(&func.inputs, &args)?;
     let input = func.encode_input(&tokens)?;
+    let amount = value
+        .and_then(|a| U256::from_dec_str(&a).ok())
+        .map_or_else(Wei::zero, Wei::new);
+
     let result = client
         .near()
-        .send_aurora_transaction(&sk, Some(target), Wei::zero(), input)
+        .send_aurora_transaction(&sk, Some(target), amount, input)
         .await?;
 
     let (gas, status) = match result.status {
