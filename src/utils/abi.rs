@@ -1,12 +1,22 @@
 use aurora_engine_types::U256;
 use ethabi::Token;
+use serde::Deserialize;
 use serde_json::Value;
 use std::path::Path;
 
 pub fn read_contract<P: AsRef<Path>>(abi_path: P) -> anyhow::Result<ethabi::Contract> {
-    std::fs::File::open(abi_path.as_ref())
-        .map_err(Into::into)
-        .and_then(|reader| ethabi::Contract::load(reader).map_err(Into::into))
+    let abi: Value = std::fs::File::open(abi_path.as_ref())
+        .and_then(|reader| serde_json::from_reader(reader).map_err(Into::into))?;
+
+    let abi = if abi.is_object() {
+        abi.get("abi")
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("It seems that the file is not an ABI"))?
+    } else {
+        abi
+    };
+
+    ethabi::Contract::deserialize(abi).map_err(Into::into)
 }
 
 pub fn parse_args(inputs: &[ethabi::Param], args: &Value) -> anyhow::Result<Vec<Token>> {
