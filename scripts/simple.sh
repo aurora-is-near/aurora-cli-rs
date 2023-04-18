@@ -2,10 +2,12 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
-AURORA_VERSION="2.9.0"
+AURORA_PREV_VERSION="2.8.1"
+AURORA_LAST_VERSION="2.9.0"
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
-ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_VERSION/aurora-mainnet.wasm"
+ENGINE_PREV_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_PREV_VERSION/aurora-mainnet.wasm"
+ENGINE_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-mainnet.wasm"
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
 USER_BASE_BIN=$(python3 -m site --user-base)/bin
 NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
@@ -60,8 +62,8 @@ assert_eq() {
 start_node
 sleep 1
 
-# Download Aurora EVM.
-curl -sL $ENGINE_WASM_URL -o $ENGINE_WASM_PATH || error_exit
+# Download Aurora EVM 2.8.1.
+curl -sL $ENGINE_PREV_WASM_URL -o $ENGINE_WASM_PATH || error_exit
 
 export NEAR_KEY_PATH=$NODE_KEY_PATH
 # Create an account for Aurora EVM.
@@ -81,7 +83,7 @@ aurora-cli --engine $ENGINE_ACCOUNT init \
   --chain-id 1313161556 \
   --owner-id $ENGINE_ACCOUNT \
   --bridge-prover-id "prover" \
-  --upgrade-delay-blocks 5 \
+  --upgrade-delay-blocks 1 \
   --custodian-address 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D \
   --ft-metadata-path docs/res/ft_metadata.json || error_exit
 sleep 1
@@ -124,7 +126,7 @@ sleep 1
 # Check read operations.
 aurora-cli --engine $ENGINE_ACCOUNT get-chain-id || error_exit
 version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
-assert_eq "$version" $AURORA_VERSION
+assert_eq "$version" $AURORA_PREV_VERSION
 echo "$version"
 aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT get-bridge-prover || error_exit
@@ -137,6 +139,16 @@ assert_eq "$block_hash" "0xd31857e9ce14083a7a74092b71f9ac48b8c0d4988ad40074182c1
 # Register a new relayer address
 aurora-cli --engine $ENGINE_ACCOUNT register-relayer 0xf644ad75e048eaeb28844dd75bd384984e8cd508 || error_exit
 sleep 1
+
+# Upgrading Aurora EVM to 2.9.0.
+curl -sL $ENGINE_LAST_WASM_URL -o $ENGINE_WASM_PATH || error_exit
+aurora-cli --engine $ENGINE_ACCOUNT stage-upgrade $ENGINE_WASM_PATH || error_exit
+sleep 2
+aurora-cli --engine $ENGINE_ACCOUNT deploy-upgrade || error_exit
+sleep 1
+version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
+assert_eq "$version" $AURORA_LAST_VERSION
+echo "$version"
 
 # Set a new owner. The functionality has not been released yet.
 aurora-cli --engine $ENGINE_ACCOUNT set-owner node0 || error_exit
