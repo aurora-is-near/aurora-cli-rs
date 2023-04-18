@@ -2,8 +2,7 @@ use aurora_engine::parameters::{
     GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
     TransactionStatus,
 };
-use aurora_engine::xcc::{AddressVersionUpdateArgs, FundXccArgs};
-use aurora_engine_precompiles::xcc::state::CodeVersion;
+use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::types::Address;
@@ -353,27 +352,6 @@ pub async fn factory_update(client: Client, path: String) -> anyhow::Result<()> 
         error_message: "Error while updating the bytecode of user's router contract",
     }
     .proceed(client, code)
-    .await
-}
-
-/// Updates the bytecode version for the given account
-pub async fn factory_upgrade_address_version(
-    client: Client,
-    address: String,
-    version: u32,
-) -> anyhow::Result<()> {
-    let args = AddressVersionUpdateArgs {
-        address: hex_to_address(&address)?,
-        version: CodeVersion(version),
-    }
-    .try_to_vec()?;
-
-    ContractCall {
-        method: "factory_upgrade_address_version",
-        success_message: "The version for address has been upgraded successfully",
-        error_message: "Error while upgrading a version for address",
-    }
-    .proceed(client, args)
     .await
 }
 
