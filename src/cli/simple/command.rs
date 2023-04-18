@@ -344,13 +344,13 @@ pub async fn deploy_upgrade(client: Client) -> anyhow::Result<()> {
 }
 
 /// Updates the bytecode for user's router contracts.
-pub async fn factory_upgrade(client: Client, path: String) -> anyhow::Result<()> {
+pub async fn factory_update(client: Client, path: String) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
 
     ContractCall {
-        method: "factory_upgrade",
-        success_message: "The bytecode of user's router contract has been upgraded successfully",
-        error_message: "Error while upgrading the bytecode of user's router contract",
+        method: "factory_update",
+        success_message: "The bytecode of user's router contract has been updated successfully",
+        error_message: "Error while updating the bytecode of user's router contract",
     }
     .proceed(client, code)
     .await

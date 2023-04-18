@@ -98,9 +98,7 @@ pub enum Command {
     /// Return paused precompiles
     PausedPrecompiles,
     /// Updates the bytecode for user's router contracts
-    FactoryUpgrade { path: String },
-    /// Updates the bytecode version for the given account
-    FactoryUpgradeAddressVersion { address: String, version: u32 },
+    FactoryUpdate { path: String },
     /// Sets the address for the `wNEAR` ERC-20 contract
     FactorySetWnearAddress { address: String },
     /// Create and/or fund an XCC sub-account directly
@@ -246,10 +244,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::ResumePrecompiles { mask } => command::resume_precompiles(client, mask).await?,
         Command::PausedPrecompiles => command::paused_precompiles(client).await?,
         Command::GetUpgradeIndex => command::get_upgrade_index(client).await?,
-        Command::FactoryUpgrade { path } => command::factory_upgrade(client, path).await?,
-        Command::FactoryUpgradeAddressVersion { address, version } => {
-            command::factory_upgrade_address_version(client, address, version).await?;
-        }
+        Command::FactoryUpdate { path } => command::factory_update(client, path).await?,
         Command::FactorySetWnearAddress { address } => {
             command::factory_set_wnear_address(client, address).await?;
         }
