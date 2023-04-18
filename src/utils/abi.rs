@@ -23,7 +23,6 @@ pub fn parse_args(inputs: &[ethabi::Param], args: &Value) -> anyhow::Result<Vec<
     if matches!(args, Value::Null) {
         return Ok(vec![]);
     }
-
     let vars_map = args
         .as_object()
         .ok_or_else(|| anyhow::anyhow!("Expected JSON object"))?;
@@ -33,7 +32,7 @@ pub fn parse_args(inputs: &[ethabi::Param], args: &Value) -> anyhow::Result<Vec<
         let arg = vars_map
             .get(&input.name)
             .and_then(Value::as_str)
-            .ok_or_else(|| anyhow::anyhow!("Missing variable"))?;
+            .ok_or_else(|| anyhow::anyhow!("Missing variable in the arguments"))?;
         let token = parse_arg(arg, &input.kind)?;
         tokens.push(token);
     }

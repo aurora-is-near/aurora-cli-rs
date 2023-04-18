@@ -97,6 +97,19 @@ pub enum Command {
     ResumePrecompiles { mask: u32 },
     /// Return paused precompiles
     PausedPrecompiles,
+    /// Updates the bytecode for user's router contracts
+    FactoryUpgrade { path: String },
+    /// Updates the bytecode version for the given account
+    FactoryUpgradeAddressVersion { address: String, version: u32 },
+    /// Sets the address for the `wNEAR` ERC-20 contract
+    FactorySetWnearAddress { address: String },
+    /// Create and/or fund an XCC sub-account directly
+    FundXccSubAccount {
+        /// Address of the target
+        target: String,
+        /// Wnear Account Id
+        wnear_account_id: Option<String>,
+    },
     /// Stage a new code for upgrade
     StageUpgrade { path: String },
     /// Deploy staged upgrade
@@ -233,6 +246,19 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::ResumePrecompiles { mask } => command::resume_precompiles(client, mask).await?,
         Command::PausedPrecompiles => command::paused_precompiles(client).await?,
         Command::GetUpgradeIndex => command::get_upgrade_index(client).await?,
+        Command::FactoryUpgrade { path } => command::factory_upgrade(client, path).await?,
+        Command::FactoryUpgradeAddressVersion { address, version } => {
+            command::factory_upgrade_address_version(client, address, version).await?;
+        }
+        Command::FactorySetWnearAddress { address } => {
+            command::factory_set_wnear_address(client, address).await?;
+        }
+        Command::FundXccSubAccount {
+            target,
+            wnear_account_id,
+        } => {
+            command::fund_xcc_sub_account(client, target, wnear_account_id).await?;
+        }
         Command::StageUpgrade { path } => command::stage_upgrade(client, path).await?,
         Command::DeployUpgrade => command::deploy_upgrade(client).await?,
         Command::GetStorageAt { address, key } => {

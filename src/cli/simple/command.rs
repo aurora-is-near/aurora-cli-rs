@@ -2,6 +2,8 @@ use aurora_engine::parameters::{
     GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
     TransactionStatus,
 };
+use aurora_engine::xcc::{AddressVersionUpdateArgs, FundXccArgs};
+use aurora_engine_precompiles::xcc::state::CodeVersion;
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::types::Address;
@@ -14,7 +16,7 @@ use std::{path::Path, str::FromStr};
 
 use crate::{
     client::Client,
-    utils::{self, hex_to_address, hex_to_vec, secret_key_from_hex},
+    utils::{self, hex_to_address, hex_to_arr, hex_to_vec, secret_key_from_hex},
 };
 
 /// Return `chain_id` of the current network.
@@ -290,7 +292,6 @@ pub async fn call(
         .near()
         .send_aurora_transaction(&sk, Some(target), amount, input)
         .await?;
-
     let (gas, status) = match result.status {
         FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {
             anyhow::bail!("Error while calling EVM transaction: Bad status of the transaction")
@@ -339,6 +340,76 @@ pub async fn deploy_upgrade(client: Client) -> anyhow::Result<()> {
         error_message: "Error while deploying upgrade",
     }
     .proceed(client, vec![])
+    .await
+}
+
+/// Updates the bytecode for user's router contracts.
+pub async fn factory_upgrade(client: Client, path: String) -> anyhow::Result<()> {
+    let code = std::fs::read(path)?;
+
+    ContractCall {
+        method: "factory_upgrade",
+        success_message: "The bytecode of user's router contract has been upgraded successfully",
+        error_message: "Error while upgrading the bytecode of user's router contract",
+    }
+    .proceed(client, code)
+    .await
+}
+
+/// Updates the bytecode version for the given account
+pub async fn factory_upgrade_address_version(
+    client: Client,
+    address: String,
+    version: u32,
+) -> anyhow::Result<()> {
+    let args = AddressVersionUpdateArgs {
+        address: hex_to_address(&address)?,
+        version: CodeVersion(version),
+    }
+    .try_to_vec()?;
+
+    ContractCall {
+        method: "factory_upgrade_address_version",
+        success_message: "The version for address has been upgraded successfully",
+        error_message: "Error while upgrading a version for address",
+    }
+    .proceed(client, args)
+    .await
+}
+
+/// Sets the address for the `wNEAR` ERC-20 contract
+pub async fn factory_set_wnear_address(client: Client, address: String) -> anyhow::Result<()> {
+    let args: [u8; 20] = hex_to_arr(&address)?;
+
+    ContractCall {
+        method: "factory_set_wnear_address",
+        success_message: "The wnear address has been set successfully",
+        error_message: "Error while upgrading wnear address",
+    }
+    .proceed(client, args.to_vec())
+    .await
+}
+
+/// Create and/or fund an XCC sub-account directly
+pub async fn fund_xcc_sub_account(
+    client: Client,
+    target: String,
+    account_id: Option<String>,
+) -> anyhow::Result<()> {
+    let args = FundXccArgs {
+        target: hex_to_address(&target)?,
+        wnear_account_id: account_id
+            .map(|id| id.parse().map_err(|e| anyhow::anyhow!("{e}")))
+            .transpose()?,
+    }
+    .try_to_vec()?;
+
+    ContractCall {
+        method: "fund_xcc_sub_account",
+        success_message: "The XCC sub-account has been funded successfully",
+        error_message: "Error while funding XCC sub-account",
+    }
+    .proceed(client, args)
     .await
 }
 
