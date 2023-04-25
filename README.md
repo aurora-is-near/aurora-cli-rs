@@ -1,6 +1,6 @@
 <p>&nbsp;</p>
 <p align="center">
-<img src="https://raw.githubusercontent.com/hskang9/aurora-cli-rs/main/img/aurora-cli-logo.png" width=500>
+<img src="https://raw.githubusercontent.com/aurora-is-near/aurora-cli-rs/main/img/aurora-cli-logo.png" width=500>
 </p>
 
 <p align="center">
