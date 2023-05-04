@@ -1,7 +1,7 @@
 {
-    "network": "mainnet",
+    "network": "testnet",
     "engine_account_id": "aurora",
-    "aurora_api_key": null,
-    "near_key_path": null,
-    "evm_secret_key": null
+    "aurora_api_key": "",
+    "near_key_path": "testnet.json",
+    "evm_secret_key": ""
 }

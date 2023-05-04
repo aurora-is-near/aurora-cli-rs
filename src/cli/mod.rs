@@ -1,32 +1,21 @@
-use clap::{Parser, Subcommand};
+#[cfg(feature = "advanced")]
+mod advanced;
+#[cfg(feature = "simple")]
+pub mod simple;
 
-pub mod aurora;
-pub mod erc20;
-pub mod near;
-pub mod process_tx_data;
-pub mod solidity;
+#[cfg(feature = "advanced")]
+pub use advanced::{aurora, near, process_tx_data, run, Cli, Command};
 
-#[derive(Parser)]
-pub struct Cli {
-    #[clap(short, long)]
-    pub config_path: Option<String>,
-    #[clap(subcommand)]
-    pub command: Command,
-}
+#[cfg(feature = "simple")]
+pub use simple::{command, run, Cli, Command};
 
-#[derive(Subcommand)]
-pub enum Command {
-    Aurora {
-        #[clap(subcommand)]
-        subcommand: aurora::Command,
-    },
-    Near {
-        #[clap(subcommand)]
-        subcommand: near::Command,
-    },
-    ProcessTxData {
-        #[clap(subcommand)]
-        action: process_tx_data::ProcessTxAction,
-        input_files_list_path: String,
-    },
-}
+/// NEAR Endpoints.
+const NEAR_MAINNET_ENDPOINT: &str = "https://archival-rpc.mainnet.near.org/";
+const NEAR_TESTNET_ENDPOINT: &str = "https://archival-rpc.testnet.near.org/";
+#[cfg(feature = "simple")]
+const NEAR_LOCAL_ENDPOINT: &str = "http://127.0.0.1:3030/";
+/// Aurora Endpoints.
+#[cfg(feature = "advanced")]
+const AURORA_MAINNET_ENDPOINT: &str = "https://mainnet.aurora.dev/";
+#[cfg(feature = "advanced")]
+const AURORA_TESTNET_ENDPOINT: &str = "https://testnet.aurora.dev/";

@@ -4,8 +4,8 @@
 use aurora_engine::parameters::SubmitResult;
 use aurora_engine_transactions::EthTransactionKind;
 use borsh::BorshDeserialize;
-use std::collections::HashMap;
-use std::sync::Arc;
+use serde_json::Value;
+use std::{collections::HashMap, path::Path, sync::Arc};
 use tokio::fs;
 
 pub mod aggregator;
@@ -26,7 +26,7 @@ pub struct TxData {
 }
 
 impl TxData {
-    pub fn from_value(value: &serde_json::Value) -> Option<Self> {
+    pub fn from_value(value: &Value) -> Option<Self> {
         let status = get_tx_status(value)?;
         let gas_profile = get_gas_profile(value)?;
         let eth_tx = get_eth_tx(value);
@@ -53,9 +53,9 @@ where
             let local_channel = send_channel.clone();
             let local_filter = Arc::clone(filter);
             tokio::task::spawn(async move {
-                let value = read_file(path.as_str()).await;
+                let value = read_file(&path).await;
                 match TxData::from_value(&value) {
-                    None => println!("ERROR failed to read tx data for {}", path.as_str()),
+                    None => println!("ERROR failed to read tx data for {}", &path),
                     Some(data) => {
                         if local_filter.pass(&data) {
                             let tx = ParsedTx { path, data };
@@ -78,18 +78,19 @@ where
     aggregator.finish();
 }
 
-async fn read_file(path: &str) -> serde_json::Value {
+async fn read_file<P: AsRef<Path> + Send>(path: P) -> serde_json::Value {
+    let path = path.as_ref();
     let bytes = match fs::read(path).await {
         Ok(b) => b,
-        Err(e) => panic!("ERROR on file {path}: {e:?}"),
+        Err(e) => panic!("ERROR on file {}: {e:?}", path.display()),
     };
     match serde_json::from_slice(&bytes) {
         Ok(x) => x,
-        Err(e) => panic!("ERROR on file {path}: {e:?}"),
+        Err(e) => panic!("ERROR on file {}: {e:?}", path.display()),
     }
 }
 
-fn get_gas_profile(value: &serde_json::Value) -> Option<HashMap<String, u128>> {
+fn get_gas_profile(value: &Value) -> Option<HashMap<String, u128>> {
     let mut profile_map = HashMap::new();
     let total = get_gas_burnt(value)?;
     let result = value.as_object()?.get("result")?;
@@ -116,21 +117,21 @@ fn get_gas_profile(value: &serde_json::Value) -> Option<HashMap<String, u128>> {
     Some(profile_map)
 }
 
-fn get_eth_tx(value: &serde_json::Value) -> Option<EthTransactionKind> {
+fn get_eth_tx(value: &Value) -> Option<EthTransactionKind> {
     let result = value.as_object()?.get("result")?;
     let transaction = result.as_object()?.get("transaction")?;
     let actions = transaction.as_object()?.get("actions")?;
     for action in actions.as_array()? {
         if let Some(fn_call) = action.as_object().and_then(|a| a.get("FunctionCall")) {
             let args = fn_call.as_object()?.get("args")?.as_str()?;
-            let bytes = base64::decode(args).ok()?;
+            let bytes = aurora_engine_sdk::base64::decode(args).ok()?;
             return bytes.as_slice().try_into().ok();
         }
     }
     None
 }
 
-fn get_tx_status(value: &serde_json::Value) -> Option<TxStatus> {
+fn get_tx_status(value: &Value) -> Option<TxStatus> {
     let result = value.as_object()?.get("result")?;
     let status = result.as_object()?.get("status")?.as_object()?;
 
@@ -149,13 +150,13 @@ fn get_tx_status(value: &serde_json::Value) -> Option<TxStatus> {
         }
     } else {
         let success_b64 = status.get("SuccessValue")?.as_str()?;
-        let success_bytes = base64::decode(success_b64).ok()?;
+        let success_bytes = aurora_engine_sdk::base64::decode(success_b64).ok()?;
         let result = SubmitResult::try_from_slice(success_bytes.as_slice()).ok()?;
         Some(TxStatus::Executed(result))
     }
 }
 
-fn get_gas_burnt(value: &serde_json::Value) -> Option<u128> {
+fn get_gas_burnt(value: &Value) -> Option<u128> {
     let result = value.as_object()?.get("result")?;
     let outcomes = result.as_object()?.get("receipts_outcome")?.as_array()?;
     let max_burnt = outcomes
@@ -168,10 +169,7 @@ fn get_gas_burnt(value: &serde_json::Value) -> Option<u128> {
     Some(u128::from(max_burnt))
 }
 
-fn get_recursive<'a, 'b>(
-    v: &'a serde_json::Value,
-    path: &'b [&str],
-) -> Option<&'a serde_json::Value> {
+fn get_recursive<'a>(v: &'a Value, path: &[&str]) -> Option<&'a Value> {
     if path.is_empty() {
         Some(v)
     } else {

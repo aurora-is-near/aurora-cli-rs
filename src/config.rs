@@ -1,7 +1,8 @@
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "advanced")]
 use std::path::Path;
-use std::{fs, io};
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
     pub network: Network,
     pub engine_account_id: String,
@@ -10,27 +11,28 @@ pub struct Config {
     pub evm_secret_key: Option<String>,
 }
 
+#[cfg(feature = "advanced")]
 impl Config {
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, io::Error> {
-        let reader = fs::File::open(path)?;
-        let config = serde_json::from_reader(reader)?;
-        Ok(config)
+    pub fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
+        std::fs::File::open(path)
+            .map_err(Into::into)
+            .and_then(|reader| serde_json::from_reader(reader).map_err(Into::into))
     }
 
-    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), io::Error> {
+    pub fn to_file<P: AsRef<Path>>(&self, path: P) -> anyhow::Result<()> {
         let serialized = serde_json::to_string_pretty(&self)?;
         std::fs::write(path, serialized)?;
         Ok(())
     }
 
-    pub fn get_evm_secret_key(&self) -> &str {
-        self.evm_secret_key
-            .as_deref()
-            .expect("evm_secret_key must be given in config to use this feature")
+    pub fn get_evm_secret_key(&self) -> anyhow::Result<&str> {
+        self.evm_secret_key.as_deref().ok_or_else(|| {
+            anyhow::anyhow!("evm_secret_key must be given in config to use this feature")
+        })
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Network {
     Mainnet,

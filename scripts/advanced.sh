@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
 ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/latest/aurora-mainnet.wasm"
@@ -12,14 +10,16 @@ export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
 export NEARCORE_HOME="/tmp/localnet"
 
 # Install `nearup` utility if not installed before.
-if $(pip3 list | grep nearup > /dev/null); then
-  echo "nearup has been already installed"
-else
-  pip3 install --user nearup
-fi
+pip3 list | grep nearup > /dev/null || pip3 install --user nearup
 
 start_node() {
-  nearup run localnet --num-nodes 1 --home $NEARCORE_HOME --no-watcher > /dev/null 2>&1
+  cmd="nearup run localnet --home $NEARCORE_HOME"
+
+  if [[ $(uname -m) == "arm64" ]]; then # Check for local execution
+    cmd="$cmd --binary-path $HOME/.nearup/near/localnet"
+  fi
+
+  $cmd > /dev/null 2>&1
 }
 
 finish() {

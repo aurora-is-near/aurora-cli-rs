@@ -44,15 +44,15 @@ pub enum Erc20 {
 }
 
 impl Erc20 {
-    pub fn abi_encode(self) -> Result<Vec<u8>, ParseError> {
+    pub fn abi_encode(self) -> anyhow::Result<Vec<u8>> {
         match self {
             Self::TotalSupply => Ok(TOTAL_SUPPLY_SELECTOR.to_vec()),
             Self::Transfer {
                 to_address_hex,
                 amount,
             } => {
-                let to = utils::hex_to_address(&to_address_hex).map_err(wrap_error)?;
-                let amount = U256::from_str_radix(&amount, 10).map_err(wrap_error)?;
+                let to = utils::hex_to_address(&to_address_hex)?;
+                let amount = U256::from_str_radix(&amount, 10)?;
                 let input = [
                     TRANSFER_SELECTOR,
                     &ethabi::encode(&[
@@ -67,8 +67,8 @@ impl Erc20 {
                 owner_address_hex,
                 spender_address_hex,
             } => {
-                let spender = utils::hex_to_address(&spender_address_hex).map_err(wrap_error)?;
-                let owner = utils::hex_to_address(&owner_address_hex).map_err(wrap_error)?;
+                let spender = utils::hex_to_address(&spender_address_hex)?;
+                let owner = utils::hex_to_address(&owner_address_hex)?;
                 let input = [
                     ALLOWANCE_SELECTOR,
                     &ethabi::encode(&[
@@ -83,8 +83,8 @@ impl Erc20 {
                 spender_address_hex,
                 amount,
             } => {
-                let spender = utils::hex_to_address(&spender_address_hex).map_err(wrap_error)?;
-                let amount = U256::from_str_radix(&amount, 10).map_err(wrap_error)?;
+                let spender = utils::hex_to_address(&spender_address_hex)?;
+                let amount = U256::from_str_radix(&amount, 10)?;
                 let input = [
                     APPROVE_SELECTOR,
                     &ethabi::encode(&[
@@ -96,7 +96,7 @@ impl Erc20 {
                 Ok(input)
             }
             Self::BalanceOf { address_hex } => {
-                let address = utils::hex_to_address(&address_hex).map_err(wrap_error)?;
+                let address = utils::hex_to_address(&address_hex)?;
                 let input = [
                     BALANCE_OF_SELECTOR,
                     &ethabi::encode(&[ethabi::Token::Address(address.raw())]),
@@ -109,9 +109,9 @@ impl Erc20 {
                 amount,
                 from_address_hex,
             } => {
-                let from = utils::hex_to_address(&from_address_hex).map_err(wrap_error)?;
-                let to = utils::hex_to_address(&to_address_hex).map_err(wrap_error)?;
-                let amount = U256::from_str_radix(&amount, 10).map_err(wrap_error)?;
+                let from = utils::hex_to_address(&from_address_hex)?;
+                let to = utils::hex_to_address(&to_address_hex)?;
+                let amount = U256::from_str_radix(&amount, 10)?;
                 let input = [
                     TRANSFER_FROM_SELECTOR,
                     &ethabi::encode(&[
@@ -126,21 +126,6 @@ impl Erc20 {
         }
     }
 }
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ParseError(String);
-
-pub fn wrap_error<E: std::fmt::Debug>(e: E) -> ParseError {
-    ParseError(format!("{e:?}"))
-}
-
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("erc20::ParseError({})", self.0))
-    }
-}
-
-impl std::error::Error for ParseError {}
 
 #[cfg(test)]
 mod tests {
