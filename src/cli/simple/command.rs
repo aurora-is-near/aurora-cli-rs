@@ -1,6 +1,9 @@
 use aurora_engine::parameters::{
     GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
-    TransactionStatus, WhitelistArgs, WhitelistKindArgs, WhitelistStatusArgs
+    TransactionStatus
+};
+use aurora_engine::silo::parameters::{
+    WhitelistArgs, WhitelistKindArgs, WhitelistStatusArgs
 };
 use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
@@ -484,7 +487,9 @@ pub async fn paused_precompiles(client: Client) -> anyhow::Result<()> {
     get_value::<u32>(client, "paused_precompiles", None).await
 }
 
-// Silo specific Methods 
+///////////////////////////////////////////////////////////////
+//                     SILO SPECIFIC METHODS                 //   
+///////////////////////////////////////////////////////////////
 
 // Return fixed gas cost
 pub async fn get_fixed_gas_cost(client: Client) -> anyhow::Result<()> {
@@ -503,36 +508,69 @@ pub async fn set_fixed_gas_cost(client: Client, cost: u64) -> anyhow::Result<()>
     .await
 }
 
-pub async fn add_entity_to_whitelist(client: Client, address: String) -> anyhow::Result<()> {
-    
-}
+pub async fn get_whitelist_status(client: Client) -> anyhow::Result<()> {
+    let args = WhitelistStatusArgs {
 
-pub async fn add_entry_to_whitelist_batch(client: Client) -> anyhow::Result<()> {
-    
-}
+    }.try_to_vec()?;
 
-pub async fn remove_entry_from_whitelist(client: Client) -> anyhow::Result<()> {
-    
+    get_value::<U256>(client, "get_whitelist_status", args).await
 }
 
 pub async fn set_whitelist_status(client: Client) -> anyhow::Result<()> {
-    
+    let args = WhitelistStatusArgs {
+
+    }.try_to_vec()?;
+
+    ContractCall {
+        method: "set_whitelist_status",
+        success_message: "Set whitelist status successfully",
+        error_message: "Error while setting whitelist status",
+    }
+    .proceed(client, args)
+    .await
 }
 
-pub async fn get_whitelist_status(client: Client) -> anyhow::Result<()> {
-    
+pub async fn add_entry_to_whitelist(client: Client, address: String) -> anyhow::Result<()> {
+    let args = WhitelistArgs {
+
+    }.try_to_vec()?;
+
+    ContractCall {
+        method: "add_entity_to_whitelist",
+        success_message: "Added entity to whitelist successfully",
+        error_message: "Error while adding entity to whitelist",
+    }
+    .proceed(client, args)
+    .await
+
 }
 
-pub async fn assert_admin(client: Client) -> anyhow::Result<()> {
-    
+pub async fn add_entry_to_whitelist_batch(client: Client) -> anyhow::Result<()> {
+    let args = WhitelistArgs {
+
+    }.try_to_vec()?;
+
+    ContractCall {
+        method: "add_entry_to_whitelist_batch",
+        success_message: "Added batch entry to whitelist successfully",
+        error_message: "Error while setting batch entry to whitelist",
+    }
+    .proceed(client, args)
+    .await
 }
 
-pub async fn is_allowed_deploy(client: Client) -> anyhow::Result<()> {
-    
-}
+pub async fn remove_entry_from_whitelist(client: Client) -> anyhow::Result<()> {
+    let args = WhitelistArgs {
 
-pub async fn is_allowed_submit(client: Client) -> anyhow::Result<()> {
-    
+    }.try_to_vec()?;
+
+    ContractCall {
+        method: "remove_entry_from_whitelist",
+        success_message: "Removed entry to whitelist successfully",
+        error_message: "Error while removing entry to whitelist",
+    }
+    .proceed(client, args)
+    .await
 }
 
 async fn get_value<T: FromCallResult + Display>(
