@@ -174,6 +174,17 @@ pub enum Command {
         #[arg(long)]
         seed: Option<u64>,
     },
+    // Silo Specific Methods
+    GetFixedGasCost,
+    SetFixedGasCost {},
+    AddEntityToWhitelist {},
+    AddEntryToWhitelistBatch {},
+    RemoveEntryFromWhitelist {},
+    SetWhitelistStatus {},
+    GetWhitelistStatus {},
+    AssertAdmin {},
+    IsAllowedDeploy {},
+    IsAllowedSubmit {},
 }
 
 #[derive(Clone)]
@@ -294,6 +305,21 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::EncodeAddress { account } => command::encode_address(&account),
         Command::KeyPair { random, seed } => command::key_pair(random, seed)?,
+        // Silo Specific Methods
+        Command::GetFixedGasCost => command::get_fixed_gas_cost(client).await?,
+        Command::SetFixedGasCost {} => command::set_fixed_gas_cost(client).await?,
+        Command::AddEntityToWhitelist {} => command::add_entity_to_whitelist(client).await?,
+        Command::AddEntryToWhitelistBatch {} => {
+            command::add_entry_to_whitelist_batch(client).await?
+        }
+        Command::RemoveEntryFromWhitelist {} => {
+            command::remove_entry_from_whitelist(client).await?
+        }
+        Command::SetWhitelistStatus {} => command::set_whitelist_status(client).await?,
+        Command::GetWhitelistStatus {} => command::get_whitelist_status(client).await?,
+        Command::AssertAdmin {} => command::assert_admin(client).await?,
+        Command::IsAllowedDeploy {} => command::is_allowed_deploy(client).await?,
+        Command::IsAllowedSubmit {} => command::is_allowed_submit(client).await?,
     }
 
     Ok(())

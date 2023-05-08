@@ -1,6 +1,6 @@
 use aurora_engine::parameters::{
     GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
-    TransactionStatus,
+    TransactionStatus, WhitelistArgs, WhitelistKindArgs, WhitelistStatusArgs
 };
 use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
@@ -482,6 +482,57 @@ pub async fn resume_precompiles(client: Client, mask: u32) -> anyhow::Result<()>
 /// Return paused precompiles.
 pub async fn paused_precompiles(client: Client) -> anyhow::Result<()> {
     get_value::<u32>(client, "paused_precompiles", None).await
+}
+
+// Silo specific Methods 
+
+// Return fixed gas cost
+pub async fn get_fixed_gas_cost(client: Client) -> anyhow::Result<()> {
+    get_value::<U256>(client, "get_fixed_gas_cost", None).await
+}
+
+pub async fn set_fixed_gas_cost(client: Client, cost: u64) -> anyhow::Result<()> {
+    let args = cost.try_to_vec()?;
+
+    ContractCall {
+        method: "set_fixed_gas_cost",
+        success_message: "Fixed gas cost was set successfully",
+        error_message: "Error while setting gas cost",
+    }
+    .proceed(client, args)
+    .await
+}
+
+pub async fn add_entity_to_whitelist(client: Client, address: String) -> anyhow::Result<()> {
+    
+}
+
+pub async fn add_entry_to_whitelist_batch(client: Client) -> anyhow::Result<()> {
+    
+}
+
+pub async fn remove_entry_from_whitelist(client: Client) -> anyhow::Result<()> {
+    
+}
+
+pub async fn set_whitelist_status(client: Client) -> anyhow::Result<()> {
+    
+}
+
+pub async fn get_whitelist_status(client: Client) -> anyhow::Result<()> {
+    
+}
+
+pub async fn assert_admin(client: Client) -> anyhow::Result<()> {
+    
+}
+
+pub async fn is_allowed_deploy(client: Client) -> anyhow::Result<()> {
+    
+}
+
+pub async fn is_allowed_submit(client: Client) -> anyhow::Result<()> {
+    
 }
 
 async fn get_value<T: FromCallResult + Display>(
