@@ -210,9 +210,21 @@ pub enum Command {
         kind: String,
         status: bool,
     },
-    AddEntryToWhitelist {},
-    AddEntryToWhitelistBatch {},
-    RemoveEntryFromWhitelist {},
+    AddEntryToWhitelist {
+        whitelistArgs: String,
+        kind: String,
+        address: String,
+    },
+    AddEntryToWhitelistBatch {
+        whitelistArgs: Vec<String>,
+        kind: Vec<String>,
+        address: Vec<String>,
+    },
+    RemoveEntryFromWhitelist {
+        whitelistArgs: String,
+        kind: String,
+        address: String,
+    },
 }
 
 #[derive(Clone)]
@@ -340,13 +352,24 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::SetWhitelistStatus { kind, status } => {
             command::set_whitelist_status(client, kind, status).await?
         }
-        Command::AddEntryToWhitelist {} => command::add_entity_to_whitelist(client).await?,
-        Command::AddEntryToWhitelistBatch {} => {
-            command::add_entry_to_whitelist_batch(client).await?
+        Command::AddEntryToWhitelist {
+            whitelistArgs,
+            kind,
+            address,
+        } => command::add_entity_to_whitelist(client, whitelistArgs, kind, address).await?,
+        Command::AddEntryToWhitelistBatch {
+            whitelistArgs,
+            kind,
+            address,
+        } => {
+            assert!(whitelistArgs.len() == kind.len() && kind.len() == address.len());
+            command::add_entry_to_whitelist_batch(client, whitelistArgs, kind, address).await?
         }
-        Command::RemoveEntryFromWhitelist {} => {
-            command::remove_entry_from_whitelist(client).await?
-        }
+        Command::RemoveEntryFromWhitelist {
+            whitelistArgs,
+            kind,
+            address,
+        } => command::remove_entry_from_whitelist(client, whitelistArgs, kind, address).await?,
     }
 
     Ok(())

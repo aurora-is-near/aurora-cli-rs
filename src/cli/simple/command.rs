@@ -510,7 +510,7 @@ pub async fn set_fixed_gas_cost(client: Client, cost: u64) -> anyhow::Result<()>
 
 pub async fn get_whitelist_status(client: Client, whitelist_kind: String) -> anyhow::Result<()> {
     let args = WhitelistKindArgs {
-        kind: get_kind(whitelist_kind).unwrap(),
+        kind: get_kind(whitelist_kind)?,
     }
     .try_to_vec()?;
 
@@ -523,7 +523,7 @@ pub async fn set_whitelist_status(
     status: bool,
 ) -> anyhow::Result<()> {
     let args = WhitelistStatusArgs {
-        kind: whitelist_kind,
+        kind: get_kind(whitelist_kind)?,
         active: status,
     }
     .try_to_vec()?;
@@ -537,20 +537,38 @@ pub async fn set_whitelist_status(
     .await
 }
 
-pub async fn add_entry_to_whitelist(client: Client, address: String) -> anyhow::Result<()> {
-    let args = WhitelistArgs {}.try_to_vec()?;
+pub async fn add_entry_to_whitelist(
+    client: Client,
+    whitelistArgs: String,
+    kind: String,
+    address: String,
+) -> anyhow::Result<()> {
+    let args = get_whitelist_args(whitelistArgs, kind, address)?;
 
     ContractCall {
         method: "add_entity_to_whitelist",
         success_message: "Added entity to whitelist successfully",
         error_message: "Error while adding entity to whitelist",
     }
-    .proceed(client, args)
+    .proceed(client, &args)
     .await
 }
 
-pub async fn add_entry_to_whitelist_batch(client: Client) -> anyhow::Result<()> {
-    let args = WhitelistArgs {}.try_to_vec()?;
+pub async fn add_entry_to_whitelist_batch(
+    client: Client,
+    whitelistArgs: Vec<String>,
+    kind: Vec<String>,
+    address: Vec<String>,
+) -> anyhow::Result<()> {
+    let mut args: Vec<WhitelistArgs> = Vec::new();
+    for i in 0..whitelistArgs.len() {
+        let arg = get_whitelist_args(
+            whitelistArgs[i].clone(),
+            kind[i].clone(),
+            address[i].clone(),
+        )?;
+        args.push(arg);
+    }
 
     ContractCall {
         method: "add_entry_to_whitelist_batch",
@@ -561,15 +579,20 @@ pub async fn add_entry_to_whitelist_batch(client: Client) -> anyhow::Result<()> 
     .await
 }
 
-pub async fn remove_entry_from_whitelist(client: Client) -> anyhow::Result<()> {
-    let args = WhitelistArgs {}.try_to_vec()?;
+pub async fn remove_entry_from_whitelist(
+    client: Client,
+    whitelistArgs: String,
+    kind: String,
+    address: String,
+) -> anyhow::Result<()> {
+    let args = get_whitelist_args(whitelistArgs, kind, address)?;
 
     ContractCall {
         method: "remove_entry_from_whitelist",
         success_message: "Removed entry to whitelist successfully",
         error_message: "Error while removing entry to whitelist",
     }
-    .proceed(client, args)
+    .proceed(client, &args)
     .await
 }
 
@@ -589,11 +612,29 @@ async fn get_value<T: FromCallResult + Display>(
 }
 
 fn get_kind(kind: String) -> Option<WhitelistKind> {
-    match kind {
+    match kind.as_str() {
         "Admin" => Some(WhitelistKind::Admin),
         "EvmAdmin" => Some(WhitelistKind::EvmAdmin),
         "Account" => Some(WhitelistKind::Account),
         "Address" => Some(WhitelistKind::Address),
+        _ => None,
+    }
+}
+
+fn get_whitelist_args(
+    whitelistArgs: String,
+    kind: String,
+    address: String,
+) -> Option<WhitelistArgs> {
+    match whitelistArgs.as_str() {
+        "WhitelistAddressArgs" => Some(WhitelistArgs::WhitelistAddressArgs(WhitelistAddressArgs {
+            kind: get_kind(kind)?,
+            address: hex_to_address(address),
+        })),
+        "WhitelistAccountArgs" => Some(WhitelistArgs::WhitelistAccountArgs(WhitelistAccountArgs {
+            kind: get_kind(kind)?,
+            account_id: to_account_id(address),
+        })),
         _ => None,
     }
 }
