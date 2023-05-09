@@ -65,13 +65,21 @@ pub enum Command {
     /// Return chain id of the network
     GetChainId,
     /// Return next nonce for address
-    GetNonce { address: String },
+    GetNonce {
+        address: String,
+    },
     /// Return block hash of the specified height
-    GetBlockHash { height: u64 },
+    GetBlockHash {
+        height: u64,
+    },
     /// Return smart contract's code for contract address
-    GetCode { address: String },
+    GetCode {
+        address: String,
+    },
     /// Return balance for address
-    GetBalance { address: String },
+    GetBalance {
+        address: String,
+    },
     /// Return a height for a staged upgrade
     GetUpgradeIndex,
     /// Return Aurora EVM version
@@ -79,7 +87,9 @@ pub enum Command {
     /// Return Aurora EVM owner
     GetOwner,
     /// Set a new owner of Aurora EVM
-    SetOwner { account_id: String },
+    SetOwner {
+        account_id: String,
+    },
     /// Return bridge prover
     GetBridgeProver,
     /// Return a value from storage at address with key
@@ -90,17 +100,27 @@ pub enum Command {
         key: String,
     },
     /// Register relayer address
-    RegisterRelayer { address: String },
+    RegisterRelayer {
+        address: String,
+    },
     /// Pause precompiles
-    PausePrecompiles { mask: u32 },
+    PausePrecompiles {
+        mask: u32,
+    },
     /// Resume precompiles
-    ResumePrecompiles { mask: u32 },
+    ResumePrecompiles {
+        mask: u32,
+    },
     /// Return paused precompiles
     PausedPrecompiles,
     /// Updates the bytecode for user's router contracts
-    FactoryUpdate { path: String },
+    FactoryUpdate {
+        path: String,
+    },
     /// Sets the address for the `wNEAR` ERC-20 contract
-    FactorySetWnearAddress { address: String },
+    FactorySetWnearAddress {
+        address: String,
+    },
     /// Create and/or fund an XCC sub-account directly
     FundXccSubAccount {
         /// Address of the target
@@ -109,7 +129,9 @@ pub enum Command {
         wnear_account_id: Option<String>,
     },
     /// Stage a new code for upgrade
-    StageUpgrade { path: String },
+    StageUpgrade {
+        path: String,
+    },
     /// Deploy staged upgrade
     DeployUpgrade,
     /// Deploy EVM smart contract's code in hex
@@ -164,7 +186,9 @@ pub enum Command {
         aurora_secret_key: Option<String>,
     },
     /// Encode address
-    EncodeAddress { account: String },
+    EncodeAddress {
+        account: String,
+    },
     /// Return Public and Secret ED25519 keys
     KeyPair {
         /// Random
@@ -176,9 +200,16 @@ pub enum Command {
     },
     // Silo Specific Methods
     GetFixedGasCost,
-    SetFixedGasCost {},
-    GetWhitelistStatus {},
-    SetWhitelistStatus {},
+    SetFixedGasCost {
+        cost: u64,
+    },
+    GetWhitelistStatus {
+        kind: String,
+    },
+    SetWhitelistStatus {
+        kind: String,
+        status: bool,
+    },
     AddEntryToWhitelist {},
     AddEntryToWhitelistBatch {},
     RemoveEntryFromWhitelist {},
@@ -304,16 +335,18 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::KeyPair { random, seed } => command::key_pair(random, seed)?,
         // Silo Specific Methods
         Command::GetFixedGasCost => command::get_fixed_gas_cost(client).await?,
-        Command::SetFixedGasCost {} => command::set_fixed_gas_cost(client).await?,
-        Command::GetWhitelistStatus {} => command::get_whitelist_status(client).await?,
-        Command::SetWhitelistStatus {} => command::set_whitelist_status(client).await?,
+        Command::SetFixedGasCost { cost } => command::set_fixed_gas_cost(client, cost).await?,
+        Command::GetWhitelistStatus { kind } => command::get_whitelist_status(client, kind).await?,
+        Command::SetWhitelistStatus { kind, status } => {
+            command::set_whitelist_status(client, kind, status).await?
+        }
         Command::AddEntryToWhitelist {} => command::add_entity_to_whitelist(client).await?,
         Command::AddEntryToWhitelistBatch {} => {
             command::add_entry_to_whitelist_batch(client).await?
-        },
+        }
         Command::RemoveEntryFromWhitelist {} => {
             command::remove_entry_from_whitelist(client).await?
-        },
+        }
     }
 
     Ok(())
