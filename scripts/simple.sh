@@ -189,6 +189,19 @@ sleep 1
 aurora-cli --engine $ENGINE_ACCOUNT factory-set-wnear-address 0x80c6a002756e29b8bf2a587f7d975a726d5de8b9 || error_exit
 sleep 1
 aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
+# Check that Silo methods work normally.
+aurora-cli --engine $ENGINE_ACCOUNT SetFixedGasCost 1 || error_exit
+result=$(aurora-cli --engine $ENGINE_ACCOUNT GetFixedGasCost || error_exit)
+assert_eq "$result" "1"
+aurora-cli --engine $ENGINE_ACCOUNT SetWhitelistStatus "EvmAdmin" true || error_exit
+result=$(aurora-cli --engine $ENGINE_ACCOUNT GetWhitelistStatus "EvmAdmin" || error_exit)
+assert_eq "$result" "true"
+aurora-cli --engine $ENGINE_ACCOUNT SetWhitelistStatus "Address" false || error_exit
+result=$(aurora-cli --engine $ENGINE_ACCOUNT GetWhitelistStatus "Address" || error_exit)
+assert_eq "$result" "false"
+aurora-cli --engine $ENGINE_ACCOUNT AddEntryToWhitelist "WhitelistAddressArgs" "Address" "0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D" || error_exit
+# aurora-cli --engine $ENGINE_ACCOUNT AddEntryToWhitelistBatch || error_exit
+aurora-cli --engine $ENGINE_ACCOUNT RemoveEntryFromWhitelist "WhitelistAddressArgs" "Address" "0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D" || error_exit
 
 # Stop NEAR node and clean up.
 finish

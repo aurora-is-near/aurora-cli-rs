@@ -2,11 +2,13 @@ use aurora_engine::parameters::{
     GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
     TransactionStatus,
 };
-use aurora_engine::silo::parameters::{
-    WhitelistArgs, WhitelistKind, WhitelistKindArgs, WhitelistStatusArgs,
-};
 use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
+use aurora_engine_silo::silo::parameters::{
+    WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKind, WhitelistKindArgs,
+    WhitelistStatusArgs,
+};
+use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
@@ -99,22 +101,22 @@ pub async fn init(
     custodian_address: Option<String>,
     ft_metadata_path: Option<String>,
 ) -> anyhow::Result<()> {
-    let to_account_id = |id: Option<String>| {
-        id.map_or_else(
-            || {
-                client
-                    .near()
-                    .engine_account_id
-                    .to_string()
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("{e}"))
-            },
-            |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
-        )
-    };
+    // let to_account_id = |id: Option<String>| {
+    //     id.map_or_else(
+    //         || {
+    //             client
+    //                 .near()
+    //                 .engine_account_id
+    //                 .to_string()
+    //                 .parse()
+    //                 .map_err(|e| anyhow::anyhow!("{e}"))
+    //         },
+    //         |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
+    //     )
+    // };
 
-    let owner_id = to_account_id(owner_id)?;
-    let prover_id = to_account_id(bridge_prover)?;
+    let owner_id = to_account_id(owner_id, &client)?;
+    let prover_id = to_account_id(bridge_prover, &client)?;
 
     let aurora_init_args = NewCallArgs {
         chain_id: H256::from_low_u64_be(chain_id).into(),
@@ -499,7 +501,7 @@ pub async fn get_fixed_gas_cost(client: Client) -> anyhow::Result<()> {
 }
 
 pub async fn set_fixed_gas_cost(client: Client, cost: u64) -> anyhow::Result<()> {
-    let args = Wei::new(cost).try_to_vec()?;
+    let args = Wei::new_u64(cost).try_to_vec()?;
 
     ContractCall {
         method: "set_fixed_gas_cost",
@@ -545,7 +547,7 @@ pub async fn add_entry_to_whitelist(
     kind: String,
     address: String,
 ) -> anyhow::Result<()> {
-    let args = get_whitelist_args(whitelistArgs, kind, address)?;
+    let args = get_whitelist_args(client, whitelistArgs, kind, address)?;
 
     ContractCall {
         method: "add_entity_to_whitelist",
@@ -565,12 +567,14 @@ pub async fn add_entry_to_whitelist_batch(
     let mut args: Vec<WhitelistArgs> = Vec::new();
     for i in 0..whitelistArgs.len() {
         let arg = get_whitelist_args(
+            client,
             whitelistArgs[i].clone(),
             kind[i].clone(),
             address[i].clone(),
         )?;
         args.push(arg);
     }
+    args.try_to_vec()?;
 
     ContractCall {
         method: "add_entry_to_whitelist_batch",
@@ -587,7 +591,7 @@ pub async fn remove_entry_from_whitelist(
     kind: String,
     address: String,
 ) -> anyhow::Result<()> {
-    let args = get_whitelist_args(whitelistArgs, kind, address)?;
+    let args = get_whitelist_args(client, whitelistArgs, kind, address)?;
 
     ContractCall {
         method: "remove_entry_from_whitelist",
@@ -624,6 +628,7 @@ fn get_kind(kind: String) -> Option<WhitelistKind> {
 }
 
 fn get_whitelist_args(
+    client: Client,
     whitelistArgs: String,
     kind: String,
     address: String,
@@ -631,13 +636,26 @@ fn get_whitelist_args(
     match whitelistArgs.as_str() {
         "WhitelistAddressArgs" => Some(WhitelistArgs::WhitelistAddressArgs(WhitelistAddressArgs {
             kind: get_kind(kind)?,
-            address: hex_to_address(address),
+            address: hex_to_address(&address),
         })),
         "WhitelistAccountArgs" => Some(WhitelistArgs::WhitelistAccountArgs(WhitelistAccountArgs {
             kind: get_kind(kind)?,
-            account_id: to_account_id(address),
+            account_id: to_account_id(Some(address), &client)?,
         })),
         _ => None,
+    }
+}
+
+fn to_account_id(id: Option<String>, client: &Client) -> anyhow::Result<AccountId> {
+    if let Some(id) = id {
+        id.parse().map_err(|e| anyhow::anyhow!("{e}"))
+    } else {
+        client
+            .near()
+            .engine_account_id
+            .to_string()
+            .parse()
+            .map_err(|e| anyhow::anyhow!("{e}"))
     }
 }
 

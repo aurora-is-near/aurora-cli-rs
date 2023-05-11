@@ -359,7 +359,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             whitelistArgs,
             kind,
             address,
-        } => command::add_entity_to_whitelist(client, whitelistArgs, kind, address).await?,
+        } => command::add_entry_to_whitelist(client, whitelistArgs, kind, address).await?,
         Command::AddEntryToWhitelistBatch {
             whitelistArgs,
             kind,
