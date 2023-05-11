@@ -172,13 +172,22 @@ impl NearClient {
         method_name: &str,
         args: Vec<u8>,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        self.contract_call_with_deposit(method_name, args, 0).await
+    }
+
+    pub async fn contract_call_with_deposit(
+        &self,
+        method_name: &str,
+        args: Vec<u8>,
+        deposit: u128,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
         self.near_broadcast_tx(
             vec![Action::FunctionCall(
                 near_primitives::transaction::FunctionCallAction {
                     method_name: method_name.to_string(),
                     args,
                     gas: NEAR_GAS,
-                    deposit: 0,
+                    deposit,
                 },
             )],
             None,

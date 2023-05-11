@@ -16,6 +16,7 @@ use serde_json::Value;
 use std::fmt::{Display, Formatter};
 use std::{path::Path, str::FromStr};
 
+use crate::utils::near_to_yocto;
 use crate::{
     client::Client,
     utils::{self, hex_to_address, hex_to_arr, hex_to_vec, secret_key_from_hex},
@@ -376,6 +377,7 @@ pub async fn fund_xcc_sub_account(
     client: Client,
     target: String,
     account_id: Option<String>,
+    deposit: f64,
 ) -> anyhow::Result<()> {
     let args = FundXccArgs {
         target: hex_to_address(&target)?,
@@ -390,7 +392,7 @@ pub async fn fund_xcc_sub_account(
         success_message: "The XCC sub-account has been funded successfully",
         error_message: "Error while funding XCC sub-account",
     }
-    .proceed(client, args)
+    .proceed_with_deposit(client, args, deposit)
     .await
 }
 
@@ -702,7 +704,20 @@ struct ContractCall<'a> {
 
 impl ContractCall<'_> {
     async fn proceed(&self, client: Client, args: Vec<u8>) -> anyhow::Result<()> {
-        let result = client.near().contract_call(self.method, args).await?;
+        self.proceed_with_deposit(client, args, 0.0).await
+    }
+
+    async fn proceed_with_deposit(
+        &self,
+        client: Client,
+        args: Vec<u8>,
+        deposit: f64,
+    ) -> anyhow::Result<()> {
+        let yocto = near_to_yocto(deposit);
+        let result = client
+            .near()
+            .contract_call_with_deposit(self.method, args, yocto)
+            .await?;
 
         match result.status {
             FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {

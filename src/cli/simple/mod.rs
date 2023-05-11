@@ -127,6 +127,8 @@ pub enum Command {
         target: String,
         /// Wnear Account Id
         wnear_account_id: Option<String>,
+        /// Attached deposit in NEAR
+        deposit: f64,
     },
     /// Stage a new code for upgrade
     StageUpgrade {
@@ -302,8 +304,9 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::FundXccSubAccount {
             target,
             wnear_account_id,
+            deposit,
         } => {
-            command::fund_xcc_sub_account(client, target, wnear_account_id).await?;
+            command::fund_xcc_sub_account(client, target, wnear_account_id, deposit).await?;
         }
         Command::StageUpgrade { path } => command::stage_upgrade(client, path).await?,
         Command::DeployUpgrade => command::deploy_upgrade(client).await?,

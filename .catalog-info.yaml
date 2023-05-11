@@ -1,0 +1,19 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: aurora-engine-cli-rs
+  description: |-
+    Command-line tool for interacting with the Aurora Engine
+  tags:
+    - near
+    - cli
+  links: []
+  annotations:
+    aurora.dev/security-tier: "2"
+spec:
+  owner: engine-team
+  type: contract-library
+  lifecycle: production
+  system: aurora-engine
+  interactsWith: []
