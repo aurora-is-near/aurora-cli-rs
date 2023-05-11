@@ -8,7 +8,7 @@ use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
 use borsh::{BorshDeserialize, BorshSerialize};
-use near_primitives::views::{CallResult, FinalExecutionOutcomeView, FinalExecutionStatus};
+use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
 use std::fmt::{Display, Formatter};
 use std::{path::Path, str::FromStr};
@@ -564,8 +564,7 @@ struct ContractCall<'a> {
 
 impl ContractCall<'_> {
     async fn proceed(&self, client: Client, args: Vec<u8>) -> anyhow::Result<()> {
-        let result = client.near().contract_call(self.method, args).await?;
-        self.handle_result(result)
+        self.proceed_with_deposit(client, args, 0.0).await
     }
 
     async fn proceed_with_deposit(
@@ -579,10 +578,7 @@ impl ContractCall<'_> {
             .near()
             .contract_call_with_deposit(self.method, args, yocto)
             .await?;
-        self.handle_result(result)
-    }
 
-    fn handle_result(&self, result: FinalExecutionOutcomeView) -> anyhow::Result<()> {
         match result.status {
             FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {
                 anyhow::bail!("{}: Bad transaction status", self.error_message)
