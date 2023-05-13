@@ -4,7 +4,7 @@ use aurora_engine::parameters::{
 };
 use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
-use aurora_engine_silo::silo::parameters::{
+use aurora_engine::silo::parameters::{
     WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKind, WhitelistKindArgs,
     WhitelistStatusArgs,
 };
@@ -501,7 +501,7 @@ pub async fn get_fixed_gas_cost(client: Client) -> anyhow::Result<()> {
 }
 
 pub async fn set_fixed_gas_cost(client: Client, cost: u64) -> anyhow::Result<()> {
-    let args = Wei::new_u64(cost).try_to_vec()?;
+    let args = Wei::new_u64(cost).to_bytes().to_vec();
 
     ContractCall {
         method: "set_fixed_gas_cost",
