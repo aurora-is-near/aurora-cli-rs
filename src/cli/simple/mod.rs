@@ -218,9 +218,7 @@ pub enum Command {
         address: String,
     },
     AddEntryToWhitelistBatch {
-        whitelistArgs: Vec<String>,
-        kind: Vec<String>,
-        address: Vec<String>,
+        path: String,
     },
     RemoveEntryFromWhitelist {
         whitelistArgs: String,
@@ -360,14 +358,10 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             kind,
             address,
         } => command::add_entry_to_whitelist(client, whitelistArgs, kind, address).await?,
-        Command::AddEntryToWhitelistBatch {
-            whitelistArgs,
-            kind,
-            address,
-        } => {
-            assert!(whitelistArgs.len() == kind.len() && kind.len() == address.len());
-            command::add_entry_to_whitelist_batch(client, whitelistArgs, kind, address).await?
+        Command::AddEntryToWhitelistBatch { path } => {
+            command::add_entry_to_whitelist_batch(client, path).await?
         }
+
         Command::RemoveEntryFromWhitelist {
             whitelistArgs,
             kind,

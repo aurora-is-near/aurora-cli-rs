@@ -2,12 +2,12 @@ use aurora_engine::parameters::{
     GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
     TransactionStatus,
 };
-use aurora_engine::xcc::FundXccArgs;
-use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine::silo::parameters::{
     WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKind, WhitelistKindArgs,
     WhitelistStatusArgs,
 };
+use aurora_engine::xcc::FundXccArgs;
+use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::types::Address;
@@ -16,6 +16,8 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
 use std::fmt::{Display, Formatter};
+use std::fs::File;
+use std::io::Read;
 use std::{path::Path, str::FromStr};
 
 use crate::utils::near_to_yocto;
@@ -558,23 +560,15 @@ pub async fn add_entry_to_whitelist(
     .await
 }
 
-pub async fn add_entry_to_whitelist_batch(
-    client: Client,
-    whitelistArgs: Vec<String>,
-    kind: Vec<String>,
-    address: Vec<String>,
-) -> anyhow::Result<()> {
-    let mut args: Vec<WhitelistArgs> = Vec::new();
-    for i in 0..whitelistArgs.len() {
-        let arg = get_whitelist_args(
-            client,
-            whitelistArgs[i].clone(),
-            kind[i].clone(),
-            address[i].clone(),
-        )?;
-        args.push(arg);
-    }
-    args.try_to_vec()?;
+pub async fn add_entry_to_whitelist_batch(client: Client, path: String) -> anyhow::Result<()> {
+    let mut file = File::open(path).expect("Failed to open file");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("Failed to read file");
+
+    let args: Vec<WhitelistArgs> = serde_json::from_str(&contents)
+        .expect("Failed to deserialize JSON")
+        .try_to_vec()?;
 
     ContractCall {
         method: "add_entry_to_whitelist_batch",
