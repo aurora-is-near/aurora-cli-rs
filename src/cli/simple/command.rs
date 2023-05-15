@@ -2,10 +2,6 @@ use aurora_engine::parameters::{
     GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
     TransactionStatus,
 };
-use aurora_engine::silo::parameters::{
-    WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKind, WhitelistKindArgs,
-    WhitelistStatusArgs,
-};
 use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
@@ -20,6 +16,10 @@ use std::fs::File;
 use std::io::Read;
 use std::{path::Path, str::FromStr};
 
+use crate::silo::parameters::{
+    WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKind, WhitelistKindArgs,
+    WhitelistStatusArgs,
+};
 use crate::utils::near_to_yocto;
 use crate::{
     client::Client,
@@ -566,9 +566,9 @@ pub async fn add_entry_to_whitelist_batch(client: Client, path: String) -> anyho
     file.read_to_string(&mut contents)
         .expect("Failed to read file");
 
-    let args: Vec<WhitelistArgs> = serde_json::from_str(&contents)
-        .expect("Failed to deserialize JSON")
-        .try_to_vec()?;
+    let args = std::fs::read_to_string(path)
+        .and_then(|string| serde_json::from_str::<Vec<WhitelistArgs>>(&string).map_err(Into::into))
+        .and_then(|entries| entries.try_to_vec())?;
 
     ContractCall {
         method: "add_entry_to_whitelist_batch",

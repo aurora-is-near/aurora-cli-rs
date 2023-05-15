@@ -9,7 +9,7 @@ ABI_PATH="docs/res/HelloWorld.abi"
 ENGINE_PREV_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_PREV_VERSION/aurora-mainnet.wasm"
 ENGINE_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-mainnet.wasm"
 XCC_ROUTER_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-factory-mainnet.wasm"
-ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
+ENGINE_WASM_PATH="wasm/aurora-mainnet.wasm"
 XCC_ROUTER_WASM_PATH="/tmp/aurora-factory-mainnet.wasm"
 USER_BASE_BIN=$(python3 -m site --user-base)/bin
 NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
@@ -98,33 +98,6 @@ result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0
 assert_eq "$result" "Hello, World!"
 sleep 1
 
-# Deploy Counter EVM code.
-EVM_CODE=$(cat docs/res/Counter.hex)
-ABI_PATH=docs/res/Counter.abi
-aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --abi-path $ABI_PATH --args '{"init_value":"5"}' \
-  --aurora-secret-key $AURORA_SECRET_KEY || error_exit
-sleep 1
-result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
-  --abi-path $ABI_PATH || error_exit)
-assert_eq "$result" "5"
-sleep 1
-aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f increment \
-  --abi-path $ABI_PATH \
-  --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
-sleep 1
-result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
-  --abi-path $ABI_PATH || error_exit)
-assert_eq "$result" "6"
-sleep 1
-aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f decrement \
-  --abi-path $ABI_PATH \
-  --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
-sleep 1
-result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
-  --abi-path $ABI_PATH || error_exit)
-assert_eq "$result" "5"
-sleep 1
-
 # Check read operations.
 aurora-cli --engine $ENGINE_ACCOUNT get-chain-id || error_exit
 version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
@@ -152,43 +125,20 @@ version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
 assert_eq "$version" $AURORA_LAST_VERSION
 echo "$version"
 
-# Set a new owner. The functionality has not been released yet.
-aurora-cli --engine $ENGINE_ACCOUNT set-owner node0 || error_exit
-sleep 1
-owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
-assert_eq "$owner" node0
-export NEAR_KEY_PATH=$NODE_KEY_PATH
-aurora-cli --engine $ENGINE_ACCOUNT set-owner aurora.node0 || error_exit
-sleep 1
-owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
-assert_eq "$owner" $ENGINE_ACCOUNT
+# Check that Silo methods work normally.
+aurora-cli --engine $ENGINE_ACCOUNT set-fixed-gas-cost 1 || error-exit
+result=$(aurora-cli --engine $ENGINE_ACCOUNT get-fixed-gas-cost || error-exit)
+assert-eq "$result" "1"
+aurora-cli --engine $ENGINE_ACCOUNT set-whitelist-status "evm-admin" true || error-exit
+result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status "evm-admin" || error-exit)
+assert-eq "$result" "true"
+aurora-cli --engine $ENGINE_ACCOUNT set-whitelist-status "address" false || error-exit
+result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status "address" || error-exit)
+assert-eq "$result" "false"
+aurora-cli --engine $ENGINE_ACCOUNT add-entry-to-whitelist "whitelist-address-args" "address" "0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D" || error-exit
+# aurora-cli --engine $ENGINE_ACCOUNT add-entry-to-whitelist-batch || error-exit
+aurora-cli --engine $ENGINE_ACCOUNT remove-entry-from-whitelist "whitelist-address-args" "address" "0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D" || error-exit
 
-# Check pausing precompiles. Not working on the current release because of
-# hardcoded aurora account in EngineAuthorizer.
-export NEAR_KEY_PATH=$AURORA_KEY_PATH
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 0
-aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 1 || error_exit
-sleep 1
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 1
-aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 2 || error_exit
-sleep 1
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 3
-aurora-cli --engine $ENGINE_ACCOUNT resume-precompiles 3 || error_exit
-sleep 1
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 0
-
-# XCC router operations.
-# Download XCC router contract.
-curl -sL $XCC_ROUTER_LAST_WASM_URL -o $XCC_ROUTER_WASM_PATH || error_exit
-aurora-cli --engine $ENGINE_ACCOUNT factory-update $XCC_ROUTER_WASM_PATH || error_exit
-sleep 1
-aurora-cli --engine $ENGINE_ACCOUNT factory-set-wnear-address 0x80c6a002756e29b8bf2a587f7d975a726d5de8b9 || error_exit
-sleep 1
-aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
 
 # Stop NEAR node and clean up.
 finish
