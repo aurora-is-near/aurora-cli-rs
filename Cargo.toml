@@ -31,6 +31,7 @@ bs58 = "0.4.0"
 clap = { version = "4", features = ["derive"] }
 ethabi = "18"
 hex = "0.4.3"
+lazy_static = "1.4.0"
 libsecp256k1 = { version = "0.7", features = ["std"] }
 near-chain-configs = "0.16"
 near-crypto = "0.16"
@@ -42,8 +43,12 @@ rand = "0.8"
 rlp = "0.5.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+shadow-rs = "0.21.0"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
 rand = "0.8"
+
+[build-dependencies]
+shadow-rs = "0.21.0"
