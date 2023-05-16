@@ -1,11 +1,26 @@
 use clap::{Parser, Subcommand};
 use std::str::FromStr;
+use lazy_static::lazy_static;
+use shadow_rs::shadow;
 
 pub mod command;
 
+lazy_static! {
+    static ref VERSION: String = {
+        shadow!(build);
+        format!("{}-{}", build::PKG_VERSION, build::SHORT_COMMIT)
+    };
+}
+
+
+fn get_version() -> &'static str {
+    VERSION.as_str()
+}
+
 /// Simple command line interface for communication with Aurora Engine
 #[derive(Parser)]
-#[command(author, version, long_about = None)]
+#[command(author, long_about = None)]
+#[command(version = get_version())]
 pub struct Cli {
     /// NEAR network ID
     #[arg(long, default_value = "localnet")]
