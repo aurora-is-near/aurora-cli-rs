@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
-use std::str::FromStr;
 use lazy_static::lazy_static;
 use shadow_rs::shadow;
+use std::str::FromStr;
 
 pub mod command;
 
@@ -11,7 +11,6 @@ lazy_static! {
         format!("{}-{}", build::PKG_VERSION, build::SHORT_COMMIT)
     };
 }
-
 
 fn get_version() -> &'static str {
     VERSION.as_str()
