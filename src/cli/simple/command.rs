@@ -1,7 +1,12 @@
 use aurora_engine::parameters::{
-    GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
-    TransactionStatus,
+    GetStorageAtArgs, InitCallArgs, LegacyNewCallArgs, NewCallArgs, PausePrecompilesCallArgs,
+    SetOwnerArgs, TransactionStatus,
 };
+use aurora_engine::silo::parameters::{
+    WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKindArgs,
+    WhitelistStatusArgs,
+};
+use aurora_engine::silo::WhitelistKind;
 use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
@@ -12,14 +17,8 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
 use std::fmt::{Display, Formatter};
-use std::fs::File;
-use std::io::Read;
 use std::{path::Path, str::FromStr};
 
-use crate::silo::parameters::{
-    WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKind, WhitelistKindArgs,
-    WhitelistStatusArgs,
-};
 use crate::utils::near_to_yocto;
 use crate::{
     client::Client,
@@ -103,29 +102,15 @@ pub async fn init(
     custodian_address: Option<String>,
     ft_metadata_path: Option<String>,
 ) -> anyhow::Result<()> {
-    // let to_account_id = |id: Option<String>| {
-    //     id.map_or_else(
-    //         || {
-    //             client
-    //                 .near()
-    //                 .engine_account_id
-    //                 .to_string()
-    //                 .parse()
-    //                 .map_err(|e| anyhow::anyhow!("{e}"))
-    //         },
-    //         |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
-    //     )
-    // };
-
     let owner_id = to_account_id(owner_id, &client)?;
     let prover_id = to_account_id(bridge_prover, &client)?;
 
-    let aurora_init_args = NewCallArgs {
+    let aurora_init_args = NewCallArgs::V1(LegacyNewCallArgs {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
         bridge_prover_id: prover_id.clone(),
         upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
-    }
+    })
     .try_to_vec()?;
 
     let eth_connector_init_args = InitCallArgs {
@@ -514,22 +499,22 @@ pub async fn set_fixed_gas_cost(client: Client, cost: u64) -> anyhow::Result<()>
     .await
 }
 
-pub async fn get_whitelist_status(client: Client, whitelist_kind: String) -> anyhow::Result<()> {
+pub async fn get_whitelist_status(client: Client, kind: String) -> anyhow::Result<()> {
     let args = WhitelistKindArgs {
-        kind: get_kind(whitelist_kind)?,
+        kind: get_kind(&kind)?,
     }
     .try_to_vec()?;
 
-    get_value::<U256>(client, "get_whitelist_status", args).await
+    get_value::<U256>(client, "get_whitelist_status", Some(args)).await
 }
 
 pub async fn set_whitelist_status(
     client: Client,
-    whitelist_kind: String,
+    kind: String,
     status: bool,
 ) -> anyhow::Result<()> {
     let args = WhitelistStatusArgs {
-        kind: get_kind(whitelist_kind)?,
+        kind: get_kind(&kind)?,
         active: status,
     }
     .try_to_vec()?;
@@ -545,27 +530,21 @@ pub async fn set_whitelist_status(
 
 pub async fn add_entry_to_whitelist(
     client: Client,
-    whitelistArgs: String,
     kind: String,
-    address: String,
+    entry: String,
 ) -> anyhow::Result<()> {
-    let args = get_whitelist_args(client, whitelistArgs, kind, address)?;
+    let args = get_whitelist_args(&kind, &entry)?;
 
     ContractCall {
         method: "add_entity_to_whitelist",
         success_message: "Added entity to whitelist successfully",
         error_message: "Error while adding entity to whitelist",
     }
-    .proceed(client, &args)
+    .proceed(client, args)
     .await
 }
 
 pub async fn add_entry_to_whitelist_batch(client: Client, path: String) -> anyhow::Result<()> {
-    let mut file = File::open(path).expect("Failed to open file");
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)
-        .expect("Failed to read file");
-
     let args = std::fs::read_to_string(path)
         .and_then(|string| serde_json::from_str::<Vec<WhitelistArgs>>(&string).map_err(Into::into))
         .and_then(|entries| entries.try_to_vec())?;
@@ -581,18 +560,17 @@ pub async fn add_entry_to_whitelist_batch(client: Client, path: String) -> anyho
 
 pub async fn remove_entry_from_whitelist(
     client: Client,
-    whitelistArgs: String,
     kind: String,
-    address: String,
+    entry: String,
 ) -> anyhow::Result<()> {
-    let args = get_whitelist_args(client, whitelistArgs, kind, address)?;
+    let args = get_whitelist_args(&kind, &entry)?;
 
     ContractCall {
         method: "remove_entry_from_whitelist",
         success_message: "Removed entry to whitelist successfully",
         error_message: "Error while removing entry to whitelist",
     }
-    .proceed(client, &args)
+    .proceed(client, args)
     .await
 }
 
@@ -611,46 +589,48 @@ async fn get_value<T: FromCallResult + Display>(
     Ok(())
 }
 
-fn get_kind(kind: String) -> Option<WhitelistKind> {
-    match kind.as_str() {
-        "Admin" => Some(WhitelistKind::Admin),
-        "EvmAdmin" => Some(WhitelistKind::EvmAdmin),
-        "Account" => Some(WhitelistKind::Account),
-        "Address" => Some(WhitelistKind::Address),
-        _ => None,
-    }
+fn get_kind(kind: &str) -> anyhow::Result<WhitelistKind> {
+    Ok(match kind {
+        "Admin" => WhitelistKind::Admin,
+        "EvmAdmin" => WhitelistKind::EvmAdmin,
+        "Account" => WhitelistKind::Account,
+        "Address" => WhitelistKind::Address,
+        _ => anyhow::bail!("Wrong whitelist kind: {kind}"),
+    })
 }
 
-fn get_whitelist_args(
-    client: Client,
-    whitelistArgs: String,
-    kind: String,
-    address: String,
-) -> Option<WhitelistArgs> {
-    match whitelistArgs.as_str() {
-        "WhitelistAddressArgs" => Some(WhitelistArgs::WhitelistAddressArgs(WhitelistAddressArgs {
-            kind: get_kind(kind)?,
-            address: hex_to_address(&address),
-        })),
-        "WhitelistAccountArgs" => Some(WhitelistArgs::WhitelistAccountArgs(WhitelistAccountArgs {
-            kind: get_kind(kind)?,
-            account_id: to_account_id(Some(address), &client)?,
-        })),
-        _ => None,
-    }
+fn get_whitelist_args(kind: &str, entry: &str) -> anyhow::Result<Vec<u8>> {
+    let kind = get_kind(kind)?;
+
+    Ok(match kind {
+        WhitelistKind::Admin | WhitelistKind::Account => {
+            WhitelistArgs::WhitelistAccountArgs(WhitelistAccountArgs {
+                kind,
+                account_id: entry.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
+            })
+        }
+        WhitelistKind::EvmAdmin | WhitelistKind::Address => {
+            WhitelistArgs::WhitelistAddressArgs(WhitelistAddressArgs {
+                kind,
+                address: hex_to_address(entry)?,
+            })
+        }
+    })
+    .and_then(|list| list.try_to_vec().map_err(Into::into))
 }
 
 fn to_account_id(id: Option<String>, client: &Client) -> anyhow::Result<AccountId> {
-    if let Some(id) = id {
-        id.parse().map_err(|e| anyhow::anyhow!("{e}"))
-    } else {
-        client
-            .near()
-            .engine_account_id
-            .to_string()
-            .parse()
-            .map_err(|e| anyhow::anyhow!("{e}"))
-    }
+    id.map_or_else(
+        || {
+            client
+                .near()
+                .engine_account_id
+                .to_string()
+                .parse()
+                .map_err(|e| anyhow::anyhow!("{e}"))
+        },
+        |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
+    )
 }
 
 struct HexString(String);

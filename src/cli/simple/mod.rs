@@ -213,17 +213,15 @@ pub enum Command {
         status: bool,
     },
     AddEntryToWhitelist {
-        whitelistArgs: String,
         kind: String,
-        address: String,
+        entry: String,
     },
     AddEntryToWhitelistBatch {
         path: String,
     },
     RemoveEntryFromWhitelist {
-        whitelistArgs: String,
         kind: String,
-        address: String,
+        entry: String,
     },
 }
 
@@ -351,22 +349,17 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::SetFixedGasCost { cost } => command::set_fixed_gas_cost(client, cost).await?,
         Command::GetWhitelistStatus { kind } => command::get_whitelist_status(client, kind).await?,
         Command::SetWhitelistStatus { kind, status } => {
-            command::set_whitelist_status(client, kind, status).await?
+            command::set_whitelist_status(client, kind, status).await?;
         }
-        Command::AddEntryToWhitelist {
-            whitelistArgs,
-            kind,
-            address,
-        } => command::add_entry_to_whitelist(client, whitelistArgs, kind, address).await?,
+        Command::AddEntryToWhitelist { kind, entry } => {
+            command::add_entry_to_whitelist(client, kind, entry).await?;
+        }
         Command::AddEntryToWhitelistBatch { path } => {
-            command::add_entry_to_whitelist_batch(client, path).await?
+            command::add_entry_to_whitelist_batch(client, path).await?;
         }
-
-        Command::RemoveEntryFromWhitelist {
-            whitelistArgs,
-            kind,
-            address,
-        } => command::remove_entry_from_whitelist(client, whitelistArgs, kind, address).await?,
+        Command::RemoveEntryFromWhitelist { kind, entry } => {
+            command::remove_entry_from_whitelist(client, kind, entry).await?;
+        }
     }
 
     Ok(())
