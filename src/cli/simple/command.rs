@@ -1,5 +1,5 @@
 use aurora_engine::parameters::{
-    GetStorageAtArgs, InitCallArgs, LegacyNewCallArgs, NewCallArgs, PausePrecompilesCallArgs,
+    GetStorageAtArgs, InitCallArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs,
     SetOwnerArgs, TransactionStatus,
 };
 use aurora_engine::silo::parameters::{
@@ -19,10 +19,9 @@ use serde_json::Value;
 use std::fmt::{Display, Formatter};
 use std::{path::Path, str::FromStr};
 
-use crate::utils::near_to_yocto;
 use crate::{
     client::Client,
-    utils::{self, hex_to_address, hex_to_arr, hex_to_vec, secret_key_from_hex},
+    utils::{self, hex_to_address, hex_to_arr, hex_to_vec, near_to_yocto, secret_key_from_hex},
 };
 
 /// Return `chain_id` of the current network.
@@ -105,10 +104,9 @@ pub async fn init(
     let owner_id = to_account_id(owner_id, &client)?;
     let prover_id = to_account_id(bridge_prover, &client)?;
 
-    let aurora_init_args = NewCallArgs::V1(LegacyNewCallArgs {
+    let aurora_init_args = NewCallArgs::V2(NewCallArgsV2 {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
-        bridge_prover_id: prover_id.clone(),
         upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
     })
     .try_to_vec()?;

@@ -2,8 +2,8 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
-AURORA_PREV_VERSION="2.8.1"
-AURORA_LAST_VERSION="2.9.0"
+AURORA_PREV_VERSION="2.9.1"
+AURORA_LAST_VERSION="2.9.1"
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
 ENGINE_PREV_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_PREV_VERSION/aurora-mainnet.wasm"
