@@ -3,8 +3,8 @@ use crate::{
     utils,
 };
 use aurora_engine::parameters::{
-    DeployErc20TokenArgs, GetStorageAtArgs, InitCallArgs, NewCallArgs, PauseEthConnectorCallArgs,
-    SubmitResult, TransactionStatus,
+    DeployErc20TokenArgs, GetStorageAtArgs, InitCallArgs, LegacyNewCallArgs, NewCallArgs,
+    PauseEthConnectorCallArgs, SubmitResult, TransactionStatus,
 };
 use aurora_engine_types::{
     account_id::AccountId,
@@ -465,14 +465,14 @@ pub async fn execute_command(
                     .unwrap_or_default();
                 let metadata = utils::ft_metadata::parse_ft_metadata(ft_metadata)?;
 
-                let new_args = NewCallArgs {
+                let new_args = NewCallArgs::V1(LegacyNewCallArgs {
                     chain_id: aurora_engine_types::types::u256_to_arr(&U256::from(chain_id)),
                     owner_id: owner_id
                         .parse()
                         .map_err(|_| anyhow::anyhow!("Owner account is an invalid Near account"))?,
                     bridge_prover_id: prover_account.clone(),
                     upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
-                };
+                });
 
                 let init_args = InitCallArgs {
                     prover_account,
