@@ -84,4 +84,6 @@ jobs:
           args: --path .
       - name: Tests (Simple CLI)
         run: scripts/simple.sh
+      - name: Tests (Silo methods CLI)
+        run: scripts/simple-silo.sh
 

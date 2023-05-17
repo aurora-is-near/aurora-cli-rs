@@ -242,7 +242,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine"
 version = "2.9.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#0ed5cb3dc6a997e7274a474e3068b7f1fa861f22"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#664ea73addb35fba21fbbffca6a9064bbd9a7a72"
 dependencies = [
  "aurora-engine-precompiles",
  "aurora-engine-sdk",
@@ -263,7 +263,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-modexp"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#0ed5cb3dc6a997e7274a474e3068b7f1fa861f22"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#664ea73addb35fba21fbbffca6a9064bbd9a7a72"
 dependencies = [
  "hex",
  "num",
@@ -272,7 +272,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-precompiles"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#0ed5cb3dc6a997e7274a474e3068b7f1fa861f22"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#664ea73addb35fba21fbbffca6a9064bbd9a7a72"
 dependencies = [
  "aurora-engine-modexp",
  "aurora-engine-sdk",
@@ -292,7 +292,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-sdk"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#0ed5cb3dc6a997e7274a474e3068b7f1fa861f22"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#664ea73addb35fba21fbbffca6a9064bbd9a7a72"
 dependencies = [
  "aurora-engine-types",
  "base64 0.21.0",
@@ -304,7 +304,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-transactions"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#0ed5cb3dc6a997e7274a474e3068b7f1fa861f22"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#664ea73addb35fba21fbbffca6a9064bbd9a7a72"
 dependencies = [
  "aurora-engine-precompiles",
  "aurora-engine-sdk",
@@ -317,7 +317,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-types"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#0ed5cb3dc6a997e7274a474e3068b7f1fa861f22"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#664ea73addb35fba21fbbffca6a9064bbd9a7a72"
 dependencies = [
  "borsh 0.10.3",
  "hex",
@@ -1718,15 +1718,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "link-cplusplus"
-version = "1.0.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecd207c9c713c34f95a097a5b029ac2ce6010530c7b49d7fea24d977dede04f5"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2699,9 +2690,9 @@ checksum = "a5996294f19bd3aae0453a862ad728f60e6600695733dd5df01da90c54363a3c"
 
 [[package]]
 name = "reqwest"
-version = "0.11.17"
+version = "0.11.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13293b639a097af28fc8a90f22add145a9c954e49d77da06263d58cf44d5fb91"
+checksum = "cde824a14b7c14f85caff81225f411faacc04a2013f41670f41443742b1c1c55"
 dependencies = [
  "base64 0.21.0",
  "bytes",
@@ -3004,7 +2995,7 @@ dependencies = [
  "const_format",
  "git2",
  "is_debug",
- "time 0.3.20",
+ "time 0.3.21",
  "tzdb",
 ]
 
@@ -3632,12 +3623,6 @@ name = "unicode-segmentation"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dd624098567895118886609431a7c3b8f516e41d30e0643f03d94592a147e36"
-
-[[package]]
-name = "unicode-width"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0edd1e5b14653f783770bce4a4dabb4a5108a5370a5f5d8cfe8710c361f6c8b"
 
 [[package]]
 name = "unicode-xid"

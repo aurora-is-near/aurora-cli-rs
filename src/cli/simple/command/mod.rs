@@ -2,11 +2,6 @@ use aurora_engine::parameters::{
     GetStorageAtArgs, InitCallArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs,
     SetOwnerArgs, TransactionStatus,
 };
-use aurora_engine::silo::parameters::{
-    WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKindArgs,
-    WhitelistStatusArgs,
-};
-use aurora_engine::silo::WhitelistKind;
 use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
@@ -23,6 +18,8 @@ use crate::{
     client::Client,
     utils::{self, hex_to_address, hex_to_arr, hex_to_vec, near_to_yocto, secret_key_from_hex},
 };
+
+pub mod silo;
 
 /// Return `chain_id` of the current network.
 pub async fn get_chain_id(client: Client) -> anyhow::Result<()> {
@@ -476,102 +473,6 @@ pub async fn paused_precompiles(client: Client) -> anyhow::Result<()> {
     get_value::<u32>(client, "paused_precompiles", None).await
 }
 
-///////////////////////////////////////////////////////////////
-//                     SILO SPECIFIC METHODS                 //
-///////////////////////////////////////////////////////////////
-
-// Return fixed gas cost
-pub async fn get_fixed_gas_cost(client: Client) -> anyhow::Result<()> {
-    get_value::<U256>(client, "get_fixed_gas_cost", None).await
-}
-
-pub async fn set_fixed_gas_cost(client: Client, cost: u64) -> anyhow::Result<()> {
-    let args = Wei::new_u64(cost).to_bytes().to_vec();
-
-    ContractCall {
-        method: "set_fixed_gas_cost",
-        success_message: "Fixed gas cost was set successfully",
-        error_message: "Error while setting gas cost",
-    }
-    .proceed(client, args)
-    .await
-}
-
-pub async fn get_whitelist_status(client: Client, kind: String) -> anyhow::Result<()> {
-    let args = WhitelistKindArgs {
-        kind: get_kind(&kind)?,
-    }
-    .try_to_vec()?;
-
-    get_value::<U256>(client, "get_whitelist_status", Some(args)).await
-}
-
-pub async fn set_whitelist_status(
-    client: Client,
-    kind: String,
-    status: bool,
-) -> anyhow::Result<()> {
-    let args = WhitelistStatusArgs {
-        kind: get_kind(&kind)?,
-        active: status,
-    }
-    .try_to_vec()?;
-
-    ContractCall {
-        method: "set_whitelist_status",
-        success_message: "Set whitelist status successfully",
-        error_message: "Error while setting whitelist status",
-    }
-    .proceed(client, args)
-    .await
-}
-
-pub async fn add_entry_to_whitelist(
-    client: Client,
-    kind: String,
-    entry: String,
-) -> anyhow::Result<()> {
-    let args = get_whitelist_args(&kind, &entry)?;
-
-    ContractCall {
-        method: "add_entity_to_whitelist",
-        success_message: "Added entity to whitelist successfully",
-        error_message: "Error while adding entity to whitelist",
-    }
-    .proceed(client, args)
-    .await
-}
-
-pub async fn add_entry_to_whitelist_batch(client: Client, path: String) -> anyhow::Result<()> {
-    let args = std::fs::read_to_string(path)
-        .and_then(|string| serde_json::from_str::<Vec<WhitelistArgs>>(&string).map_err(Into::into))
-        .and_then(|entries| entries.try_to_vec())?;
-
-    ContractCall {
-        method: "add_entry_to_whitelist_batch",
-        success_message: "Added batch entry to whitelist successfully",
-        error_message: "Error while setting batch entry to whitelist",
-    }
-    .proceed(client, args)
-    .await
-}
-
-pub async fn remove_entry_from_whitelist(
-    client: Client,
-    kind: String,
-    entry: String,
-) -> anyhow::Result<()> {
-    let args = get_whitelist_args(&kind, &entry)?;
-
-    ContractCall {
-        method: "remove_entry_from_whitelist",
-        success_message: "Removed entry to whitelist successfully",
-        error_message: "Error while removing entry to whitelist",
-    }
-    .proceed(client, args)
-    .await
-}
-
 async fn get_value<T: FromCallResult + Display>(
     client: Client,
     method_name: &str,
@@ -585,36 +486,6 @@ async fn get_value<T: FromCallResult + Display>(
     println!("{output}");
 
     Ok(())
-}
-
-fn get_kind(kind: &str) -> anyhow::Result<WhitelistKind> {
-    Ok(match kind {
-        "Admin" => WhitelistKind::Admin,
-        "EvmAdmin" => WhitelistKind::EvmAdmin,
-        "Account" => WhitelistKind::Account,
-        "Address" => WhitelistKind::Address,
-        _ => anyhow::bail!("Wrong whitelist kind: {kind}"),
-    })
-}
-
-fn get_whitelist_args(kind: &str, entry: &str) -> anyhow::Result<Vec<u8>> {
-    let kind = get_kind(kind)?;
-
-    Ok(match kind {
-        WhitelistKind::Admin | WhitelistKind::Account => {
-            WhitelistArgs::WhitelistAccountArgs(WhitelistAccountArgs {
-                kind,
-                account_id: entry.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
-            })
-        }
-        WhitelistKind::EvmAdmin | WhitelistKind::Address => {
-            WhitelistArgs::WhitelistAddressArgs(WhitelistAddressArgs {
-                kind,
-                address: hex_to_address(entry)?,
-            })
-        }
-    })
-    .and_then(|list| list.try_to_vec().map_err(Into::into))
 }
 
 fn to_account_id(id: Option<String>, client: &Client) -> anyhow::Result<AccountId> {

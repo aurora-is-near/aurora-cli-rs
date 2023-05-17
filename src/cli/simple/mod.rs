@@ -217,24 +217,39 @@ pub enum Command {
     // Silo Specific Methods
     GetFixedGasCost,
     SetFixedGasCost {
-        cost: u64,
+        /// Fixed gas cost in Wei.
+        cost: u128,
     },
     GetWhitelistStatus {
+        /// Kind of the whitelist.
         kind: String,
     },
     SetWhitelistStatus {
+        /// Kind of the whitelist.
+        #[arg(long)]
         kind: String,
-        status: bool,
+        /// Status of the whitelist, 0/1.
+        #[arg(long)]
+        status: u8,
     },
     AddEntryToWhitelist {
+        /// Kind of the whitelist.
+        #[arg(long)]
         kind: String,
+        /// Entry for adding to the whitelist.
+        #[arg(long)]
         entry: String,
     },
     AddEntryToWhitelistBatch {
+        /// Path to JSON file with array of entries.
         path: String,
     },
     RemoveEntryFromWhitelist {
+        /// Kind of the whitelist.
+        #[arg(long)]
         kind: String,
+        /// Entry for removing from the whitelist.
+        #[arg(long)]
         entry: String,
     },
 }
@@ -359,20 +374,24 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::EncodeAddress { account } => command::encode_address(&account),
         Command::KeyPair { random, seed } => command::key_pair(random, seed)?,
         // Silo Specific Methods
-        Command::GetFixedGasCost => command::get_fixed_gas_cost(client).await?,
-        Command::SetFixedGasCost { cost } => command::set_fixed_gas_cost(client, cost).await?,
-        Command::GetWhitelistStatus { kind } => command::get_whitelist_status(client, kind).await?,
+        Command::GetFixedGasCost => command::silo::get_fixed_gas_cost(client).await?,
+        Command::SetFixedGasCost { cost } => {
+            command::silo::set_fixed_gas_cost(client, cost).await?;
+        }
+        Command::GetWhitelistStatus { kind } => {
+            command::silo::get_whitelist_status(client, kind).await?;
+        }
         Command::SetWhitelistStatus { kind, status } => {
-            command::set_whitelist_status(client, kind, status).await?;
+            command::silo::set_whitelist_status(client, kind, status).await?;
         }
         Command::AddEntryToWhitelist { kind, entry } => {
-            command::add_entry_to_whitelist(client, kind, entry).await?;
+            command::silo::add_entry_to_whitelist(client, kind, entry).await?;
         }
         Command::AddEntryToWhitelistBatch { path } => {
-            command::add_entry_to_whitelist_batch(client, path).await?;
+            command::silo::add_entry_to_whitelist_batch(client, path).await?;
         }
         Command::RemoveEntryFromWhitelist { kind, entry } => {
-            command::remove_entry_from_whitelist(client, kind, entry).await?;
+            command::silo::remove_entry_from_whitelist(client, kind, entry).await?;
         }
     }
 
