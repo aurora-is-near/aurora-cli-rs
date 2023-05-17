@@ -56,7 +56,7 @@ assert_eq() {
 
 # Start NEAR node.
 start_node
-sleep 1
+sleep 3
 
 export NEAR_KEY_PATH=$NODE_KEY_PATH
 # Create an account for Aurora EVM.
