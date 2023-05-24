@@ -79,21 +79,13 @@ pub enum Command {
     /// Return chain id of the network
     GetChainId,
     /// Return next nonce for address
-    GetNonce {
-        address: String,
-    },
+    GetNonce { address: String },
     /// Return block hash of the specified height
-    GetBlockHash {
-        height: u64,
-    },
+    GetBlockHash { height: u64 },
     /// Return smart contract's code for contract address
-    GetCode {
-        address: String,
-    },
+    GetCode { address: String },
     /// Return balance for address
-    GetBalance {
-        address: String,
-    },
+    GetBalance { address: String },
     /// Return a height for a staged upgrade
     GetUpgradeIndex,
     /// Return Aurora EVM version
@@ -101,9 +93,7 @@ pub enum Command {
     /// Return Aurora EVM owner
     GetOwner,
     /// Set a new owner of Aurora EVM
-    SetOwner {
-        account_id: String,
-    },
+    SetOwner { account_id: String },
     /// Return bridge prover
     GetBridgeProver,
     /// Return a value from storage at address with key
@@ -114,27 +104,17 @@ pub enum Command {
         key: String,
     },
     /// Register relayer address
-    RegisterRelayer {
-        address: String,
-    },
+    RegisterRelayer { address: String },
     /// Pause precompiles
-    PausePrecompiles {
-        mask: u32,
-    },
+    PausePrecompiles { mask: u32 },
     /// Resume precompiles
-    ResumePrecompiles {
-        mask: u32,
-    },
+    ResumePrecompiles { mask: u32 },
     /// Return paused precompiles
     PausedPrecompiles,
     /// Updates the bytecode for user's router contracts
-    FactoryUpdate {
-        path: String,
-    },
+    FactoryUpdate { path: String },
     /// Sets the address for the `wNEAR` ERC-20 contract
-    FactorySetWnearAddress {
-        address: String,
-    },
+    FactorySetWnearAddress { address: String },
     /// Create and/or fund an XCC sub-account directly
     FundXccSubAccount {
         /// Address of the target
@@ -145,9 +125,7 @@ pub enum Command {
         deposit: f64,
     },
     /// Stage a new code for upgrade
-    StageUpgrade {
-        path: String,
-    },
+    StageUpgrade { path: String },
     /// Deploy staged upgrade
     DeployUpgrade,
     /// Deploy EVM smart contract's code in hex
@@ -202,9 +180,7 @@ pub enum Command {
         aurora_secret_key: Option<String>,
     },
     /// Encode address
-    EncodeAddress {
-        account: String,
-    },
+    EncodeAddress { account: String },
     /// Return Public and Secret ED25519 keys
     KeyPair {
         /// Random
@@ -214,16 +190,19 @@ pub enum Command {
         #[arg(long)]
         seed: Option<u64>,
     },
-    // Silo Specific Methods
+    /// Return fixed gas cost
     GetFixedGasCost,
+    /// Set fixed gas cost
     SetFixedGasCost {
         /// Fixed gas cost in Wei.
         cost: u128,
     },
+    /// Return a status of the whitelist
     GetWhitelistStatus {
         /// Kind of the whitelist.
         kind: String,
     },
+    /// Set a status for the whitelist
     SetWhitelistStatus {
         /// Kind of the whitelist.
         #[arg(long)]
@@ -232,6 +211,7 @@ pub enum Command {
         #[arg(long)]
         status: u8,
     },
+    /// Add entry into the whitelist
     AddEntryToWhitelist {
         /// Kind of the whitelist.
         #[arg(long)]
@@ -240,10 +220,12 @@ pub enum Command {
         #[arg(long)]
         entry: String,
     },
+    /// Add entries into the whitelist
     AddEntryToWhitelistBatch {
         /// Path to JSON file with array of entries.
         path: String,
     },
+    /// Remove the entry from the whitelist
     RemoveEntryFromWhitelist {
         /// Kind of the whitelist.
         #[arg(long)]
