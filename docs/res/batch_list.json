@@ -1,0 +1,18 @@
+[
+  {
+    "kind": "Admin",
+    "account_id": "account.near"
+  },
+  {
+    "kind": "EvmAdmin",
+    "address": "0xef5d992c74e531bba6bf92ca1476d8ca4ca1b997"
+  },
+  {
+    "kind": "Account",
+    "account_id": "account1.near"
+  },
+  {
+    "kind": "Address",
+    "address": "0x92f854dadc0526717893da71cb44012fd4b8faac"
+  }
+]

@@ -1,9 +1,10 @@
 use aurora_engine::parameters::{
-    GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
-    TransactionStatus,
+    GetStorageAtArgs, InitCallArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs,
+    SetOwnerArgs, TransactionStatus,
 };
 use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
+use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
@@ -13,11 +14,12 @@ use serde_json::Value;
 use std::fmt::{Display, Formatter};
 use std::{path::Path, str::FromStr};
 
-use crate::utils::near_to_yocto;
 use crate::{
     client::Client,
-    utils::{self, hex_to_address, hex_to_arr, hex_to_vec, secret_key_from_hex},
+    utils::{self, hex_to_address, hex_to_arr, hex_to_vec, near_to_yocto, secret_key_from_hex},
 };
+
+pub mod silo;
 
 /// Return `chain_id` of the current network.
 pub async fn get_chain_id(client: Client) -> anyhow::Result<()> {
@@ -96,29 +98,14 @@ pub async fn init(
     custodian_address: Option<String>,
     ft_metadata_path: Option<String>,
 ) -> anyhow::Result<()> {
-    let to_account_id = |id: Option<String>| {
-        id.map_or_else(
-            || {
-                client
-                    .near()
-                    .engine_account_id
-                    .to_string()
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("{e}"))
-            },
-            |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
-        )
-    };
+    let owner_id = to_account_id(owner_id, &client)?;
+    let prover_id = to_account_id(bridge_prover, &client)?;
 
-    let owner_id = to_account_id(owner_id)?;
-    let prover_id = to_account_id(bridge_prover)?;
-
-    let aurora_init_args = NewCallArgs {
+    let aurora_init_args = NewCallArgs::V2(NewCallArgsV2 {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
-        bridge_prover_id: prover_id.clone(),
         upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
-    }
+    })
     .try_to_vec()?;
 
     let eth_connector_init_args = InitCallArgs {
@@ -499,6 +486,20 @@ async fn get_value<T: FromCallResult + Display>(
     println!("{output}");
 
     Ok(())
+}
+
+fn to_account_id(id: Option<String>, client: &Client) -> anyhow::Result<AccountId> {
+    id.map_or_else(
+        || {
+            client
+                .near()
+                .engine_account_id
+                .to_string()
+                .parse()
+                .map_err(|e| anyhow::anyhow!("{e}"))
+        },
+        |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
+    )
 }
 
 struct HexString(String);
