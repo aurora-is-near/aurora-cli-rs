@@ -16,6 +16,7 @@ NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
 AURORA_KEY_PATH=$NEARCORE_HOME/node0/aurora_key.json
 AURORA_SECRET_KEY=27cb3ddbd18037b38d7fb9ae3433a9d6f5cd554a4ba5768c8a15053f688ee167
 ENGINE_ACCOUNT=aurora.node0
+NEW_NAMED_ACCOUNT_FOR_LEDGER=xyz1123456789.testnet
 LEDGER_ACCOUNT_ID=3f6ab82e37adf3e6c91c9aa8f23ecfbb80d54e624ea56b0a619b0d94d6ee732c
 
 export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
@@ -87,6 +88,11 @@ sleep 1
 # Balance of Ledger account.
 echo "View Ledger account: $LEDGER_ACCOUNT_ID"
 aurora-cli view-account $LEDGER_ACCOUNT_ID || error_exit
+sleep 1
+
+# Create named account for the current ledger signe pub key.
+echo "creating account $NEW_NAMED_ACCOUNT_FOR_LEDGER using ledger on testnet"
+aurora-cli -u --network testnet create-account --account $NEW_NAMED_ACCOUNT_FOR_LEDGER --balance 100 > $AURORA_KEY_PATH
 sleep 1
 
 # Fund the engine account with ledger

@@ -370,6 +370,12 @@ impl NearClient {
             RpcBroadcastTxCommitRequest { signed_transaction }
         } else {
             let contract_id = self.contract_id()?;
+            let new_public_key = if self.ledger {
+                signer.public_key.clone() // use the ledger public key as named account
+            } else {
+                new_key_pair.public_key()
+            };
+
             let unsigned_transaction = Transaction {
                 signer_id: signer.account_id.clone(),
                 public_key: signer.public_key.clone(),
@@ -379,7 +385,7 @@ impl NearClient {
                 actions: vec![Action::FunctionCall(FunctionCallAction {
                     args: serde_json::json!({
                         "new_account_id": new_account_id,
-                        "new_public_key": new_key_pair.public_key(),
+                        "new_public_key": new_public_key,
                     })
                     .to_string()
                     .into_bytes(),
