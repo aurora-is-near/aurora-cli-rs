@@ -1,11 +1,25 @@
 use clap::{Parser, Subcommand};
+use lazy_static::lazy_static;
+use shadow_rs::shadow;
 use std::str::FromStr;
 
 pub mod command;
 
+lazy_static! {
+    static ref VERSION: String = {
+        shadow!(build);
+        format!("{}-{}", build::PKG_VERSION, build::SHORT_COMMIT)
+    };
+}
+
+fn get_version() -> &'static str {
+    VERSION.as_str()
+}
+
 /// Simple command line interface for communication with Aurora Engine
 #[derive(Parser)]
-#[command(author, version, long_about = None)]
+#[command(author, long_about = None)]
+#[command(version = get_version())]
 pub struct Cli {
     /// NEAR network ID
     #[arg(long, default_value = "localnet")]
@@ -107,6 +121,8 @@ pub enum Command {
         target: String,
         /// Wnear Account Id
         wnear_account_id: Option<String>,
+        /// Attached deposit in NEAR
+        deposit: f64,
     },
     /// Stage a new code for upgrade
     StageUpgrade { path: String },
@@ -173,6 +189,50 @@ pub enum Command {
         /// From seed
         #[arg(long)]
         seed: Option<u64>,
+    },
+    /// Return fixed gas cost
+    GetFixedGasCost,
+    /// Set fixed gas cost
+    SetFixedGasCost {
+        /// Fixed gas cost in Wei.
+        cost: u128,
+    },
+    /// Return a status of the whitelist
+    GetWhitelistStatus {
+        /// Kind of the whitelist.
+        kind: String,
+    },
+    /// Set a status for the whitelist
+    SetWhitelistStatus {
+        /// Kind of the whitelist.
+        #[arg(long)]
+        kind: String,
+        /// Status of the whitelist, 0/1.
+        #[arg(long)]
+        status: u8,
+    },
+    /// Add entry into the whitelist
+    AddEntryToWhitelist {
+        /// Kind of the whitelist.
+        #[arg(long)]
+        kind: String,
+        /// Entry for adding to the whitelist.
+        #[arg(long)]
+        entry: String,
+    },
+    /// Add entries into the whitelist
+    AddEntryToWhitelistBatch {
+        /// Path to JSON file with array of entries.
+        path: String,
+    },
+    /// Remove the entry from the whitelist
+    RemoveEntryFromWhitelist {
+        /// Kind of the whitelist.
+        #[arg(long)]
+        kind: String,
+        /// Entry for removing from the whitelist.
+        #[arg(long)]
+        entry: String,
     },
 }
 
@@ -251,8 +311,9 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::FundXccSubAccount {
             target,
             wnear_account_id,
+            deposit,
         } => {
-            command::fund_xcc_sub_account(client, target, wnear_account_id).await?;
+            command::fund_xcc_sub_account(client, target, wnear_account_id, deposit).await?;
         }
         Command::StageUpgrade { path } => command::stage_upgrade(client, path).await?,
         Command::DeployUpgrade => command::deploy_upgrade(client).await?,
@@ -294,6 +355,26 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::EncodeAddress { account } => command::encode_address(&account),
         Command::KeyPair { random, seed } => command::key_pair(random, seed)?,
+        // Silo Specific Methods
+        Command::GetFixedGasCost => command::silo::get_fixed_gas_cost(client).await?,
+        Command::SetFixedGasCost { cost } => {
+            command::silo::set_fixed_gas_cost(client, cost).await?;
+        }
+        Command::GetWhitelistStatus { kind } => {
+            command::silo::get_whitelist_status(client, kind).await?;
+        }
+        Command::SetWhitelistStatus { kind, status } => {
+            command::silo::set_whitelist_status(client, kind, status).await?;
+        }
+        Command::AddEntryToWhitelist { kind, entry } => {
+            command::silo::add_entry_to_whitelist(client, kind, entry).await?;
+        }
+        Command::AddEntryToWhitelistBatch { path } => {
+            command::silo::add_entry_to_whitelist_batch(client, path).await?;
+        }
+        Command::RemoveEntryFromWhitelist { kind, entry } => {
+            command::silo::remove_entry_from_whitelist(client, kind, entry).await?;
+        }
     }
 
     Ok(())

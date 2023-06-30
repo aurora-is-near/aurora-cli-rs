@@ -2,7 +2,8 @@
 
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
-ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/latest/aurora-mainnet.wasm"
+AURORA_LAST_VERSION="2.9.1"
+ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-mainnet.wasm"
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
 USER_BASE_BIN=$(python3 -m site --user-base)/bin
 
@@ -13,7 +14,7 @@ export NEARCORE_HOME="/tmp/localnet"
 pip3 list | grep nearup > /dev/null || pip3 install --user nearup
 
 start_node() {
-  cmd="nearup run localnet --home $NEARCORE_HOME"
+  cmd="nearup run localnet --home $NEARCORE_HOME --num-nodes 1"
 
   if [[ $(uname -m) == "arm64" ]]; then # Check for local execution
     cmd="$cmd --binary-path $HOME/.nearup/near/localnet"
@@ -27,7 +28,16 @@ finish() {
   nearup stop > /dev/null 2>&1
   # Cleanup
   rm -rf $NEARCORE_HOME
-  exit
+
+  if [[ -z "$1" ]]; then
+    exit 0
+  else
+    exit "$1"
+  fi
+}
+
+error_exit() {
+  finish 1
 }
 
 # Download `neard` and preparing config files.
@@ -45,18 +55,18 @@ start_node
 sleep 1
 
 # Download Aurora EVM.
-curl -sL $ENGINE_WASM_URL -o $ENGINE_WASM_PATH || finish
+curl -sL $ENGINE_WASM_URL -o $ENGINE_WASM_PATH || error_exit
 
 # Deploy and init Aurora EVM smart contract.
-aurora-cli near write engine-init -w $ENGINE_WASM_PATH || finish
+aurora-cli near write engine-init -w $ENGINE_WASM_PATH || error_exit
 sleep 2
 
 # Deploy EVM code.
-aurora-cli near write deploy-code $EVM_CODE || finish
+aurora-cli near write deploy-code $EVM_CODE || error_exit
 sleep 2
 
 # Run EVM view call.
 aurora-cli near read solidity -t 0x592186c059e3d9564cac6b1ada6f2dc7ff1d78e9 call-args-by-name \
-    --abi-path $ABI_PATH -m "greet" --arg '{}'
+    --abi-path $ABI_PATH -m "greet" --arg '{}' || error_exit
 
 finish

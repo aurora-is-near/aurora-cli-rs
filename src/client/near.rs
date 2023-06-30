@@ -1,11 +1,11 @@
+use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
 #[cfg(feature = "advanced")]
-use aurora_engine::parameters::SubmitResult;
-use aurora_engine::parameters::TransactionStatus;
+use aurora_engine_types::parameters::engine::SubmitResult;
+use aurora_engine_types::parameters::engine::TransactionStatus;
 use aurora_engine_types::{
     types::{Address, Wei},
     U256,
 };
-use borsh::{BorshDeserialize, BorshSerialize};
 use near_crypto::InMemorySigner;
 use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
@@ -94,7 +94,7 @@ impl NearClient {
 
     #[cfg(feature = "advanced")]
     pub async fn get_erc20_from_nep141(&self, nep141: &str) -> anyhow::Result<Address> {
-        let args = aurora_engine::parameters::GetErc20FromNep141CallArgs {
+        let args = aurora_engine_types::parameters::engine::GetErc20FromNep141CallArgs {
             nep141: nep141.parse().unwrap(),
         };
         let result = self
@@ -117,7 +117,7 @@ impl NearClient {
         amount: Wei,
         input: Vec<u8>,
     ) -> anyhow::Result<TransactionStatus> {
-        let args = aurora_engine::parameters::ViewCallArgs {
+        let args = aurora_engine_types::parameters::engine::ViewCallArgs {
             sender,
             address: target,
             amount: amount.to_bytes(),
@@ -172,13 +172,22 @@ impl NearClient {
         method_name: &str,
         args: Vec<u8>,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        self.contract_call_with_deposit(method_name, args, 0).await
+    }
+
+    pub async fn contract_call_with_deposit(
+        &self,
+        method_name: &str,
+        args: Vec<u8>,
+        deposit: u128,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
         self.near_broadcast_tx(
             vec![Action::FunctionCall(
                 near_primitives::transaction::FunctionCallAction {
                     method_name: method_name.to_string(),
                     args,
                     gas: NEAR_GAS,
-                    deposit: 0,
+                    deposit,
                 },
             )],
             None,

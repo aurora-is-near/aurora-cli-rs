@@ -2,13 +2,15 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
-AURORA_PREV_VERSION="2.8.1"
-AURORA_LAST_VERSION="2.9.0"
+AURORA_PREV_VERSION="2.9.1"
+AURORA_LAST_VERSION="2.9.1"
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
 ENGINE_PREV_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_PREV_VERSION/aurora-mainnet.wasm"
 ENGINE_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-mainnet.wasm"
+XCC_ROUTER_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-factory-mainnet.wasm"
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
+XCC_ROUTER_WASM_PATH="/tmp/aurora-factory-mainnet.wasm"
 USER_BASE_BIN=$(python3 -m site --user-base)/bin
 NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
 AURORA_KEY_PATH=$NEARCORE_HOME/node0/aurora_key.json
@@ -178,6 +180,15 @@ aurora-cli --engine $ENGINE_ACCOUNT resume-precompiles 3 || error_exit
 sleep 1
 mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
 assert_eq "$mask" 0
+
+# XCC router operations.
+# Download XCC router contract.
+curl -sL $XCC_ROUTER_LAST_WASM_URL -o $XCC_ROUTER_WASM_PATH || error_exit
+aurora-cli --engine $ENGINE_ACCOUNT factory-update $XCC_ROUTER_WASM_PATH || error_exit
+sleep 1
+aurora-cli --engine $ENGINE_ACCOUNT factory-set-wnear-address 0x80c6a002756e29b8bf2a587f7d975a726d5de8b9 || error_exit
+sleep 1
+aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
 
 # Stop NEAR node and clean up.
 finish
