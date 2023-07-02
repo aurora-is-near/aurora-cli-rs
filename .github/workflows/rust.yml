@@ -65,8 +65,21 @@ jobs:
           args: --all-targets --no-default-features -F advanced
 
   shell_tests:
-    name: Shell Tests
+    name: Tests ${{ matrix.interface }} CLI
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        interface: [ Advanced, Simple, Silo ]
+        include:
+          - interface: Advanced
+            args: --path . --no-default-features -F advanced
+            script: scripts/advanced.sh
+          - interface: Simple
+            args: --path .
+            script: scripts/simple.sh
+          - interface: Silo
+            args: --path .
+            script: scripts/simple-silo.sh
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -74,14 +87,6 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: --path . --no-default-features -F advanced
-      - name: Tests (Advanced CLI)
-        run: scripts/advanced.sh
-      - name: Install aurora-cli (Simple CLI)
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --path .
-      - name: Tests (Simple CLI)
-        run: scripts/simple.sh
+          args: ${{ matrix.args }}
+      - run: ${{ matrix.script }}
 
