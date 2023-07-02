@@ -2,7 +2,7 @@
 
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
-AURORA_LAST_VERSION="2.9.1"
+AURORA_LAST_VERSION="2.9.2"
 ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-mainnet.wasm"
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
 USER_BASE_BIN=$(python3 -m site --user-base)/bin
