@@ -70,7 +70,7 @@ sleep 1
 # Deploy Aurora EVM.
 export NEAR_KEY_PATH=$AURORA_KEY_PATH
 aurora-cli deploy-aurora $ENGINE_WASM_PATH || error_exit
-sleep 3
+sleep 4
 # Init Aurora EVM.
 aurora-cli --engine $ENGINE_ACCOUNT init \
   --chain-id 1313161556 \
