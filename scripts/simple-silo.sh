@@ -20,7 +20,7 @@ start_node() {
   cmd="nearup run localnet --home $NEARCORE_HOME"
 
   if [[ $(uname -m) == "arm64" ]]; then # Check for local execution
-    cmd="$cmd --binary-path $HOME/.nearup/near/localnet"
+    cmd="$cmd --binary-path $HOME/.nearup/near/localnet --num-nodes 1"
   fi
 
   $cmd > /dev/null 2>&1
@@ -56,7 +56,7 @@ assert_eq() {
 
 # Start NEAR node.
 start_node
-sleep 3
+sleep 2
 
 export NEAR_KEY_PATH=$NODE_KEY_PATH
 # Create an account for Aurora EVM.

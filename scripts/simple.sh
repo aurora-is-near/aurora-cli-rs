@@ -26,7 +26,7 @@ start_node() {
   cmd="nearup run localnet --home $NEARCORE_HOME"
 
   if [[ $(uname -m) == "arm64" ]]; then # Check for local execution
-    cmd="$cmd --binary-path $HOME/.nearup/near/localnet"
+    cmd="$cmd --binary-path $HOME/.nearup/near/localnet --num-nodes 1"
   fi
 
   $cmd > /dev/null 2>&1
