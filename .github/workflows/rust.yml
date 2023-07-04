@@ -51,6 +51,11 @@ jobs:
           - build: Windows
             os: windows-latest
     steps:
+      - name: Setup Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt install libudev-dev pkg-config
       - name: Checkout sources
         uses: actions/checkout@v2
       - name: Run tests simple
