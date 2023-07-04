@@ -12,6 +12,11 @@ jobs:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
+      - name: Setup Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt install libudev-dev pkg-config
       - name: Checkout sources
         uses: actions/checkout@v2
       - name: Run rustfmt
@@ -24,6 +29,11 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
+      - name: Setup Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt install libudev-dev pkg-config
       - name: Checkout sources
         uses: actions/checkout@v2
       - name: Run clippy simple
