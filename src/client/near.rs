@@ -15,10 +15,7 @@ use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_primitives::views::FinalExecutionStatus;
 use near_primitives::{
     hash::CryptoHash,
-    transaction::{
-        Action, DeployContractAction,
-        Transaction,
-    },
+    transaction::{Action, DeployContractAction, Transaction},
     types::AccountId,
     views,
     views::FinalExecutionOutcomeView,
