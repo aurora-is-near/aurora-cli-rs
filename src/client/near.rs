@@ -322,8 +322,7 @@ impl NearClient {
                 }
 
                 Ok(format!(
-                    "Account {:?} has received {:?}NEAR",
-                    receiver_id, amount
+                    "Account {receiver_id:?} has received {amount:?}NEAR"
                 ))
             }
         }
