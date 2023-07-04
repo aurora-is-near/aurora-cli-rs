@@ -1,8 +1,8 @@
 use aurora_engine_transactions::legacy::{LegacyEthSignedTransaction, TransactionLegacy};
 use aurora_engine_types::{types::Address, U256};
-use borsh::BorshSerialize;
 use libsecp256k1::{Message, PublicKey, SecretKey};
 use near_crypto::{InMemorySigner, KeyType};
+use near_primitives::borsh::BorshSerialize;
 use near_primitives::transaction::{SignedTransaction, Transaction};
 use rlp::RlpStream;
 use serde::{Deserialize, Serialize};

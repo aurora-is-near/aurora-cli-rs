@@ -1,9 +1,9 @@
 //! Helpful functions for analyzing JSON data obtained from NEAR (e.g. via `tx` JSON RPC method).
 //! `paths: Vec<String>` gives the list of (absolute) paths for all the files to include in the analysis.
 
-use aurora_engine::parameters::SubmitResult;
 use aurora_engine_transactions::EthTransactionKind;
-use borsh::BorshDeserialize;
+use aurora_engine_types::borsh::BorshDeserialize;
+use aurora_engine_types::parameters::engine::{SubmitResult, TransactionStatus};
 use serde_json::Value;
 use std::{collections::HashMap, path::Path, sync::Arc};
 use tokio::fs;
@@ -199,7 +199,7 @@ impl TxStatus {
     const fn flatten(&self) -> FlatTxStatus {
         match self {
             Self::Executed(result) => match result.status {
-                aurora_engine::parameters::TransactionStatus::Succeed(_) => FlatTxStatus::Succeeded,
+                TransactionStatus::Succeed(_) => FlatTxStatus::Succeeded,
                 _ => FlatTxStatus::Reverted,
             },
             Self::GasLimit => FlatTxStatus::GasLimit,

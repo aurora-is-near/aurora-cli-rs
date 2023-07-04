@@ -1,14 +1,13 @@
-use aurora_engine::parameters::{
-    GetStorageAtArgs, InitCallArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs,
-    SetOwnerArgs, TransactionStatus,
-};
-use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
-use aurora_engine_types::parameters::engine::SubmitResult;
+use aurora_engine_types::borsh::{self, BorshDeserialize, BorshSerialize};
+use aurora_engine_types::parameters::connector::InitCallArgs;
+use aurora_engine_types::parameters::engine::{
+    GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, SetOwnerArgs,
+    SubmitResult, TransactionStatus,
+};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
-use borsh::{BorshDeserialize, BorshSerialize};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
 use std::fmt::{Display, Formatter};
@@ -354,6 +353,13 @@ pub async fn factory_set_wnear_address(client: Client, address: String) -> anyho
     }
     .proceed(client, args.to_vec())
     .await
+}
+
+// TODO: Use it from aurora_engine_types::parameters::xcc module.
+#[derive(Debug, Clone, PartialEq, Eq, BorshDeserialize, BorshSerialize)]
+struct FundXccArgs {
+    pub target: Address,
+    pub wnear_account_id: Option<AccountId>,
 }
 
 /// Create and/or fund an XCC sub-account directly

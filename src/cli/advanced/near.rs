@@ -2,9 +2,11 @@ use crate::{
     config::{Config, Network},
     utils,
 };
-use aurora_engine::parameters::{
-    DeployErc20TokenArgs, GetStorageAtArgs, InitCallArgs, NewCallArgs, NewCallArgsV2,
-    PauseEthConnectorCallArgs, SubmitResult, TransactionStatus,
+use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
+use aurora_engine_types::parameters::connector::InitCallArgs;
+use aurora_engine_types::parameters::engine::{
+    DeployErc20TokenArgs, GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PauseEthConnectorCallArgs,
+    SubmitResult, TransactionStatus,
 };
 use aurora_engine_types::{
     account_id::AccountId,
@@ -12,7 +14,6 @@ use aurora_engine_types::{
     types::{Address, NearGas, Wei, Yocto},
     H256, U256,
 };
-use borsh::{BorshDeserialize, BorshSerialize};
 use clap::Subcommand;
 use near_primitives::{
     account::{AccessKey, Account},

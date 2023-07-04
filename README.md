@@ -74,7 +74,7 @@ After that we need to prepare an account and create a file with a private key fo
 
 ```shell
 aurora-cli --near-key-path /tmp/localnet/node0/validator_key.json create-account \
-  --account aurora.node0 --balance 100 > /tmp/localnet/auora_key.json
+  --account aurora.node0 --balance 100 > /tmp/localnet/aurora_key.json
 ```
 
 Let's check if the account has been created successfully:
@@ -100,12 +100,12 @@ curl -sL https://github.com/aurora-is-near/aurora-engine/releases/download/lates
 
 Deploy Aurora EVM:
 ```shell
-aurora-cli --near-key-path /tmp/localnet/auora_key.json deploy-aurora /tmp/aurora-mainnet.wasm
+aurora-cli --near-key-path /tmp/localnet/aurora_key.json deploy-aurora /tmp/aurora-mainnet.wasm
 ```
 
 Initialize Aurora EVM:
 ```shell
-aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/auora_key.json init --chain-id 1313161556 --owner-id aurora.node0
+aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json init --chain-id 1313161556 --owner-id aurora.node0
 ```
 
 And now we can deploy the EVM smart contract. In our example, it will be a simple counter that can return its current
@@ -126,7 +126,7 @@ The response should be similar to this:
 
 Deploy EVM smart contract:
 ```shell
-aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/auora_key.json deploy \
+aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json deploy \
   --code $(cat docs/res/Counter.hex) \
   --abi-path docs/res/Counter.abi \
   --args '{"init_value":"5"}' \
@@ -149,7 +149,7 @@ If we see `5` then everything is right.
 
 Now let's try to increment the value:
 ```shell
-aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/auora_key.json call \
+aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json call \
   --address 0x8417907c7158f02b42b0962cac27c4b4fd4a11f2 \
   -f increment \
   --abi-path docs/res/Counter.abi \

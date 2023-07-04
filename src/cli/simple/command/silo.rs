@@ -1,10 +1,9 @@
-use aurora_engine::silo::parameters::{
-    FixedGasCostArgs, WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKindArgs,
-    WhitelistStatusArgs,
+use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
+use aurora_engine_types::parameters::silo::{
+    FixedGasCostArgs, WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKind,
+    WhitelistKindArgs, WhitelistStatusArgs,
 };
-use aurora_engine::silo::WhitelistKind;
 use aurora_engine_types::types::Wei;
-use borsh::{BorshDeserialize, BorshSerialize};
 use near_primitives::views::CallResult;
 use std::fmt::{Display, Formatter};
 

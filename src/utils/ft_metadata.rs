@@ -1,5 +1,5 @@
-use aurora_engine::fungible_token::{FungibleReferenceHash, FungibleTokenMetadata};
-use borsh::BorshDeserialize;
+use aurora_engine_types::borsh::BorshDeserialize;
+use aurora_engine_types::parameters::connector::{FungibleReferenceHash, FungibleTokenMetadata};
 
 pub fn parse_ft_metadata(input: Option<String>) -> anyhow::Result<FungibleTokenMetadata> {
     let Some(input) = input else { return Ok(default_ft_metadata()); };
