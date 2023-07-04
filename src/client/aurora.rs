@@ -206,7 +206,7 @@ impl AuroraClient {
         let near_rx_hex = near_tx_str.strip_prefix("0x").unwrap_or(near_tx_str);
         let near_receipt_id = hex::decode(near_rx_hex)?;
         let near_client =
-            super::NearClient::new(&self.near_url, self.engine_account_id.as_ref(), None);
+            super::NearClient::new(&self.near_url, self.engine_account_id.as_ref(), None, false);
 
         near_client
             .get_receipt_outcome(near_receipt_id.as_slice().try_into().unwrap())

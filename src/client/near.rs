@@ -14,11 +14,10 @@ use near_jsonrpc_primitives::types::query::QueryResponseKind;
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
 use near_primitives::{
-    account::{AccessKey, AccessKeyPermission},
     hash::CryptoHash,
     transaction::{
-        Action, AddKeyAction, CreateAccountAction, DeployContractAction, FunctionCallAction,
-        Transaction, TransferAction,
+        Action, DeployContractAction,
+        Transaction,
     },
     types::AccountId,
     views,
