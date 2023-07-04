@@ -11,14 +11,14 @@ use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
-use near_primitives::transaction::Action;
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
 use near_primitives::{
     account::{AccessKey, AccessKeyPermission},
     hash::CryptoHash,
     transaction::{
-        AddKeyAction, CreateAccountAction, FunctionCallAction, Transaction, TransferAction,
+        Action, AddKeyAction, CreateAccountAction, DeployContractAction, FunctionCallAction,
+        Transaction, TransferAction,
     },
     types::AccountId,
     views,
@@ -371,7 +371,7 @@ impl NearClient {
         } else {
             let contract_id = self.contract_id()?;
             let new_public_key = if self.ledger {
-                signer.public_key.clone() // use the ledger public key as named account
+                signer.public_key.clone() // use the ledger public key for named account
             } else {
                 new_key_pair.public_key()
             };
@@ -441,9 +441,7 @@ impl NearClient {
             nonce,
             receiver_id: signer.account_id.clone(),
             block_hash,
-            actions: vec![Action::DeployContract(
-                near_primitives::transaction::DeployContractAction { code },
-            )],
+            actions: vec![Action::DeployContract(DeployContractAction { code })],
         };
 
         let signed_transaction = if self.ledger {
@@ -503,7 +501,7 @@ impl NearClient {
         };
         let response = self.client.call(request).await?;
         let block_hash = response.block_hash;
-        let nonce = match response.kind {
+        let nonce: u64 = match response.kind {
             QueryResponseKind::AccessKey(k) => k.nonce + 1,
             _ => anyhow::bail!("Wrong response kind: {:?}", response.kind),
         };
