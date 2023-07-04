@@ -70,11 +70,7 @@ sleep 1
 # Deploy Aurora EVM.
 export NEAR_KEY_PATH=$AURORA_KEY_PATH
 aurora-cli deploy-aurora $ENGINE_WASM_PATH || error_exit
-<<<<<<< HEAD
-sleep 2
-=======
 sleep 4
->>>>>>> main
 # Init Aurora EVM.
 aurora-cli --engine $ENGINE_ACCOUNT init \
   --chain-id 1313161556 \
@@ -83,11 +79,7 @@ aurora-cli --engine $ENGINE_ACCOUNT init \
   --upgrade-delay-blocks 1 \
   --custodian-address 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D \
   --ft-metadata-path docs/res/ft_metadata.json || error_exit
-<<<<<<< HEAD
-sleep 1
-=======
 sleep 2
->>>>>>> main
 
 # Silo methods
 # Get fixed gas cost
