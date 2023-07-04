@@ -509,7 +509,10 @@ impl NearClient {
     }
 
     fn signer(&self) -> anyhow::Result<InMemorySigner> {
-        if !self.ledger {
+        if self.ledger {
+            // use ledger singer!
+            utils::read_ledger_keypair()
+        } else {
             std::env::var("NEAR_KEY_PATH")
                 .ok()
                 .as_ref()
@@ -521,9 +524,6 @@ impl NearClient {
                     )
                 })
                 .and_then(utils::read_key_file)
-        } else {
-            // use ledger singer!
-            utils::read_ledger_keypair()
         }
     }
 

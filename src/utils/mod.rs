@@ -83,17 +83,13 @@ pub fn read_ledger_keypair() -> anyhow::Result<InMemorySigner> {
     let public_key = near_ledger::get_public_key(input_seed_phrase_path)
         .map_err(|near_ledger_error| {
             println!(
-                "{}",
-                format!(
-                    "An error occurred while trying to get PublicKey from Ledger device: {near_ledger_error:?}"
-                )
-            )
+                "An error occurred while trying to get PublicKey from Ledger device: {near_ledger_error:?}"
+            );
         })
         .unwrap();
     let near_public_key =
         near_crypto::PublicKey::ED25519(near_crypto::ED25519PublicKey::from(public_key.to_bytes()));
-    let implicit_account_id =
-        near_primitives::types::AccountId::try_from(hex::encode(public_key))?;
+    let implicit_account_id = near_primitives::types::AccountId::try_from(hex::encode(public_key))?;
     Ok(InMemorySigner {
         account_id: implicit_account_id,
         public_key: near_public_key,
