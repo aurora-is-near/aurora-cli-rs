@@ -12,7 +12,11 @@ use near_jsonrpc_client::{
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 #[cfg(feature = "simple")]
-use near_primitives::views::FinalExecutionStatus;
+use near_primitives::{
+    account::{AccessKey, AccessKeyPermission},
+    transaction::{AddKeyAction, CreateAccountAction, FunctionCallAction, TransferAction},
+    views::FinalExecutionStatus,
+};
 use near_primitives::{
     hash::CryptoHash,
     transaction::{Action, DeployContractAction, Transaction},
