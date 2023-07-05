@@ -12,6 +12,11 @@ jobs:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
+      - name: Setup Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt install libudev-dev pkg-config
       - name: Checkout sources
         uses: actions/checkout@v2
       - name: Run rustfmt
@@ -24,6 +29,11 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
+      - name: Setup Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt install libudev-dev pkg-config
       - name: Checkout sources
         uses: actions/checkout@v2
       - name: Run clippy simple
@@ -51,6 +61,11 @@ jobs:
           - build: Windows
             os: windows-latest
     steps:
+      - name: Setup Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt install libudev-dev pkg-config
       - name: Checkout sources
         uses: actions/checkout@v2
       - name: Run tests simple
@@ -81,6 +96,11 @@ jobs:
             args: --path .
             script: scripts/simple-silo.sh
     steps:
+      - name: Setup Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt install libudev-dev pkg-config
       - name: Checkout sources
         uses: actions/checkout@v2
       - name: Install aurora-cli (Advanced CLI)

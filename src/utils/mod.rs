@@ -1,10 +1,13 @@
 use aurora_engine_transactions::legacy::{LegacyEthSignedTransaction, TransactionLegacy};
 use aurora_engine_types::{types::Address, U256};
 use libsecp256k1::{Message, PublicKey, SecretKey};
-use near_crypto::InMemorySigner;
+use near_crypto::{InMemorySigner, KeyType};
+use near_primitives::borsh::BorshSerialize;
+use near_primitives::transaction::{SignedTransaction, Transaction};
 use rlp::RlpStream;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use slip10::BIP32Path;
+use std::{path::Path, str::FromStr};
 
 pub mod abi;
 pub mod ft_metadata;
@@ -71,6 +74,51 @@ pub fn read_key_file<P: AsRef<Path>>(path: P) -> anyhow::Result<InMemorySigner> 
             public_key: key.secret_key.public_key(),
             secret_key: key.secret_key,
         }),
+    }
+}
+
+pub fn read_ledger_keypair() -> anyhow::Result<InMemorySigner> {
+    //TODO: use prompt to get the HD derivation path from the user.
+    let input_seed_phrase_path = BIP32Path::from_str("44'/397'/0'/0'/1'").unwrap();
+    let public_key = near_ledger::get_public_key(input_seed_phrase_path)
+        .map_err(|near_ledger_error| {
+            println!(
+                "An error occurred while trying to get PublicKey from Ledger device: {near_ledger_error:?}"
+            );
+        })
+        .unwrap();
+    let near_public_key =
+        near_crypto::PublicKey::ED25519(near_crypto::ED25519PublicKey::from(public_key.to_bytes()));
+    let implicit_account_id = near_primitives::types::AccountId::try_from(hex::encode(public_key))?;
+    Ok(InMemorySigner {
+        account_id: implicit_account_id,
+        public_key: near_public_key,
+        // generate random seed to fulfill the return value.
+        // this secret key won't be used for signing the key.
+        secret_key: near_crypto::SecretKey::from_random(KeyType::ED25519),
+    })
+}
+
+pub fn sign_near_transaction_with_ledger(
+    unsiged_transaction: Transaction,
+) -> anyhow::Result<SignedTransaction> {
+    let input_seed_phrase_path = BIP32Path::from_str("44'/397'/0'/0'/1'").unwrap();
+    match near_ledger::sign_transaction(
+        unsiged_transaction
+            .try_to_vec()
+            .expect("Transaction is not expected to fail on serialization"),
+        input_seed_phrase_path,
+    ) {
+        Ok(signature) => Ok(near_primitives::transaction::SignedTransaction::new(
+            near_crypto::Signature::from_parts(near_crypto::KeyType::ED25519, &signature)
+                .expect("Signature is not expected to fail on deserialization"),
+            unsiged_transaction,
+        )),
+        Err(error) => {
+            let message = format!("Error occurred while signing the transaction: {error:?}");
+            let err = anyhow::Error::msg(message);
+            Err(err)
+        }
     }
 }
 

@@ -30,15 +30,22 @@ pub struct Client {
     aurora_rpc: String,
     engine_account_id: AccountId,
     signer_key_path: Option<String>,
+    use_ledger: bool,
 }
 
 #[cfg(feature = "simple")]
 impl Client {
-    pub fn new(near_rpc: &str, engine_account: &str, signer_key_path: Option<String>) -> Self {
+    pub fn new(
+        near_rpc: &str,
+        engine_account: &str,
+        signer_key_path: Option<String>,
+        ledger: bool,
+    ) -> Self {
         Self {
             near_rpc: near_rpc.to_string(),
             engine_account_id: engine_account.parse().expect("wrong engine account format"),
             signer_key_path,
+            use_ledger: ledger,
         }
     }
 
@@ -47,6 +54,7 @@ impl Client {
             &self.near_rpc,
             self.engine_account_id.as_ref(),
             self.signer_key_path.clone(),
+            self.use_ledger,
         )
     }
 }

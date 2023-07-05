@@ -402,6 +402,15 @@ pub async fn set_owner(client: Client, account_id: String) -> anyhow::Result<()>
     .await
 }
 
+/// Fund Near account
+pub async fn send_money(client: Client, account: String, amount: f64) -> anyhow::Result<()> {
+    match client.near().send_money(&account, amount).await {
+        Ok(result) => println!("{result}"),
+        Err(e) => eprintln!("{e:?}"),
+    }
+    Ok(())
+}
+
 /// Register relayer address.
 pub async fn register_relayer(client: Client, address: String) -> anyhow::Result<()> {
     let args = hex_to_vec(&address)?;

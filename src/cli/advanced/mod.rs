@@ -68,6 +68,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
                 near_endpoint,
                 &config.engine_account_id,
                 config.near_key_path.clone(),
+                false,
             );
             near::execute_command(subcommand, &client, &config, config_path).await?;
         }

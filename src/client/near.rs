@@ -11,13 +11,20 @@ use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
-use near_primitives::transaction::Action;
 #[cfg(feature = "simple")]
-use near_primitives::views::FinalExecutionStatus;
 use near_primitives::{
-    hash::CryptoHash, transaction::SignedTransaction, types::AccountId, views,
+    account::{AccessKey, AccessKeyPermission},
+    transaction::{AddKeyAction, CreateAccountAction, FunctionCallAction, TransferAction},
+    views::FinalExecutionStatus,
+};
+use near_primitives::{
+    hash::CryptoHash,
+    transaction::{Action, DeployContractAction, Transaction},
+    types::AccountId,
+    views,
     views::FinalExecutionOutcomeView,
 };
+
 #[cfg(feature = "simple")]
 use std::str::FromStr;
 
@@ -32,15 +39,22 @@ pub struct NearClient {
     client: JsonRpcClient,
     pub engine_account_id: AccountId,
     signer_key_path: Option<String>,
+    ledger: bool,
 }
 
 impl NearClient {
-    pub fn new<U: AsUrl>(url: U, engine_account_id: &str, signer_key_path: Option<String>) -> Self {
+    pub fn new<U: AsUrl>(
+        url: U,
+        engine_account_id: &str,
+        signer_key_path: Option<String>,
+        use_ledger: bool,
+    ) -> Self {
         let client = JsonRpcClient::connect(url);
         Self {
             client,
             engine_account_id: engine_account_id.parse().unwrap(),
             signer_key_path,
+            ledger: use_ledger,
         }
     }
 
@@ -245,20 +259,73 @@ impl NearClient {
         let signer = self.signer()?;
         let (block_hash, nonce) = self.get_nonce(&signer).await?;
         let nonce = nonce_override.unwrap_or(nonce);
-
-        let request = RpcBroadcastTxCommitRequest {
-            signed_transaction: SignedTransaction::from_actions(
-                nonce,
-                signer.account_id.clone(),
-                self.engine_account_id.parse().unwrap(),
-                &signer,
-                actions,
-                block_hash,
-            ),
+        let unsigned_transaction = Transaction {
+            signer_id: signer.account_id.clone(),
+            public_key: signer.public_key.clone(),
+            nonce,
+            receiver_id: self.engine_account_id.parse().unwrap(),
+            block_hash,
+            actions,
         };
-        let response = self.client.call(request).await?;
+
+        let signed_transaction = if self.ledger {
+            utils::sign_near_transaction_with_ledger(unsigned_transaction).unwrap()
+        } else {
+            unsigned_transaction.sign(&signer)
+        };
+
+        let request = RpcBroadcastTxCommitRequest { signed_transaction };
+
+        let response: FinalExecutionOutcomeView = self.client.call(request).await?;
 
         Ok(response)
+    }
+
+    /// Fund NEAR account
+    #[cfg(feature = "simple")]
+    pub async fn send_money(&self, account: &str, amount: f64) -> anyhow::Result<String> {
+        let signer = self.signer()?;
+        let receiver_id = AccountId::from_str(account)?;
+        let (block_hash, nonce) = self.get_nonce(&signer).await?;
+        let deposit = utils::near_to_yocto(amount);
+
+        let unsigned_transaction = Transaction {
+            signer_id: signer.account_id.clone(),
+            public_key: signer.public_key.clone(),
+            nonce,
+            receiver_id: receiver_id.clone(),
+            block_hash,
+            actions: vec![Action::Transfer(TransferAction { deposit })],
+        };
+
+        let signed_transaction = if self.ledger {
+            utils::sign_near_transaction_with_ledger(unsigned_transaction).unwrap()
+        } else {
+            unsigned_transaction.sign(&signer)
+        };
+
+        let request = RpcBroadcastTxCommitRequest { signed_transaction };
+        let response: FinalExecutionOutcomeView = self.client.call(request).await?;
+
+        match &response.status {
+            FinalExecutionStatus::NotStarted => {
+                anyhow::bail!("Transaction execution status: not started")
+            }
+            FinalExecutionStatus::Started => anyhow::bail!("Transaction execution status: started"),
+            FinalExecutionStatus::Failure(error) => anyhow::bail!(error.to_string()),
+            FinalExecutionStatus::SuccessValue(result) => {
+                if String::from_utf8_lossy(result) == "false" {
+                    anyhow::bail!(
+                        "Error while creating account, tx hash: {}",
+                        response.transaction.hash
+                    )
+                }
+
+                Ok(format!(
+                    "Account {receiver_id:?} has received {amount:?}NEAR"
+                ))
+            }
+        }
     }
 
     /// Creates new NEAR account.
@@ -272,37 +339,67 @@ impl NearClient {
         let initial_balance = utils::near_to_yocto(deposit);
 
         let request = if is_sub_account {
-            RpcBroadcastTxCommitRequest {
-                signed_transaction: SignedTransaction::create_account(
-                    nonce,
-                    signer.account_id.clone(),
-                    new_account_id,
-                    initial_balance,
-                    new_key_pair.public_key(),
-                    &signer,
-                    block_hash,
-                ),
-            }
+            let unsigned_transaction = Transaction {
+                signer_id: signer.account_id.clone(),
+                public_key: signer.public_key.clone(),
+                nonce,
+                receiver_id: new_account_id.clone(),
+                block_hash,
+                actions: vec![
+                    Action::CreateAccount(CreateAccountAction {}),
+                    Action::AddKey(AddKeyAction {
+                        public_key: new_key_pair.public_key(),
+                        access_key: AccessKey {
+                            nonce: 0,
+                            permission: AccessKeyPermission::FullAccess,
+                        },
+                    }),
+                    Action::Transfer(TransferAction {
+                        deposit: initial_balance,
+                    }),
+                ],
+            };
+
+            let signed_transaction = if self.ledger {
+                utils::sign_near_transaction_with_ledger(unsigned_transaction).unwrap()
+            } else {
+                unsigned_transaction.sign(&signer)
+            };
+
+            RpcBroadcastTxCommitRequest { signed_transaction }
         } else {
             let contract_id = self.contract_id()?;
-            RpcBroadcastTxCommitRequest {
-                signed_transaction: SignedTransaction::call(
-                    nonce,
-                    signer.account_id.clone(),
-                    contract_id,
-                    &signer,
-                    initial_balance,
-                    "create_account".to_string(),
-                    serde_json::json!({
+            let new_public_key = if self.ledger {
+                signer.public_key.clone() // use the ledger public key for named account
+            } else {
+                new_key_pair.public_key()
+            };
+
+            let unsigned_transaction = Transaction {
+                signer_id: signer.account_id.clone(),
+                public_key: signer.public_key.clone(),
+                nonce,
+                receiver_id: contract_id,
+                block_hash,
+                actions: vec![Action::FunctionCall(FunctionCallAction {
+                    args: serde_json::json!({
                         "new_account_id": new_account_id,
-                        "new_public_key": new_key_pair.public_key(),
+                        "new_public_key": new_public_key,
                     })
                     .to_string()
                     .into_bytes(),
-                    NEAR_GAS,
-                    block_hash,
-                ),
-            }
+                    method_name: "create_account".to_string(),
+                    gas: NEAR_GAS,
+                    deposit: initial_balance,
+                })],
+            };
+            let signed_transaction = if self.ledger {
+                utils::sign_near_transaction_with_ledger(unsigned_transaction).unwrap()
+            } else {
+                unsigned_transaction.sign(&signer)
+            };
+
+            RpcBroadcastTxCommitRequest { signed_transaction }
         };
 
         let response = self.client.call(request).await?;
@@ -337,19 +434,22 @@ impl NearClient {
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
         let signer = self.signer()?;
         let (block_hash, nonce) = self.get_nonce(&signer).await?;
-        let request = RpcBroadcastTxCommitRequest {
-            signed_transaction: SignedTransaction::from_actions(
-                nonce,
-                signer.account_id.clone(),
-                signer.account_id.clone(),
-                &signer,
-                vec![Action::DeployContract(
-                    near_primitives::transaction::DeployContractAction { code },
-                )],
-                block_hash,
-            ),
+        let unsigned_transaction = Transaction {
+            signer_id: signer.account_id.clone(),
+            public_key: signer.public_key.clone(),
+            nonce,
+            receiver_id: signer.account_id.clone(),
+            block_hash,
+            actions: vec![Action::DeployContract(DeployContractAction { code })],
         };
 
+        let signed_transaction = if self.ledger {
+            utils::sign_near_transaction_with_ledger(unsigned_transaction).unwrap()
+        } else {
+            unsigned_transaction.sign(&signer)
+        };
+
+        let request = RpcBroadcastTxCommitRequest { signed_transaction };
         self.client.call(request).await.map_err(Into::into)
     }
 
@@ -400,7 +500,7 @@ impl NearClient {
         };
         let response = self.client.call(request).await?;
         let block_hash = response.block_hash;
-        let nonce = match response.kind {
+        let nonce: u64 = match response.kind {
             QueryResponseKind::AccessKey(k) => k.nonce + 1,
             _ => anyhow::bail!("Wrong response kind: {:?}", response.kind),
         };
@@ -409,15 +509,22 @@ impl NearClient {
     }
 
     fn signer(&self) -> anyhow::Result<InMemorySigner> {
-        std::env::var("NEAR_KEY_PATH")
-            .ok()
-            .as_ref()
-            .or(self.signer_key_path.as_ref())
-            .map(std::path::Path::new)
-            .ok_or_else(|| {
-                anyhow::anyhow!("Path to the key file must be provided to use this functionality")
-            })
-            .and_then(utils::read_key_file)
+        if self.ledger {
+            // use ledger singer!
+            utils::read_ledger_keypair()
+        } else {
+            std::env::var("NEAR_KEY_PATH")
+                .ok()
+                .as_ref()
+                .or(self.signer_key_path.as_ref())
+                .map(std::path::Path::new)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Path to the key file must be provided to use this functionality"
+                    )
+                })
+                .and_then(utils::read_key_file)
+        }
     }
 
     #[cfg(feature = "simple")]

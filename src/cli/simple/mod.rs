@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 use lazy_static::lazy_static;
 use shadow_rs::shadow;
 use std::str::FromStr;
@@ -30,6 +30,9 @@ pub struct Cli {
     /// Path to file with NEAR account id and secret key in JSON format
     #[arg(long)]
     pub near_key_path: Option<String>,
+    /// Uses ledger for creating new accounts/signing transactions
+    #[arg(long, short, action=ArgAction::SetTrue)]
+    pub use_ledger: bool,
     #[clap(subcommand)]
     pub command: Command,
 }
@@ -102,6 +105,13 @@ pub enum Command {
         address: String,
         #[arg(short, long)]
         key: String,
+    },
+    /// Fund Near account
+    SendMoney {
+        #[arg(short, long)]
+        to: String,
+        #[arg(short, long)]
+        amount: f64,
     },
     /// Register relayer address
     RegisterRelayer { address: String },
@@ -262,12 +272,15 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Network::Testnet => super::NEAR_TESTNET_ENDPOINT,
         Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
     };
-    let client = crate::client::Client::new(near_rpc, &args.engine, args.near_key_path);
+    // check use_ledger ? use ledger path : near_key_path.
+    let client =
+        crate::client::Client::new(near_rpc, &args.engine, args.near_key_path, args.use_ledger);
 
     match args.command {
         Command::GetChainId => command::get_chain_id(client).await?,
         Command::GetVersion => command::get_version(client).await?,
         Command::GetOwner => command::get_owner(client).await?,
+        Command::SendMoney { to, amount } => command::send_money(client, to, amount).await?,
         Command::SetOwner { account_id } => command::set_owner(client, account_id).await?,
         Command::RegisterRelayer { address } => command::register_relayer(client, address).await?,
         Command::GetBridgeProver => command::get_bridge_prover(client).await?,
