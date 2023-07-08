@@ -45,6 +45,8 @@ jobs:
           - interface: Silo
             script: scripts/simple-silo.sh
     steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
       - run: ${{ matrix.script }}
 
   advanced_tests:
@@ -52,4 +54,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: install_advanced
     steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
       - run: scripts/advanced.sh
