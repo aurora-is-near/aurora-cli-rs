@@ -8,45 +8,46 @@ on:
   pull_request:
 
 jobs:
-  shell_tests:
-    name: Tests ${{ matrix.interface }} CLI
+  install_simple:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        interface: [ Advanced, Simple, Silo ]
-        include:
-          - interface: Advanced
-            args: --path . --no-default-features -F advanced
-            script: scripts/advanced.sh
-          - interface: Simple
-            args: --path .
-            script: scripts/simple.sh
-          - interface: Silo
-            args: --path .
-            script: scripts/simple-silo.sh
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Cargo Cache
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo
-          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
-            ${{ runner.os }}-cargo
-      - name: Cargo Target Cache
-        uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-target-${{ hashFiles('Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-target-${{ hashFiles('Cargo.toml') }}
-            ${{ runner.os }}-cargo-target
       - name: Install aurora-cli (Advanced CLI)
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: ${{ matrix.args }}
+          args: --path .
+
+  install_advanced:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Install aurora-cli (Advanced CLI)
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --path . --no-default-features -F advanced
+
+  simple_tests:
+    name: Tests ${{ matrix.interface }} CLI
+    runs-on: ubuntu-latest
+    needs: install_simple
+    strategy:
+      matrix:
+        interface: [ Simple, Silo ]
+        include:
+          - interface: Simple
+            script: scripts/simple.sh
+          - interface: Silo
+            script: scripts/simple-silo.sh
+    steps:
       - run: ${{ matrix.script }}
 
+  advanced_tests:
+    name: Tests Advanced CLI
+    runs-on: ubuntu-latest
+    needs: install_advanced
+    steps:
+      - run: scripts/advanced.sh
