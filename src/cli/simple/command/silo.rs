@@ -10,6 +10,7 @@ use std::fmt::{Display, Formatter};
 use super::{get_value, ContractCall};
 use crate::cli::command::FromCallResult;
 use crate::client::Client;
+use crate::contract_call;
 use crate::utils::hex_to_address;
 
 /// Return fixed gas cost.
@@ -24,11 +25,11 @@ pub async fn set_fixed_gas_cost(client: Client, cost: u128) -> anyhow::Result<()
     }
     .try_to_vec()?;
 
-    ContractCall {
-        method: "set_fixed_gas_cost",
-        success_message: "Fixed gas cost was set successfully",
-        error_message: "Error while setting gas cost",
-    }
+    contract_call!(
+        "set_fixed_gas_cost",
+        "The fixed gas cost: {cost} has been set successfully",
+        "Error while setting gas cost"
+    )
     .proceed(client, args)
     .await
 }
@@ -50,12 +51,13 @@ pub async fn set_whitelist_status(client: Client, kind: String, status: u8) -> a
         active: status > 0,
     }
     .try_to_vec()?;
+    let str_status = if status == 0 { "disabled" } else { "enabled" };
 
-    ContractCall {
-        method: "set_whitelist_status",
-        success_message: "Set whitelist status successfully",
-        error_message: "Error while setting whitelist status",
-    }
+    contract_call!(
+        "set_whitelist_status",
+        "The whitelist has been {str_status} successfully",
+        "Error while setting whitelist status"
+    )
     .proceed(client, args)
     .await
 }
@@ -68,11 +70,11 @@ pub async fn add_entry_to_whitelist(
 ) -> anyhow::Result<()> {
     let args = get_whitelist_args(&kind, &entry)?;
 
-    ContractCall {
-        method: "add_entry_to_whitelist",
-        success_message: "Added entry to whitelist successfully",
-        error_message: "Error while adding entry to whitelist",
-    }
+    contract_call!(
+        "add_entry_to_whitelist",
+        "The entry: {entry} has been added to the whitelist successfully",
+        "Error while adding entry to whitelist"
+    )
     .proceed(client, args)
     .await
 }
@@ -83,11 +85,11 @@ pub async fn add_entry_to_whitelist_batch(client: Client, path: String) -> anyho
         .and_then(|string| serde_json::from_str::<Vec<WhitelistArgs>>(&string).map_err(Into::into))
         .and_then(|entries| entries.try_to_vec())?;
 
-    ContractCall {
-        method: "add_entry_to_whitelist_batch",
-        success_message: "Added batch entry to whitelist successfully",
-        error_message: "Error while setting batch entry to whitelist",
-    }
+    contract_call!(
+        "add_entry_to_whitelist_batch",
+        "The batch of entries has been added to the whitelist successfully",
+        "Error while setting batch entry to whitelist"
+    )
     .proceed(client, args)
     .await
 }
@@ -100,11 +102,11 @@ pub async fn remove_entry_from_whitelist(
 ) -> anyhow::Result<()> {
     let args = get_whitelist_args(&kind, &entry)?;
 
-    ContractCall {
-        method: "remove_entry_from_whitelist",
-        success_message: "Removed entry to whitelist successfully",
-        error_message: "Error while removing entry to whitelist",
-    }
+    contract_call!(
+        "remove_entry_from_whitelist",
+        "The entry: {entry} has been removed from the whitelist successfully",
+        "Error while removing entry to whitelist"
+    )
     .proceed(client, args)
     .await
 }
