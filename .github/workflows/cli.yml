@@ -9,22 +9,24 @@ on:
 
 jobs:
   install_simple:
+    name: Install Simple
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Install aurora-cli (Advanced CLI)
+      - name: Install aurora-cli
         uses: actions-rs/cargo@v1
         with:
           command: install
           args: --path .
 
   install_advanced:
+    name: Install Advanced
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Install aurora-cli (Advanced CLI)
+      - name: Install aurora-cli
         uses: actions-rs/cargo@v1
         with:
           command: install
