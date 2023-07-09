@@ -8,34 +8,9 @@ on:
   pull_request:
 
 jobs:
-  install_simple:
-    name: Install Simple
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-      - name: Install aurora-cli
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --path .
-
-  install_advanced:
-    name: Install Advanced
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-      - name: Install aurora-cli
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: --path . --no-default-features -F advanced
-
   simple_tests:
     name: Tests ${{ matrix.interface }} CLI
     runs-on: ubuntu-latest
-    needs: install_simple
     strategy:
       matrix:
         interface: [ Simple, Silo ]
@@ -47,13 +22,24 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - run: ${{ matrix.script }}
+      - name: Install aurora-cli
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --path .
+      - name: Run ${{ matrix.interface }} tests
+        run: ${{ matrix.script }}
 
   advanced_tests:
     name: Tests Advanced CLI
     runs-on: ubuntu-latest
-    needs: install_advanced
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-      - run: scripts/advanced.sh
+      - name: Install aurora-cli
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: --path . --no-default-features -F advanced
+      - name: Run Advanced tests
+        run: scripts/advanced.sh
