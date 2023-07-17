@@ -145,7 +145,7 @@ sleep 1
 # Upgrading Aurora EVM to 2.9.0.
 curl -sL $ENGINE_LAST_WASM_URL -o $ENGINE_WASM_PATH || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT stage-upgrade $ENGINE_WASM_PATH || error_exit
-sleep 2
+sleep 3
 aurora-cli --engine $ENGINE_ACCOUNT deploy-upgrade || error_exit
 sleep 1
 version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
