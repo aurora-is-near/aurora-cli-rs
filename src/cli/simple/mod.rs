@@ -1,5 +1,7 @@
+use aurora_engine_types::account_id::AccountId;
 use clap::{Parser, Subcommand};
 use lazy_static::lazy_static;
+use near_crypto::{KeyType, PublicKey};
 use shadow_rs::shadow;
 use std::str::FromStr;
 
@@ -190,6 +192,13 @@ pub enum Command {
         #[arg(long)]
         seed: Option<u64>,
     },
+    /// Return randomly generated NEAR key for AccountId
+    GenerateNearKey {
+        /// AccountId
+        account_id: String,
+        /// Key type: ed25519 or secp256k1
+        key_type: KeyType,
+    },
     /// Return fixed gas cost
     GetFixedGasCost,
     /// Set fixed gas cost
@@ -233,6 +242,26 @@ pub enum Command {
         /// Entry for removing from the whitelist.
         #[arg(long)]
         entry: String,
+    },
+    /// Set relayer key manager
+    SetKeyManager {
+        /// AccountId of the key manager
+        #[arg(value_parser = parse_account_id)]
+        account_id: Option<AccountId>,
+    },
+    /// Add relayer public key
+    AddRelayerKey {
+        /// Public key
+        #[arg(long)]
+        public_key: PublicKey,
+        /// Allowance
+        #[arg(long)]
+        allowance: f64,
+    },
+    /// Remove relayer public key
+    RemoveRelayerKey {
+        /// Public key
+        public_key: PublicKey,
     },
 }
 
@@ -355,6 +384,10 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::EncodeAddress { account } => command::encode_address(&account),
         Command::KeyPair { random, seed } => command::key_pair(random, seed)?,
+        Command::GenerateNearKey {
+            account_id,
+            key_type,
+        } => command::gen_near_key(&account_id, key_type)?,
         // Silo Specific Methods
         Command::GetFixedGasCost => command::silo::get_fixed_gas_cost(client).await?,
         Command::SetFixedGasCost { cost } => {
@@ -375,7 +408,24 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::RemoveEntryFromWhitelist { kind, entry } => {
             command::silo::remove_entry_from_whitelist(client, kind, entry).await?;
         }
+        Command::SetKeyManager { account_id } => {
+            // command::set_key_manager(client, account_id.map(|a| a.parse().unwrap())).await?;
+            command::set_key_manager(client, account_id).await?;
+        }
+        Command::AddRelayerKey {
+            public_key,
+            allowance,
+        } => {
+            command::add_relayer_key(client, public_key, allowance).await?;
+        }
+        Command::RemoveRelayerKey { public_key } => {
+            command::remove_relayer_key(client, public_key).await?;
+        }
     }
 
     Ok(())
+}
+
+fn parse_account_id(arg: &str) -> anyhow::Result<AccountId> {
+    arg.parse().map_err(|e| anyhow::anyhow!("{e}"))
 }

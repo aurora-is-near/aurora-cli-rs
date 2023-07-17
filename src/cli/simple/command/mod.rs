@@ -8,6 +8,7 @@ use aurora_engine_types::parameters::engine::{
 };
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
+use near_crypto::{KeyType, PublicKey};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
 use std::fmt::{Display, Formatter};
@@ -459,6 +460,23 @@ pub fn key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Return randomly generated content of the key file for `AccountId`.
+pub fn gen_near_key(account_id: &str, key_type: KeyType) -> anyhow::Result<()> {
+    let secret_key = near_crypto::SecretKey::from_random(key_type);
+    let public_key = secret_key.public_key();
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "account_id": account_id,
+            "public_key": public_key,
+            "secret_key": secret_key
+        }))?
+    );
+
+    Ok(())
+}
+
 /// Pause precompiles with mask.
 pub async fn pause_precompiles(client: Client, mask: u32) -> anyhow::Result<()> {
     let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
@@ -488,6 +506,56 @@ pub async fn resume_precompiles(client: Client, mask: u32) -> anyhow::Result<()>
 /// Return paused precompiles.
 pub async fn paused_precompiles(client: Client) -> anyhow::Result<()> {
     get_value::<u32>(client, "paused_precompiles", None).await
+}
+
+/// Set relayer key manager.
+pub async fn set_key_manager(client: Client, manager: Option<AccountId>) -> anyhow::Result<()> {
+    let message = manager.as_ref().map_or_else(
+        || "has been removed".to_string(),
+        |account_id| format!("{account_id} has been set"),
+    );
+    // TODO: Use RelayerKeyManagerArgs from engine-types instead.
+    let args = serde_json::to_vec(&serde_json::json!({ "key_manager": manager }))?;
+
+    contract_call!(
+        "set_key_manager",
+        "The key manager {message} successfully",
+        "Error while setting key manager"
+    )
+    .proceed(client, args)
+    .await
+}
+
+/// Add relayer public key.
+pub async fn add_relayer_key(
+    client: Client,
+    public_key: PublicKey,
+    allowance: f64,
+) -> anyhow::Result<()> {
+    // TODO: Use RelayerKeyArgs from engine-types instead.
+    let args = serde_json::to_vec(&serde_json::json!({ "public_key": public_key }))?;
+
+    contract_call!(
+        "add_relayer_key",
+        "The public key: {public_key} has been added successfully",
+        "Error while adding public key"
+    )
+    .proceed_with_deposit(client, args, allowance)
+    .await
+}
+
+/// Remove relayer public key.
+pub async fn remove_relayer_key(client: Client, public_key: PublicKey) -> anyhow::Result<()> {
+    // TODO: Use RelayerKeyArgs from engine-types instead.
+    let args = serde_json::to_vec(&serde_json::json!({ "public_key": public_key }))?;
+
+    contract_call!(
+        "remove_relayer_key",
+        "The public key: {public_key} has been removed successfully",
+        "Error while removing public key"
+    )
+    .proceed(client, args)
+    .await
 }
 
 async fn get_value<T: FromCallResult + Display>(
