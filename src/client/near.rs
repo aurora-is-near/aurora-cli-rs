@@ -44,6 +44,7 @@ impl NearClient {
         );
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(TIMEOUT))
+            .connect_timeout(std::time::Duration::from_secs(TIMEOUT))
             .default_headers(headers)
             .build()
             .map(JsonRpcClient::with)
