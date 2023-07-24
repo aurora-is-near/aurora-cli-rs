@@ -1,7 +1,7 @@
 use aurora_engine_types::account_id::AccountId;
+use aurora_engine_types::public_key::{KeyType, PublicKey};
 use clap::{Parser, Subcommand};
 use lazy_static::lazy_static;
-use near_crypto::{KeyType, PublicKey};
 use shadow_rs::shadow;
 use std::str::FromStr;
 
@@ -409,7 +409,6 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             command::silo::remove_entry_from_whitelist(client, kind, entry).await?;
         }
         Command::SetKeyManager { account_id } => {
-            // command::set_key_manager(client, account_id.map(|a| a.parse().unwrap())).await?;
             command::set_key_manager(client, account_id).await?;
         }
         Command::AddRelayerKey {

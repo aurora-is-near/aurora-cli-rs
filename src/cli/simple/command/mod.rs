@@ -3,12 +3,12 @@ use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::borsh::{self, BorshDeserialize, BorshSerialize};
 use aurora_engine_types::parameters::connector::InitCallArgs;
 use aurora_engine_types::parameters::engine::{
-    GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, SetOwnerArgs,
-    SubmitResult, TransactionStatus,
+    GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs,
+    RelayerKeyManagerArgs, SetOwnerArgs, SubmitResult, TransactionStatus,
 };
+use aurora_engine_types::public_key::{KeyType, PublicKey};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
-use near_crypto::{KeyType, PublicKey};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
 use std::fmt::{Display, Formatter};
@@ -462,7 +462,8 @@ pub fn key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<()> {
 
 /// Return randomly generated content of the key file for `AccountId`.
 pub fn gen_near_key(account_id: &str, key_type: KeyType) -> anyhow::Result<()> {
-    let secret_key = near_crypto::SecretKey::from_random(key_type);
+    let near_key_type = near_crypto::KeyType::try_from(u8::from(key_type))?;
+    let secret_key = near_crypto::SecretKey::from_random(near_key_type);
     let public_key = secret_key.public_key();
 
     println!(
@@ -509,13 +510,12 @@ pub async fn paused_precompiles(client: Client) -> anyhow::Result<()> {
 }
 
 /// Set relayer key manager.
-pub async fn set_key_manager(client: Client, manager: Option<AccountId>) -> anyhow::Result<()> {
-    let message = manager.as_ref().map_or_else(
+pub async fn set_key_manager(client: Client, key_manager: Option<AccountId>) -> anyhow::Result<()> {
+    let message = key_manager.as_ref().map_or_else(
         || "has been removed".to_string(),
         |account_id| format!("{account_id} has been set"),
     );
-    // TODO: Use RelayerKeyManagerArgs from engine-types instead.
-    let args = serde_json::to_vec(&serde_json::json!({ "key_manager": manager }))?;
+    let args = serde_json::to_vec(&RelayerKeyManagerArgs { key_manager })?;
 
     contract_call!(
         "set_key_manager",
@@ -532,8 +532,7 @@ pub async fn add_relayer_key(
     public_key: PublicKey,
     allowance: f64,
 ) -> anyhow::Result<()> {
-    // TODO: Use RelayerKeyArgs from engine-types instead.
-    let args = serde_json::to_vec(&serde_json::json!({ "public_key": public_key }))?;
+    let args = serde_json::to_vec(&RelayerKeyArgs { public_key })?;
 
     contract_call!(
         "add_relayer_key",
@@ -546,8 +545,7 @@ pub async fn add_relayer_key(
 
 /// Remove relayer public key.
 pub async fn remove_relayer_key(client: Client, public_key: PublicKey) -> anyhow::Result<()> {
-    // TODO: Use RelayerKeyArgs from engine-types instead.
-    let args = serde_json::to_vec(&serde_json::json!({ "public_key": public_key }))?;
+    let args = serde_json::to_vec(&RelayerKeyArgs { public_key })?;
 
     contract_call!(
         "remove_relayer_key",
