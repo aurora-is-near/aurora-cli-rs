@@ -2,8 +2,8 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
-AURORA_PREV_VERSION="2.8.1"
-AURORA_LAST_VERSION="2.9.0"
+AURORA_PREV_VERSION="2.9.1"
+AURORA_LAST_VERSION="2.9.2"
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
 ENGINE_PREV_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_PREV_VERSION/aurora-mainnet.wasm"
@@ -26,7 +26,7 @@ start_node() {
   cmd="nearup run localnet --home $NEARCORE_HOME"
 
   if [[ $(uname -m) == "arm64" ]]; then # Check for local execution
-    cmd="$cmd --binary-path $HOME/.nearup/near/localnet"
+    cmd="$cmd --binary-path $HOME/.nearup/near/localnet --num-nodes 1"
   fi
 
   $cmd > /dev/null 2>&1
@@ -79,7 +79,7 @@ sleep 1
 # Deploy Aurora EVM.
 export NEAR_KEY_PATH=$AURORA_KEY_PATH
 aurora-cli deploy-aurora $ENGINE_WASM_PATH || error_exit
-sleep 2
+sleep 4
 # Init Aurora EVM.
 aurora-cli --engine $ENGINE_ACCOUNT init \
   --chain-id 1313161556 \
@@ -88,7 +88,7 @@ aurora-cli --engine $ENGINE_ACCOUNT init \
   --upgrade-delay-blocks 1 \
   --custodian-address 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D \
   --ft-metadata-path docs/res/ft_metadata.json || error_exit
-sleep 1
+sleep 2
 
 # Deploy Hello World EVM code.
 aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --aurora-secret-key $AURORA_SECRET_KEY || error_exit

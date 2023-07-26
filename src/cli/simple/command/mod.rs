@@ -1,23 +1,35 @@
-use aurora_engine::parameters::{
-    GetStorageAtArgs, InitCallArgs, NewCallArgs, PausePrecompilesCallArgs, SetOwnerArgs,
-    TransactionStatus,
-};
-use aurora_engine::xcc::FundXccArgs;
 use aurora_engine_sdk::types::near_account_to_evm_address;
-use aurora_engine_types::parameters::engine::SubmitResult;
+use aurora_engine_types::account_id::AccountId;
+use aurora_engine_types::borsh::{self, BorshDeserialize, BorshSerialize};
+use aurora_engine_types::parameters::connector::InitCallArgs;
+use aurora_engine_types::parameters::engine::{
+    GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, SetOwnerArgs,
+    SubmitResult, TransactionStatus,
+};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
-use borsh::{BorshDeserialize, BorshSerialize};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
 use std::fmt::{Display, Formatter};
 use std::{path::Path, str::FromStr};
 
-use crate::utils::near_to_yocto;
 use crate::{
     client::Client,
-    utils::{self, hex_to_address, hex_to_arr, hex_to_vec, secret_key_from_hex},
+    utils::{self, hex_to_address, hex_to_arr, hex_to_vec, near_to_yocto, secret_key_from_hex},
 };
+
+pub mod silo;
+
+#[macro_export]
+macro_rules! contract_call {
+    ($method:expr, $success_msg:expr, $error_msg:expr) => {
+        ContractCall {
+            method: $method,
+            success_message: &format!($success_msg),
+            error_message: &format!($error_msg),
+        }
+    };
+}
 
 /// Return `chain_id` of the current network.
 pub async fn get_chain_id(client: Client) -> anyhow::Result<()> {
@@ -96,29 +108,14 @@ pub async fn init(
     custodian_address: Option<String>,
     ft_metadata_path: Option<String>,
 ) -> anyhow::Result<()> {
-    let to_account_id = |id: Option<String>| {
-        id.map_or_else(
-            || {
-                client
-                    .near()
-                    .engine_account_id
-                    .to_string()
-                    .parse()
-                    .map_err(|e| anyhow::anyhow!("{e}"))
-            },
-            |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
-        )
-    };
+    let owner_id = to_account_id(owner_id, &client)?;
+    let prover_id = to_account_id(bridge_prover, &client)?;
 
-    let owner_id = to_account_id(owner_id)?;
-    let prover_id = to_account_id(bridge_prover)?;
-
-    let aurora_init_args = NewCallArgs {
+    let aurora_init_args = NewCallArgs::V2(NewCallArgsV2 {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
-        bridge_prover_id: prover_id.clone(),
         upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
-    }
+    })
     .try_to_vec()?;
 
     let eth_connector_init_args = InitCallArgs {
@@ -323,22 +320,22 @@ pub async fn call(
 pub async fn stage_upgrade<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
 
-    ContractCall {
-        method: "stage_upgrade",
-        success_message: "The code has been saved for staged upgrade successfully",
-        error_message: "Error while staging code for upgrade",
-    }
+    contract_call!(
+        "stage_upgrade",
+        "The code has been saved for staged upgrade successfully",
+        "Error while staging code for upgrade"
+    )
     .proceed(client, code)
     .await
 }
 
 /// Deploy staged upgrade.
 pub async fn deploy_upgrade(client: Client) -> anyhow::Result<()> {
-    ContractCall {
-        method: "deploy_upgrade",
-        success_message: "The upgrade has been applied successfully",
-        error_message: "Error while deploying upgrade",
-    }
+    contract_call!(
+        "deploy_upgrade",
+        "The upgrade has been applied successfully",
+        "Error while deploying upgrade"
+    )
     .proceed(client, vec![])
     .await
 }
@@ -347,11 +344,11 @@ pub async fn deploy_upgrade(client: Client) -> anyhow::Result<()> {
 pub async fn factory_update(client: Client, path: String) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
 
-    ContractCall {
-        method: "factory_update",
-        success_message: "The bytecode of user's router contract has been updated successfully",
-        error_message: "Error while updating the bytecode of user's router contract",
-    }
+    contract_call!(
+        "factory_update",
+        "The bytecode of user's router contract has been updated successfully",
+        "Error while updating the bytecode of user's router contract"
+    )
     .proceed(client, code)
     .await
 }
@@ -360,13 +357,20 @@ pub async fn factory_update(client: Client, path: String) -> anyhow::Result<()> 
 pub async fn factory_set_wnear_address(client: Client, address: String) -> anyhow::Result<()> {
     let args: [u8; 20] = hex_to_arr(&address)?;
 
-    ContractCall {
-        method: "factory_set_wnear_address",
-        success_message: "The wnear address has been set successfully",
-        error_message: "Error while upgrading wnear address",
-    }
+    contract_call!(
+        "factory_set_wnear_address",
+        "The wnear address has been set successfully",
+        "Error while upgrading wnear address"
+    )
     .proceed(client, args.to_vec())
     .await
+}
+
+// TODO: Use it from aurora_engine_types::parameters::xcc module.
+#[derive(Debug, Clone, PartialEq, Eq, BorshDeserialize, BorshSerialize)]
+struct FundXccArgs {
+    pub target: Address,
+    pub wnear_account_id: Option<AccountId>,
 }
 
 /// Create and/or fund an XCC sub-account directly
@@ -384,11 +388,11 @@ pub async fn fund_xcc_sub_account(
     }
     .try_to_vec()?;
 
-    ContractCall {
-        method: "fund_xcc_sub_account",
-        success_message: "The XCC sub-account has been funded successfully",
-        error_message: "Error while funding XCC sub-account",
-    }
+    contract_call!(
+        "fund_xcc_sub_account",
+        "The XCC sub-account has been funded successfully",
+        "Error while funding XCC sub-account"
+    )
     .proceed_with_deposit(client, args, deposit)
     .await
 }
@@ -400,11 +404,11 @@ pub async fn set_owner(client: Client, account_id: String) -> anyhow::Result<()>
     }
     .try_to_vec()?;
 
-    ContractCall {
-        method: "set_owner",
-        success_message: "The owner has been changed successfully",
-        error_message: "Error while setting a new owner",
-    }
+    contract_call!(
+        "set_owner",
+        "The owner has been changed successfully",
+        "Error while setting a new owner"
+    )
     .proceed(client, args)
     .await
 }
@@ -413,11 +417,11 @@ pub async fn set_owner(client: Client, account_id: String) -> anyhow::Result<()>
 pub async fn register_relayer(client: Client, address: String) -> anyhow::Result<()> {
     let args = hex_to_vec(&address)?;
 
-    ContractCall {
-        method: "register_relayer",
-        success_message: "The new relayer has been registered successfully",
-        error_message: "Error while registering a new relayer",
-    }
+    contract_call!(
+        "register_relayer",
+        "The new relayer has been registered successfully",
+        "Error while registering a new relayer"
+    )
     .proceed(client, args)
     .await
 }
@@ -459,11 +463,11 @@ pub fn key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<()> {
 pub async fn pause_precompiles(client: Client, mask: u32) -> anyhow::Result<()> {
     let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
 
-    ContractCall {
-        method: "pause_precompiles",
-        success_message: "The precompiles have been paused successfully",
-        error_message: "Error while pausing precompiles",
-    }
+    contract_call!(
+        "pause_precompiles",
+        "The precompiles have been paused successfully",
+        "Error while pausing precompiles"
+    )
     .proceed(client, args)
     .await
 }
@@ -472,11 +476,11 @@ pub async fn pause_precompiles(client: Client, mask: u32) -> anyhow::Result<()> 
 pub async fn resume_precompiles(client: Client, mask: u32) -> anyhow::Result<()> {
     let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
 
-    ContractCall {
-        method: "resume_precompiles",
-        success_message: "The precompiles have been resumed successfully",
-        error_message: "Error while resuming precompiles",
-    }
+    contract_call!(
+        "resume_precompiles",
+        "The precompiles have been resumed successfully",
+        "Error while resuming precompiles"
+    )
     .proceed(client, args)
     .await
 }
@@ -499,6 +503,20 @@ async fn get_value<T: FromCallResult + Display>(
     println!("{output}");
 
     Ok(())
+}
+
+fn to_account_id(id: Option<String>, client: &Client) -> anyhow::Result<AccountId> {
+    id.map_or_else(
+        || {
+            client
+                .near()
+                .engine_account_id
+                .to_string()
+                .parse()
+                .map_err(|e| anyhow::anyhow!("{e}"))
+        },
+        |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
+    )
 }
 
 struct HexString(String);
