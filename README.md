@@ -186,6 +186,66 @@ aurora-cli --engine aurora.node0 get-balance 0x53a9fed853e02a39bf8d298f751374de8
 aurora-cli --engine aurora.node0 get-storage-at --address 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf --key 0
 ```
 
+### **Silo methods**
+
+Retrieves the current fixed gas cost set in the Silo contract. 
+```shell
+aurora-cli --engine aurora.node0 get-fixed-gas-cost
+```
+Sets the fixed gas cost in the Silo contract to a specific value.
+```shell
+aurora-cli --engine aurora.node0 set-fixed-gas-cost 0
+```
+Check whitelists statuses
+```shell
+aurora-cli --engine aurora.node0 get-whitelist-status admin
+aurora-cli --engine aurora.node0 get-whitelist-status evm-admin
+aurora-cli --engine aurora.node0 get-whitelist-status account
+aurora-cli --engine aurora.node0 get-whitelist-status address
+```
+Add whitelist entry
+```shell
+aurora-cli --engine aurora.node0 add-entry-to-whitelist --kind <whitelist-kind> --entry <entry-value>
+```
+Remove whitelist entry
+```shell
+aurora-cli --engine aurora.node0 remove-entry-from-whitelist --kind <whitelist-kind> --entry <entry-value>
+```
+Disable whitelist status
+```shell
+aurora-cli --engine aurora.node0 set-whitelist-status --kind <whitelist-kind> --status 0
+```
+Replace `<whitelist-kind>` with the desired whitelist type (admin, evm-admin, account, or address), and `<entry-value>` with the address or account to be whitelisted or removed.
+
+
+Add whitelist batch
+```shell
+aurora-cli --engine aurora.node0 add-entry-to-whitelist-batch path/to/batch_list.json
+```
+
+The batch should be provided in a JSON format. Each entry in the JSON array should have two properties: `kind` and either `account_id` or `address`, depending on the type of whitelist being updated.
+
+Example JSON batch file (`batch_list.json`):
+```json
+[
+  {
+    "kind": "Admin",
+    "account_id": "account.near"
+  },
+  {
+    "kind": "EvmAdmin",
+    "address": "0xef5d992c74e531bba6bf92ca1476d8ca4ca1b997"
+  },
+  {
+    "kind": "Account",
+    "account_id": "account1.near"
+  },
+  {
+    "kind": "Address",
+    "address": "0x92f854dadc0526717893da71cb44012fd4b8faac"
+  }
+]
+```
 
 ## Reference
 
@@ -219,7 +279,12 @@ aurora-cli --engine aurora.node0 get-storage-at --address 0x53a9fed853e02a39bf8d
 - [`aurora-cli call`](#aurora-cli-call)
 - [`aurora-cli encode-address`](#aurora-cli-encode-address)
 - [`aurora-cli key-pair`](#aurora-cli-key-pair)
-
+- ['aurora-cli get-whitelist-status'](#aurora-cli-get-whitelist-status)
+- ['aurora-cli set-whitelist-status'](#aurora-cli-set-whitelist-status)
+- ['aurora-cli add-entry-to-whitelist'](#aurora-cli-add-entry-to-whitelist)
+- ['aurora-cli add-entry-to-whitelist-batch'](#aurora-cli-add-entry-to-whitelist-batch)
+- ['aurora-cli remove-entry-from-whitelist'](#aurora-cli-remove-entry-from-whitelist)
+  
 
 ### `aurora-cli help`
 
@@ -698,3 +763,82 @@ Options:
       --seed <SEED>  From seed
   -h, --help         Print help
 ```
+
+  Return a status of the whitelist
+  Set a status for the whitelist
+  Add entry into the whitelist
+  Add entries into the whitelist
+  Remove the entry from the whitelist
+
+### `aurora-cli get-whitelist-status`
+
+```console
+$ aurora-cli help get-whitelist-status
+Return a status of the whitelist
+
+Usage: aurora-cli get-whitelist-status <KIND>
+
+Arguments:
+  <KIND>  Kind of the whitelist
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli set-whitelist-status`
+
+```console
+$ aurora-cli help set-whitelist-status
+Set a status for the whitelist
+
+Usage: aurora-cli set-whitelist-status --kind <KIND> --status <STATUS>
+
+Options:
+      --kind <KIND>      Kind of the whitelist
+      --status <STATUS>  Status of the whitelist, 0/1
+  -h, --help             Print help
+```
+
+### `aurora-cli add-entry-to-whitelist`
+
+```console
+aurora-cli help add-entry-to-whitelist
+Add entry into the whitelist
+
+Usage: aurora-cli add-entry-to-whitelist --kind <KIND> --entry <ENTRY>
+
+Options:
+      --kind <KIND>    Kind of the whitelist
+      --entry <ENTRY>  Entry for adding to the whitelist
+  -h, --help           Print help
+```
+
+### `aurora-cli add-entry-to-whitelist-batch`
+
+```console
+$ aurora-cli help add-entry-to-whitelist-batch
+Add entries into the whitelist
+
+Usage: aurora-cli add-entry-to-whitelist-batch <PATH>
+
+Arguments:
+  <PATH>  Path to JSON file with array of entries
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli remove-entry-from-whitelist`
+
+```console
+$ aurora-cli help remove-entry-from-whitelist
+Remove the entry from the whitelist
+
+Usage: aurora-cli remove-entry-from-whitelist --kind <KIND> --entry <ENTRY>
+
+Options:
+      --kind <KIND>    Kind of the whitelist
+      --entry <ENTRY>  Entry for removing from the whitelist
+  -h, --help           Print help
+```
+
