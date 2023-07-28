@@ -295,36 +295,43 @@ Simple command line interface for communication with Aurora Engine
 Usage: aurora-cli [OPTIONS] <COMMAND>
 
 Commands:
-  create-account             Create new NEAR account
-  view-account               View NEAR account
-  deploy-aurora              Deploy Aurora EVM smart contract
-  init                       Initialize Aurora EVM and ETH connector
-  get-chain-id               Return chain id of the network
-  get-nonce                  Return next nonce for address
-  get-block-hash             Return block hash of the specified height
-  get-code                   Return smart contract's code for contract address
-  get-balance                Return balance for address
-  get-upgrade-index          Return a height for a staged upgrade
-  get-version                Return Aurora EVM version
-  get-owner                  Return Aurora EVM owner
-  set-owner                  Set a new owner of Aurora EVM
-  get-bridge-prover          Return bridge prover
-  get-storage-at             Return a value from storage at address with key
-  register-relayer           Register relayer address
-  pause-precompiles          Pause precompiles
-  resume-precompiles         Resume precompiles
-  paused-precompiles         Return paused precompiles
-  factory-update             Updates the bytecode for user's router contracts
-  factory-set-wnear-address  Sets the address for the `wNEAR` ERC-20 contract
-  fund-xcc-sub-account       Create and/or fund an XCC sub-account directly
-  stage-upgrade              Stage a new code for upgrade
-  deploy-upgrade             Deploy staged upgrade
-  deploy                     Deploy EVM smart contract's code in hex
-  view-call                  Call a view method of the smart contract
-  call                       Call a modified method of the smart contract
-  encode-address             Encode address
-  key-pair                   Return Public and Secret ED25519 keys
-  help                       Print this message or the help of the given subcommand(s)
+  create-account                Create new NEAR account
+  view-account                  View NEAR account
+  deploy-aurora                 Deploy Aurora EVM smart contract
+  init                          Initialize Aurora EVM and ETH connector
+  get-chain-id                  Return chain id of the network
+  get-nonce                     Return next nonce for address
+  get-block-hash                Return block hash of the specified height
+  get-code                      Return smart contract's code for contract address
+  get-balance                   Return balance for address
+  get-upgrade-index             Return a height for a staged upgrade
+  get-version                   Return Aurora EVM version
+  get-owner                     Return Aurora EVM owner
+  set-owner                     Set a new owner of Aurora EVM
+  get-bridge-prover             Return bridge prover
+  get-storage-at                Return a value from storage at address with key
+  register-relayer              Register relayer address
+  pause-precompiles             Pause precompiles
+  resume-precompiles            Resume precompiles
+  paused-precompiles            Return paused precompiles
+  factory-update                Updates the bytecode for user's router contracts
+  factory-set-wnear-address     Sets the address for the `wNEAR` ERC-20 contract
+  fund-xcc-sub-account          Create and/or fund an XCC sub-account directly
+  stage-upgrade                 Stage a new code for upgrade
+  deploy-upgrade                Deploy staged upgrade
+  deploy                        Deploy EVM smart contract's code in hex
+  view-call                     Call a view method of the smart contract
+  call                          Call a modified method of the smart contract
+  encode-address                Encode address
+  key-pair                      Return Public and Secret ED25519 keys
+  get-fixed-gas-cost            Return fixed gas cost
+  set-fixed-gas-cost            Set fixed gas cost
+  get-whitelist-status          Return a status of the whitelist
+  set-whitelist-status          Set a status for the whitelist
+  add-entry-to-whitelist        Add entry into the whitelist
+  add-entry-to-whitelist-batch  Add entries into the whitelist
+  remove-entry-from-whitelist   Remove the entry from the whitelist
+  help                          Print this message or the help of the given subcommand(s)
 
 Options:
       --network <NETWORK>              NEAR network ID [default: localnet]
