@@ -1,7 +1,7 @@
-#[cfg(feature = "advanced")]
-use aurora_engine::parameters::SubmitResult;
 #[cfg(feature = "simple")]
 use aurora_engine_types::account_id::AccountId;
+#[cfg(feature = "advanced")]
+use aurora_engine_types::parameters::engine::SubmitResult;
 #[cfg(feature = "advanced")]
 use aurora_engine_types::H256;
 #[cfg(feature = "advanced")]

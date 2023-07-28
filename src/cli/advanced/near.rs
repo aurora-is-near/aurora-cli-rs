@@ -2,8 +2,10 @@ use crate::{
     config::{Config, Network},
     utils,
 };
-use aurora_engine::parameters::{
-    DeployErc20TokenArgs, GetStorageAtArgs, InitCallArgs, NewCallArgs, PauseEthConnectorCallArgs,
+use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
+use aurora_engine_types::parameters::connector::InitCallArgs;
+use aurora_engine_types::parameters::engine::{
+    DeployErc20TokenArgs, GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PauseEthConnectorCallArgs,
     SubmitResult, TransactionStatus,
 };
 use aurora_engine_types::{
@@ -12,7 +14,6 @@ use aurora_engine_types::{
     types::{Address, NearGas, Wei, Yocto},
     H256, U256,
 };
-use borsh::{BorshDeserialize, BorshSerialize};
 use clap::Subcommand;
 use near_primitives::{
     account::{AccessKey, Account},
@@ -465,14 +466,13 @@ pub async fn execute_command(
                     .unwrap_or_default();
                 let metadata = utils::ft_metadata::parse_ft_metadata(ft_metadata)?;
 
-                let new_args = NewCallArgs {
+                let new_args = NewCallArgs::V2(NewCallArgsV2 {
                     chain_id: aurora_engine_types::types::u256_to_arr(&U256::from(chain_id)),
                     owner_id: owner_id
                         .parse()
                         .map_err(|_| anyhow::anyhow!("Owner account is an invalid Near account"))?,
-                    bridge_prover_id: prover_account.clone(),
                     upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
-                };
+                });
 
                 let init_args = InitCallArgs {
                     prover_account,
