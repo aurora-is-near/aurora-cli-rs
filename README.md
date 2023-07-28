@@ -279,11 +279,11 @@ Example JSON batch file (`batch_list.json`):
 - [`aurora-cli call`](#aurora-cli-call)
 - [`aurora-cli encode-address`](#aurora-cli-encode-address)
 - [`aurora-cli key-pair`](#aurora-cli-key-pair)
-- ['aurora-cli get-whitelist-status'](#aurora-cli-get-whitelist-status)
-- ['aurora-cli set-whitelist-status'](#aurora-cli-set-whitelist-status)
-- ['aurora-cli add-entry-to-whitelist'](#aurora-cli-add-entry-to-whitelist)
-- ['aurora-cli add-entry-to-whitelist-batch'](#aurora-cli-add-entry-to-whitelist-batch)
-- ['aurora-cli remove-entry-from-whitelist'](#aurora-cli-remove-entry-from-whitelist)
+- [`aurora-cli get-whitelist-status`](#aurora-cli-get-whitelist-status)
+- [`aurora-cli set-whitelist-status`](#aurora-cli-set-whitelist-status)
+- [`aurora-cli add-entry-to-whitelist`](#aurora-cli-add-entry-to-whitelist)
+- [`aurora-cli add-entry-to-whitelist-batch`](#aurora-cli-add-entry-to-whitelist-batch)
+- [`aurora-cli remove-entry-from-whitelist`](#aurora-cli-remove-entry-from-whitelist)
   
 
 ### `aurora-cli help`
