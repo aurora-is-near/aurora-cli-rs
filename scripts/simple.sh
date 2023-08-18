@@ -2,8 +2,8 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
-AURORA_PREV_VERSION="2.9.1"
-AURORA_LAST_VERSION="2.9.2"
+AURORA_PREV_VERSION="2.9.3"
+AURORA_LAST_VERSION="2.10.0"
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
 ENGINE_PREV_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_PREV_VERSION/aurora-mainnet.wasm"
@@ -14,8 +14,11 @@ XCC_ROUTER_WASM_PATH="/tmp/aurora-factory-mainnet.wasm"
 USER_BASE_BIN=$(python3 -m site --user-base)/bin
 NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
 AURORA_KEY_PATH=$NEARCORE_HOME/node0/aurora_key.json
+MANAGER_KEY_PATH=$NEARCORE_HOME/node0/manager_key.json
+RELAYER_KEY_PATH=$NEARCORE_HOME/node0/relayer_key.json
 AURORA_SECRET_KEY=27cb3ddbd18037b38d7fb9ae3433a9d6f5cd554a4ba5768c8a15053f688ee167
 ENGINE_ACCOUNT=aurora.node0
+MANAGER_ACCOUNT=key-manager.aurora.node0
 
 export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
 
@@ -90,15 +93,52 @@ aurora-cli --engine $ENGINE_ACCOUNT init \
   --ft-metadata-path docs/res/ft_metadata.json || error_exit
 sleep 2
 
-# Deploy Hello World EVM code.
-aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --aurora-secret-key $AURORA_SECRET_KEY || error_exit
+# Upgrading Aurora EVM to 2.10.0.
+version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
+assert_eq "$version" $AURORA_PREV_VERSION
+echo "$version"
+curl -sL $ENGINE_LAST_WASM_URL -o $ENGINE_WASM_PATH || error_exit
+aurora-cli --engine $ENGINE_ACCOUNT stage-upgrade $ENGINE_WASM_PATH || error_exit
+sleep 2
+aurora-cli --engine $ENGINE_ACCOUNT deploy-upgrade || error_exit
+sleep 1
+version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
+assert_eq "$version" $AURORA_LAST_VERSION
+echo "$version"
+
+# Create account id for key manager
+aurora-cli create-account --account $MANAGER_ACCOUNT --balance 10 > $MANAGER_KEY_PATH || error_exit
+sleep 1
+
+# Set key manager
+aurora-cli --engine $ENGINE_ACCOUNT set-key-manager $MANAGER_ACCOUNT || error_exit
+sleep 1
+
+# Create new keys for relayer
+aurora-cli generate-near-key $ENGINE_ACCOUNT ed25519 > $RELAYER_KEY_PATH || error_exit
+relayer_public_key="$(jq -r .public_key < $RELAYER_KEY_PATH)"
+
+# Add relayer key by key manager
+export NEAR_KEY_PATH=$MANAGER_KEY_PATH
+aurora-cli --engine $ENGINE_ACCOUNT add-relayer-key --public-key "$relayer_public_key" --allowance "0.5" || error_exit
+sleep 1
+
+# Deploy Hello World EVM code with relayer key.
+export NEAR_KEY_PATH=$RELAYER_KEY_PATH
+aurora-cli --engine $ENGINE_ACCOUNT deploy --code "$EVM_CODE" --aurora-secret-key $AURORA_SECRET_KEY || error_exit
 sleep 1
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f greet \
   --abi-path $ABI_PATH || error_exit)
 assert_eq "$result" "Hello, World!"
 sleep 1
 
+# Remove relayer key
+export NEAR_KEY_PATH=$MANAGER_KEY_PATH
+aurora-cli --engine $ENGINE_ACCOUNT remove-relayer-key "$relayer_public_key" || error_exit
+sleep 1
+
 # Deploy Counter EVM code.
+export NEAR_KEY_PATH=$AURORA_KEY_PATH
 EVM_CODE=$(cat docs/res/Counter.hex)
 ABI_PATH=docs/res/Counter.abi
 aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --abi-path $ABI_PATH --args '{"init_value":"5"}' \
@@ -127,9 +167,6 @@ sleep 1
 
 # Check read operations.
 aurora-cli --engine $ENGINE_ACCOUNT get-chain-id || error_exit
-version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
-assert_eq "$version" $AURORA_PREV_VERSION
-echo "$version"
 aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT get-bridge-prover || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT get-balance 0x04b678962787ccd195a8e324d4c6bc4d5727f82b || error_exit
@@ -141,16 +178,6 @@ assert_eq "$block_hash" "0xd31857e9ce14083a7a74092b71f9ac48b8c0d4988ad40074182c1
 # Register a new relayer address
 aurora-cli --engine $ENGINE_ACCOUNT register-relayer 0xf644ad75e048eaeb28844dd75bd384984e8cd508 || error_exit
 sleep 1
-
-# Upgrading Aurora EVM to 2.9.0.
-curl -sL $ENGINE_LAST_WASM_URL -o $ENGINE_WASM_PATH || error_exit
-aurora-cli --engine $ENGINE_ACCOUNT stage-upgrade $ENGINE_WASM_PATH || error_exit
-sleep 2
-aurora-cli --engine $ENGINE_ACCOUNT deploy-upgrade || error_exit
-sleep 1
-version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
-assert_eq "$version" $AURORA_LAST_VERSION
-echo "$version"
 
 # Set a new owner. The functionality has not been released yet.
 aurora-cli --engine $ENGINE_ACCOUNT set-owner node0 || error_exit
