@@ -10,7 +10,7 @@ on:
 jobs:
   shell_tests:
     name: Tests ${{ matrix.interface }} CLI
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, heavy]
     strategy:
       matrix:
         interface: [ Advanced, Simple, Silo ]
