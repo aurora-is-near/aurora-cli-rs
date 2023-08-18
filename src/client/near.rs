@@ -27,6 +27,7 @@ use crate::utils;
 
 // The maximum amount of prepaid NEAR gas required for paying for a transaction.
 const NEAR_GAS: u64 = 300_000_000_000_000;
+const TIMEOUT: u64 = 20;
 
 pub struct NearClient {
     client: JsonRpcClient,
@@ -36,7 +37,19 @@ pub struct NearClient {
 
 impl NearClient {
     pub fn new<U: AsUrl>(url: U, engine_account_id: &str, signer_key_path: Option<String>) -> Self {
-        let client = JsonRpcClient::connect(url);
+        let mut headers = reqwest::header::HeaderMap::with_capacity(2);
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            reqwest::header::HeaderValue::from_static("application/json"),
+        );
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(TIMEOUT))
+            .default_headers(headers)
+            .build()
+            .map(JsonRpcClient::with)
+            .expect("couldn't create json rpc client");
+        let client = client.connect(url);
+
         Self {
             client,
             engine_account_id: engine_account_id.parse().unwrap(),
