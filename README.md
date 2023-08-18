@@ -186,6 +186,66 @@ aurora-cli --engine aurora.node0 get-balance 0x53a9fed853e02a39bf8d298f751374de8
 aurora-cli --engine aurora.node0 get-storage-at --address 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf --key 0
 ```
 
+### **Silo methods**
+
+Retrieves the current fixed gas cost set in the Silo contract. 
+```shell
+aurora-cli --engine aurora.node0 get-fixed-gas-cost
+```
+Sets the fixed gas cost in the Silo contract to a specific value.
+```shell
+aurora-cli --engine aurora.node0 set-fixed-gas-cost 0
+```
+Check whitelists statuses
+```shell
+aurora-cli --engine aurora.node0 get-whitelist-status admin
+aurora-cli --engine aurora.node0 get-whitelist-status evm-admin
+aurora-cli --engine aurora.node0 get-whitelist-status account
+aurora-cli --engine aurora.node0 get-whitelist-status address
+```
+Add whitelist entry
+```shell
+aurora-cli --engine aurora.node0 add-entry-to-whitelist --kind <whitelist-kind> --entry <entry-value>
+```
+Remove whitelist entry
+```shell
+aurora-cli --engine aurora.node0 remove-entry-from-whitelist --kind <whitelist-kind> --entry <entry-value>
+```
+Disable whitelist status
+```shell
+aurora-cli --engine aurora.node0 set-whitelist-status --kind <whitelist-kind> --status 0
+```
+Replace `<whitelist-kind>` with the desired whitelist type (admin, evm-admin, account, or address), and `<entry-value>` with the address or account to be whitelisted or removed.
+
+
+Add whitelist batch
+```shell
+aurora-cli --engine aurora.node0 add-entry-to-whitelist-batch path/to/batch_list.json
+```
+
+The batch should be provided in a JSON format. Each entry in the JSON array should have two properties: `kind` and either `account_id` or `address`, depending on the type of whitelist being updated.
+
+Example JSON batch file (`batch_list.json`):
+```json
+[
+  {
+    "kind": "Admin",
+    "account_id": "account.near"
+  },
+  {
+    "kind": "EvmAdmin",
+    "address": "0xef5d992c74e531bba6bf92ca1476d8ca4ca1b997"
+  },
+  {
+    "kind": "Account",
+    "account_id": "account1.near"
+  },
+  {
+    "kind": "Address",
+    "address": "0x92f854dadc0526717893da71cb44012fd4b8faac"
+  }
+]
+```
 
 ## Reference
 
@@ -219,7 +279,12 @@ aurora-cli --engine aurora.node0 get-storage-at --address 0x53a9fed853e02a39bf8d
 - [`aurora-cli call`](#aurora-cli-call)
 - [`aurora-cli encode-address`](#aurora-cli-encode-address)
 - [`aurora-cli key-pair`](#aurora-cli-key-pair)
-
+- [`aurora-cli get-whitelist-status`](#aurora-cli-get-whitelist-status)
+- [`aurora-cli set-whitelist-status`](#aurora-cli-set-whitelist-status)
+- [`aurora-cli add-entry-to-whitelist`](#aurora-cli-add-entry-to-whitelist)
+- [`aurora-cli add-entry-to-whitelist-batch`](#aurora-cli-add-entry-to-whitelist-batch)
+- [`aurora-cli remove-entry-from-whitelist`](#aurora-cli-remove-entry-from-whitelist)
+  
 
 ### `aurora-cli help`
 
@@ -230,36 +295,43 @@ Simple command line interface for communication with Aurora Engine
 Usage: aurora-cli [OPTIONS] <COMMAND>
 
 Commands:
-  create-account             Create new NEAR account
-  view-account               View NEAR account
-  deploy-aurora              Deploy Aurora EVM smart contract
-  init                       Initialize Aurora EVM and ETH connector
-  get-chain-id               Return chain id of the network
-  get-nonce                  Return next nonce for address
-  get-block-hash             Return block hash of the specified height
-  get-code                   Return smart contract's code for contract address
-  get-balance                Return balance for address
-  get-upgrade-index          Return a height for a staged upgrade
-  get-version                Return Aurora EVM version
-  get-owner                  Return Aurora EVM owner
-  set-owner                  Set a new owner of Aurora EVM
-  get-bridge-prover          Return bridge prover
-  get-storage-at             Return a value from storage at address with key
-  register-relayer           Register relayer address
-  pause-precompiles          Pause precompiles
-  resume-precompiles         Resume precompiles
-  paused-precompiles         Return paused precompiles
-  factory-update             Updates the bytecode for user's router contracts
-  factory-set-wnear-address  Sets the address for the `wNEAR` ERC-20 contract
-  fund-xcc-sub-account       Create and/or fund an XCC sub-account directly
-  stage-upgrade              Stage a new code for upgrade
-  deploy-upgrade             Deploy staged upgrade
-  deploy                     Deploy EVM smart contract's code in hex
-  view-call                  Call a view method of the smart contract
-  call                       Call a modified method of the smart contract
-  encode-address             Encode address
-  key-pair                   Return Public and Secret ED25519 keys
-  help                       Print this message or the help of the given subcommand(s)
+  create-account                Create new NEAR account
+  view-account                  View NEAR account
+  deploy-aurora                 Deploy Aurora EVM smart contract
+  init                          Initialize Aurora EVM and ETH connector
+  get-chain-id                  Return chain id of the network
+  get-nonce                     Return next nonce for address
+  get-block-hash                Return block hash of the specified height
+  get-code                      Return smart contract's code for contract address
+  get-balance                   Return balance for address
+  get-upgrade-index             Return a height for a staged upgrade
+  get-version                   Return Aurora EVM version
+  get-owner                     Return Aurora EVM owner
+  set-owner                     Set a new owner of Aurora EVM
+  get-bridge-prover             Return bridge prover
+  get-storage-at                Return a value from storage at address with key
+  register-relayer              Register relayer address
+  pause-precompiles             Pause precompiles
+  resume-precompiles            Resume precompiles
+  paused-precompiles            Return paused precompiles
+  factory-update                Updates the bytecode for user's router contracts
+  factory-set-wnear-address     Sets the address for the `wNEAR` ERC-20 contract
+  fund-xcc-sub-account          Create and/or fund an XCC sub-account directly
+  stage-upgrade                 Stage a new code for upgrade
+  deploy-upgrade                Deploy staged upgrade
+  deploy                        Deploy EVM smart contract's code in hex
+  view-call                     Call a view method of the smart contract
+  call                          Call a modified method of the smart contract
+  encode-address                Encode address
+  key-pair                      Return Public and Secret ED25519 keys
+  get-fixed-gas-cost            Return fixed gas cost
+  set-fixed-gas-cost            Set fixed gas cost
+  get-whitelist-status          Return a status of the whitelist
+  set-whitelist-status          Set a status for the whitelist
+  add-entry-to-whitelist        Add entry into the whitelist
+  add-entry-to-whitelist-batch  Add entries into the whitelist
+  remove-entry-from-whitelist   Remove the entry from the whitelist
+  help                          Print this message or the help of the given subcommand(s)
 
 Options:
       --network <NETWORK>              NEAR network ID [default: localnet]
@@ -698,3 +770,83 @@ Options:
       --seed <SEED>  From seed
   -h, --help         Print help
 ```
+
+  Return a status of the whitelist
+  Set a status for the whitelist
+  Add entry into the whitelist
+  Add entries into the whitelist
+  Remove the entry from the whitelist
+
+### `aurora-cli get-whitelist-status`
+
+```console
+$ aurora-cli help get-whitelist-status
+Return a status of the whitelist
+
+Usage: aurora-cli get-whitelist-status <KIND>
+
+Arguments:
+  <KIND>  Kind of the whitelist
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli set-whitelist-status`
+
+```console
+$ aurora-cli help set-whitelist-status
+Set a status for the whitelist
+
+Usage: aurora-cli set-whitelist-status --kind <KIND> --status <STATUS>
+
+Options:
+      --kind <KIND>      Kind of the whitelist
+      --status <STATUS>  Status of the whitelist, 0/1
+  -h, --help             Print help
+```
+
+### `aurora-cli add-entry-to-whitelist`
+
+```console
+aurora-cli help add-entry-to-whitelist
+Add entry into the whitelist
+
+Usage: aurora-cli add-entry-to-whitelist --kind <KIND> --entry <ENTRY>
+
+Options:
+      --kind <KIND>    Kind of the whitelist
+      --entry <ENTRY>  Entry for adding to the whitelist
+  -h, --help           Print help
+```
+
+### `aurora-cli add-entry-to-whitelist-batch`
+
+```console
+$ aurora-cli help add-entry-to-whitelist-batch
+Add entries into the whitelist
+
+Usage: aurora-cli add-entry-to-whitelist-batch <PATH>
+
+Arguments:
+  <PATH>  Path to JSON file with array of entries
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli remove-entry-from-whitelist`
+
+```console
+$ aurora-cli help remove-entry-from-whitelist
+Remove the entry from the whitelist
+
+Usage: aurora-cli remove-entry-from-whitelist --kind <KIND> --entry <ENTRY>
+
+Options:
+      --kind <KIND>    Kind of the whitelist
+      --entry <ENTRY>  Entry for removing from the whitelist
+  -h, --help           Print help
+```
+
+
