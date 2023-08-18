@@ -246,17 +246,16 @@ dependencies = [
 [[package]]
 name = "aurora-engine-modexp"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#41aa01baffaddc3930b9542c7987b953f962459e"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=silo-2.10.2#72ecee76617c3aa73625daf333c5b0aaf8b13a13"
 dependencies = [
  "hex",
- "ibig",
  "num",
 ]
 
 [[package]]
 name = "aurora-engine-precompiles"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#41aa01baffaddc3930b9542c7987b953f962459e"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=silo-2.10.2#72ecee76617c3aa73625daf333c5b0aaf8b13a13"
 dependencies = [
  "aurora-engine-modexp",
  "aurora-engine-sdk",
@@ -275,7 +274,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-sdk"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#41aa01baffaddc3930b9542c7987b953f962459e"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=silo-2.10.2#72ecee76617c3aa73625daf333c5b0aaf8b13a13"
 dependencies = [
  "aurora-engine-types",
  "base64 0.21.2",
@@ -286,7 +285,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-transactions"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#41aa01baffaddc3930b9542c7987b953f962459e"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=silo-2.10.2#72ecee76617c3aa73625daf333c5b0aaf8b13a13"
 dependencies = [
  "aurora-engine-precompiles",
  "aurora-engine-sdk",
@@ -298,7 +297,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-types"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?branch=feat/aleksuss/silo#41aa01baffaddc3930b9542c7987b953f962459e"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=silo-2.10.2#72ecee76617c3aa73625daf333c5b0aaf8b13a13"
 dependencies = [
  "base64 0.21.2",
  "borsh 0.10.3",
@@ -1467,17 +1466,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f31827a206f56af32e590ba56d5d2d085f558508192593743f16b2306495269f"
 dependencies = [
  "cc",
-]
-
-[[package]]
-name = "ibig"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1fcc7f316b2c079dde77564a1360639c1a956a23fa96122732e416cb10717bb"
-dependencies = [
- "cfg-if",
- "num-traits",
- "static_assertions",
 ]
 
 [[package]]
