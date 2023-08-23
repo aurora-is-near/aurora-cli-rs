@@ -76,7 +76,7 @@ Then we can use this CLI to deploy the engine:
 ```shell
 aurora-cli near write engine-init -w $ENGINE_WASM_PATH
 ```
-
+    
 ## Using the localnet
 
 After completing the setup above you can use this CLI to interact with it just like you would the testnet or mainnet.
@@ -103,5 +103,3 @@ aurora-cli near \
 
 [String("Hello, World!")]
 ```
-
-
