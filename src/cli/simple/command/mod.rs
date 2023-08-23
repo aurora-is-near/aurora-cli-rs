@@ -3,9 +3,10 @@ use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::borsh::{self, BorshDeserialize, BorshSerialize};
 use aurora_engine_types::parameters::connector::InitCallArgs;
 use aurora_engine_types::parameters::engine::{
-    GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, SetOwnerArgs,
-    SubmitResult, TransactionStatus,
+    GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs,
+    RelayerKeyManagerArgs, SetOwnerArgs, SubmitResult, TransactionStatus,
 };
+use aurora_engine_types::public_key::{KeyType, PublicKey};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
@@ -459,6 +460,24 @@ pub fn key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Return randomly generated content of the key file for `AccountId`.
+pub fn gen_near_key(account_id: &str, key_type: KeyType) -> anyhow::Result<()> {
+    let near_key_type = near_crypto::KeyType::try_from(u8::from(key_type))?;
+    let secret_key = near_crypto::SecretKey::from_random(near_key_type);
+    let public_key = secret_key.public_key();
+
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "account_id": account_id,
+            "public_key": public_key,
+            "secret_key": secret_key
+        }))?
+    );
+
+    Ok(())
+}
+
 /// Pause precompiles with mask.
 pub async fn pause_precompiles(client: Client, mask: u32) -> anyhow::Result<()> {
     let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
@@ -488,6 +507,53 @@ pub async fn resume_precompiles(client: Client, mask: u32) -> anyhow::Result<()>
 /// Return paused precompiles.
 pub async fn paused_precompiles(client: Client) -> anyhow::Result<()> {
     get_value::<u32>(client, "paused_precompiles", None).await
+}
+
+/// Set relayer key manager.
+pub async fn set_key_manager(client: Client, key_manager: Option<AccountId>) -> anyhow::Result<()> {
+    let message = key_manager.as_ref().map_or_else(
+        || "has been removed".to_string(),
+        |account_id| format!("{account_id} has been set"),
+    );
+    let args = serde_json::to_vec(&RelayerKeyManagerArgs { key_manager })?;
+
+    contract_call!(
+        "set_key_manager",
+        "The key manager {message} successfully",
+        "Error while setting key manager"
+    )
+    .proceed(client, args)
+    .await
+}
+
+/// Add relayer public key.
+pub async fn add_relayer_key(
+    client: Client,
+    public_key: PublicKey,
+    allowance: f64,
+) -> anyhow::Result<()> {
+    let args = serde_json::to_vec(&RelayerKeyArgs { public_key })?;
+
+    contract_call!(
+        "add_relayer_key",
+        "The public key: {public_key} has been added successfully",
+        "Error while adding public key"
+    )
+    .proceed_with_deposit(client, args, allowance)
+    .await
+}
+
+/// Remove relayer public key.
+pub async fn remove_relayer_key(client: Client, public_key: PublicKey) -> anyhow::Result<()> {
+    let args = serde_json::to_vec(&RelayerKeyArgs { public_key })?;
+
+    contract_call!(
+        "remove_relayer_key",
+        "The public key: {public_key} has been removed successfully",
+        "Error while removing public key"
+    )
+    .proceed(client, args)
+    .await
 }
 
 async fn get_value<T: FromCallResult + Display>(

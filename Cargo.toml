@@ -19,10 +19,10 @@ simple = []
 advanced = []
 
 [dependencies]
-aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", branch = "feat/aleksuss/silo", features = ["std"] }
-aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", branch = "feat/aleksuss/silo", features = ["std"] }
-aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", branch = "feat/aleksuss/silo", features = ["std"] }
-aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", branch = "feat/aleksuss/silo", features = ["std", "impl-serde"] }
+aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "silo-2.10.2", features = ["std"] }
+aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "silo-2.10.2", features = ["std"] }
+aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "silo-2.10.2", features = ["std"] }
+aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "silo-2.10.2", features = ["std", "impl-serde"] }
 
 anyhow = "1"
 bs58 = "0.5"

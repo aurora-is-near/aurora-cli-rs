@@ -3,10 +3,10 @@ use crate::{
     utils,
 };
 use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
-use aurora_engine_types::parameters::connector::InitCallArgs;
+use aurora_engine_types::parameters::connector::{InitCallArgs, PauseEthConnectorCallArgs};
 use aurora_engine_types::parameters::engine::{
-    DeployErc20TokenArgs, GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PauseEthConnectorCallArgs,
-    SubmitResult, TransactionStatus,
+    DeployErc20TokenArgs, GetStorageAtArgs, NewCallArgs, NewCallArgsV2, SubmitResult,
+    TransactionStatus,
 };
 use aurora_engine_types::{
     account_id::AccountId,
