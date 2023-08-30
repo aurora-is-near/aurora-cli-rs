@@ -86,7 +86,8 @@ sleep 2
 result=$(aurora-cli --engine $ENGINE_ACCOUNT get-fixed-gas-cost || error_exit)
 assert_eq "none" "$result"
 # Set fixed gas cost
-aurora-cli --engine $ENGINE_ACCOUNT set-fixed-gas-cost 0 || error_exit
+aurora-cli --engine $ENGINE_ACCOUNT set-silo-params --cost 0 --rollback-address \
+  0x7e5f4552091a69125d5dfcb7b8c2659029395bdf || error_exit
 sleep 1
 # Get fixed gas cost
 result=$(aurora-cli --engine $ENGINE_ACCOUNT get-fixed-gas-cost || error_exit)

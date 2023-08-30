@@ -43,7 +43,7 @@ pub enum Command {
         /// AccountId
         #[arg(long, short)]
         account: String,
-        /// Initial account balance in NEAR  
+        /// Initial account balance in NEAR
         #[arg(long, short)]
         balance: f64,
     },
@@ -205,6 +205,15 @@ pub enum Command {
     SetFixedGasCost {
         /// Fixed gas cost in Wei.
         cost: u128,
+    },
+    /// Set SILO params.
+    SetSiloParams {
+        /// Fixed gas cost in Wei.
+        #[arg(long, short)]
+        cost: u128,
+        /// Rollback EVM address.
+        #[arg(long, short)]
+        rollback_address: String,
     },
     /// Return a status of the whitelist
     GetWhitelistStatus {
@@ -392,6 +401,12 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::GetFixedGasCost => command::silo::get_fixed_gas_cost(client).await?,
         Command::SetFixedGasCost { cost } => {
             command::silo::set_fixed_gas_cost(client, cost).await?;
+        }
+        Command::SetSiloParams {
+            cost,
+            rollback_address,
+        } => {
+            command::silo::set_silo_params(client, cost, rollback_address).await?;
         }
         Command::GetWhitelistStatus { kind } => {
             command::silo::get_whitelist_status(client, kind).await?;

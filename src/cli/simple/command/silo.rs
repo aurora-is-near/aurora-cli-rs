@@ -1,7 +1,7 @@
 use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
 use aurora_engine_types::parameters::silo::{
-    FixedGasCostArgs, WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs, WhitelistKind,
-    WhitelistKindArgs, WhitelistStatusArgs,
+    FixedGasCostArgs, SiloParamsArgs, WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs,
+    WhitelistKind, WhitelistKindArgs, WhitelistStatusArgs,
 };
 use aurora_engine_types::types::Wei;
 use near_primitives::views::CallResult;
@@ -29,6 +29,26 @@ pub async fn set_fixed_gas_cost(client: Client, cost: u128) -> anyhow::Result<()
         "set_fixed_gas_cost",
         "The fixed gas cost: {cost} has been set successfully",
         "Error while setting gas cost"
+    )
+    .proceed(client, args)
+    .await
+}
+
+pub async fn set_silo_params(
+    client: Client,
+    cost: u128,
+    rollback_address: String,
+) -> anyhow::Result<()> {
+    let args = Some(SiloParamsArgs {
+        fixed_gas_cost: Wei::new_u128(cost),
+        erc20_fallback_address: hex_to_address(&rollback_address)?,
+    })
+    .try_to_vec()?;
+
+    contract_call!(
+        "set_silo_params",
+        "The silo parameters have been set successfully",
+        "Error while setting silo parameters"
     )
     .proceed(client, args)
     .await
