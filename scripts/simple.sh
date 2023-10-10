@@ -2,8 +2,8 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
-AURORA_PREV_VERSION="2.9.3"
-AURORA_LAST_VERSION="2.10.0"
+AURORA_PREV_VERSION="2.10.2"
+AURORA_LAST_VERSION="3.1.0"
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
 ENGINE_PREV_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_PREV_VERSION/aurora-mainnet.wasm"
@@ -67,7 +67,7 @@ assert_eq() {
 start_node
 sleep 1
 
-# Download Aurora EVM 2.8.1.
+# Download Aurora EVM.
 curl -sL $ENGINE_PREV_WASM_URL -o $ENGINE_WASM_PATH || error_exit
 
 export NEAR_KEY_PATH=$NODE_KEY_PATH
@@ -216,6 +216,14 @@ sleep 1
 aurora-cli --engine $ENGINE_ACCOUNT factory-set-wnear-address 0x80c6a002756e29b8bf2a587f7d975a726d5de8b9 || error_exit
 sleep 1
 aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
+
+# Change upgrade delay blocks.
+blocks=$(aurora-cli --engine $ENGINE_ACCOUNT get-upgrade-delay-blocks || error_exit)
+assert_eq "$blocks" 1 # 1 is set on init stage
+aurora-cli --engine $ENGINE_ACCOUNT set-upgrade-delay-blocks 5 || error_exit
+sleep 1
+blocks=$(aurora-cli --engine $ENGINE_ACCOUNT get-upgrade-delay-blocks || error_exit)
+assert_eq "$blocks" 5
 
 # Stop NEAR node and clean up.
 finish
