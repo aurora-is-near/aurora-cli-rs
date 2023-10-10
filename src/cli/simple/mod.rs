@@ -278,7 +278,7 @@ pub enum Command {
     SetUpgradeDelayBlocks {
         /// Number blocks
         blocks: u64,
-    }
+    },
 }
 
 #[derive(Clone)]

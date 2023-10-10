@@ -2,7 +2,11 @@ use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::borsh::{self, BorshDeserialize, BorshSerialize};
 use aurora_engine_types::parameters::connector::InitCallArgs;
-use aurora_engine_types::parameters::engine::{GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, SubmitResult, TransactionStatus};
+use aurora_engine_types::parameters::engine::{
+    GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs,
+    RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, SubmitResult,
+    TransactionStatus,
+};
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
@@ -562,15 +566,16 @@ pub async fn remove_relayer_key(client: Client, public_key: PublicKey) -> anyhow
 pub async fn set_upgrade_delay_blocks(client: Client, blocks: u64) -> anyhow::Result<()> {
     let args = SetUpgradeDelayBlocksArgs {
         upgrade_delay_blocks: blocks,
-    }.try_to_vec()?;
+    }
+    .try_to_vec()?;
 
     contract_call!(
         "set_upgrade_delay_blocks",
         "Upgrade delay blocks: {blocks} has been set successfully",
         "Error while setting upgrade delay blocks"
     )
-        .proceed(client, args)
-        .await
+    .proceed(client, args)
+    .await
 }
 
 async fn get_value<T: FromCallResult + Display>(
