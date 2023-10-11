@@ -272,6 +272,13 @@ pub enum Command {
         /// Public key
         public_key: PublicKey,
     },
+    /// Get delay for upgrade in blocks
+    GetUpgradeDelayBlocks,
+    /// Set delay for upgrade in blocks
+    SetUpgradeDelayBlocks {
+        /// Number blocks
+        blocks: u64,
+    },
 }
 
 #[derive(Clone)]
@@ -434,6 +441,12 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::RemoveRelayerKey { public_key } => {
             command::remove_relayer_key(client, public_key).await?;
+        }
+        Command::GetUpgradeDelayBlocks => {
+            command::get_upgrade_delay_blocks(client).await?;
+        }
+        Command::SetUpgradeDelayBlocks { blocks } => {
+            command::set_upgrade_delay_blocks(client, blocks).await?;
         }
     }
 
