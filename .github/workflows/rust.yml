@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Run rustfmt
         uses: actions-rs/cargo@v1
         with:
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Run clippy simple
         uses: actions-rs/clippy-check@v1
         with:
@@ -52,7 +52,7 @@ jobs:
             os: windows-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Run tests simple
         uses: actions-rs/cargo@v1
         with:

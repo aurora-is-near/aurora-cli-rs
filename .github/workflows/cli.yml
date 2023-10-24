@@ -26,7 +26,7 @@ jobs:
             script: scripts/simple-silo.sh
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install aurora-cli (Advanced CLI)
         uses: actions-rs/cargo@v1
         with:

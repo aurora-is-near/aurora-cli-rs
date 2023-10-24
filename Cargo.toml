@@ -3,7 +3,7 @@ name = "aurora-cli-rs"
 version = "0.1.0"
 authors = ["Aurora Labs <hello@aurora.dev>"]
 edition = "2021"
-rust-version = "1.69.0"
+rust-version = "1.70.0"
 homepage = "https://github.com/aurora-is-near/aurora-cli-rs"
 repository = "https://github.com/aurora-is-near/aurora-cli-rs"
 description = "Aurora CLI is a command line interface to bootstrap Aurora engine"
@@ -19,10 +19,10 @@ simple = []
 advanced = []
 
 [dependencies]
-aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "silo-2.10.2", features = ["std"] }
-aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "silo-2.10.2", features = ["std"] }
-aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "silo-2.10.2", features = ["std"] }
-aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "silo-2.10.2", features = ["std", "impl-serde"] }
+aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.3.0", features = ["std"] }
+aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.3.0", features = ["std"] }
+aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.3.0", features = ["std"] }
+aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.3.0", features = ["std", "impl-serde"] }
 
 anyhow = "1"
 bs58 = "0.5"
@@ -41,12 +41,9 @@ rand = "0.8"
 rlp = "0.5.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-shadow-rs = "0.23"
+shadow-rs = "0.24"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 
-[dev-dependencies]
-rand = "0.8"
-
 [build-dependencies]
-shadow-rs = "0.23"
+shadow-rs = "0.24"
