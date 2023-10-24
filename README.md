@@ -10,7 +10,7 @@
 <br />
 
 [![CI](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml)
-![rust 1.68.2+ required](https://img.shields.io/badge/rust-1.68.2+-blue.svg?label=MSRV)
+![rust 1.70.0+ required](https://img.shields.io/badge/rust-1.70.0+-blue.svg?label=MSRV)
 
 ## What is Engine?
 
@@ -188,13 +188,13 @@ aurora-cli --engine aurora.node0 get-storage-at --address 0x53a9fed853e02a39bf8d
 
 ### **Silo methods**
 
-Retrieves the current fixed gas cost set in the Silo contract. 
+Retrieves the current fixed gas set in the Silo contract. 
 ```shell
-aurora-cli --engine aurora.node0 get-fixed-gas-cost
+aurora-cli --engine aurora.node0 get-fixed-gas
 ```
-Sets the fixed gas cost in the Silo contract to a specific value.
+Sets the fixed gas in the Silo contract to a specific value.
 ```shell
-aurora-cli --engine aurora.node0 set-fixed-gas-cost 0
+aurora-cli --engine aurora.node0 set-fixed-gas 0
 ```
 Check whitelists statuses
 ```shell
@@ -324,8 +324,8 @@ Commands:
   call                          Call a modified method of the smart contract
   encode-address                Encode address
   key-pair                      Return Public and Secret ED25519 keys
-  get-fixed-gas-cost            Return fixed gas cost
-  set-fixed-gas-cost            Set fixed gas cost
+  get-fixed-gas                 Return fixed gas per transaction
+  set-fixed-gas                 Set fixed gas per transaction
   get-whitelist-status          Return a status of the whitelist
   set-whitelist-status          Set a status for the whitelist
   add-entry-to-whitelist        Add entry into the whitelist

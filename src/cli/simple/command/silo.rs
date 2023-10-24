@@ -1,9 +1,9 @@
 use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
 use aurora_engine_types::parameters::silo::{
-    FixedGasCostArgs, SiloParamsArgs, WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs,
+    FixedGasArgs, SiloParamsArgs, WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs,
     WhitelistKind, WhitelistKindArgs, WhitelistStatusArgs,
 };
-use aurora_engine_types::types::Wei;
+use aurora_engine_types::types::EthGas;
 use near_primitives::views::CallResult;
 use std::fmt::{Display, Formatter};
 
@@ -15,20 +15,20 @@ use crate::utils::hex_to_address;
 
 /// Return fixed gas cost.
 pub async fn get_fixed_gas_cost(client: Client) -> anyhow::Result<()> {
-    get_value::<FixedGasCost>(client, "get_fixed_gas_cost", None).await
+    get_value::<FixedGas>(client, "get_fixed_gas", None).await
 }
 
 /// Set fixed gas cost.
-pub async fn set_fixed_gas_cost(client: Client, cost: u128) -> anyhow::Result<()> {
-    let args = FixedGasCostArgs {
-        cost: Some(Wei::new_u128(cost)),
+pub async fn set_fixed_gas(client: Client, cost: u64) -> anyhow::Result<()> {
+    let args = FixedGasArgs {
+        fixed_gas: Some(EthGas::new(cost)),
     }
     .try_to_vec()?;
 
     contract_call!(
-        "set_fixed_gas_cost",
-        "The fixed gas cost: {cost} has been set successfully",
-        "Error while setting gas cost"
+        "set_fixed_gas",
+        "The fixed gas: {cost} has been set successfully",
+        "Error while setting fixed gas"
     )
     .proceed(client, args)
     .await
@@ -36,11 +36,11 @@ pub async fn set_fixed_gas_cost(client: Client, cost: u128) -> anyhow::Result<()
 
 pub async fn set_silo_params(
     client: Client,
-    cost: u128,
+    cost: u64,
     rollback_address: String,
 ) -> anyhow::Result<()> {
     let args = Some(SiloParamsArgs {
-        fixed_gas_cost: Wei::new_u128(cost),
+        fixed_gas: EthGas::new(cost),
         erc20_fallback_address: hex_to_address(&rollback_address)?,
     })
     .try_to_vec()?;
@@ -177,20 +177,20 @@ impl Display for WhitelistStatus {
     }
 }
 
-struct FixedGasCost(FixedGasCostArgs);
+struct FixedGas(FixedGasArgs);
 
-impl FromCallResult for FixedGasCost {
+impl FromCallResult for FixedGas {
     fn from_result(result: CallResult) -> anyhow::Result<Self> {
-        let args = FixedGasCostArgs::try_from_slice(&result.result)?;
+        let args = FixedGasArgs::try_from_slice(&result.result)?;
         Ok(Self(args))
     }
 }
 
-impl Display for FixedGasCost {
+impl Display for FixedGas {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let value = self
             .0
-            .cost
+            .fixed_gas
             .map_or("none".to_string(), |cost| cost.to_string());
         f.write_str(&value)
     }

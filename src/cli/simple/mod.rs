@@ -199,18 +199,18 @@ pub enum Command {
         /// Key type: ed25519 or secp256k1
         key_type: KeyType,
     },
-    /// Return fixed gas cost
-    GetFixedGasCost,
-    /// Set fixed gas cost
-    SetFixedGasCost {
-        /// Fixed gas cost in Wei.
-        cost: u128,
+    /// Return fixed gas
+    GetFixedGas,
+    /// Set fixed gas
+    SetFixedGas {
+        /// Fixed gas in EthGas.
+        cost: u64,
     },
     /// Set SILO params.
     SetSiloParams {
-        /// Fixed gas cost in Wei.
+        /// Fixed gas in EthGas.
         #[arg(long, short)]
-        cost: u128,
+        cost: u64,
         /// Rollback EVM address.
         #[arg(long, short)]
         rollback_address: String,
@@ -405,9 +405,9 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             key_type,
         } => command::gen_near_key(&account_id, key_type)?,
         // Silo Specific Methods
-        Command::GetFixedGasCost => command::silo::get_fixed_gas_cost(client).await?,
-        Command::SetFixedGasCost { cost } => {
-            command::silo::set_fixed_gas_cost(client, cost).await?;
+        Command::GetFixedGas => command::silo::get_fixed_gas_cost(client).await?,
+        Command::SetFixedGas { cost } => {
+            command::silo::set_fixed_gas(client, cost).await?;
         }
         Command::SetSiloParams {
             cost,
