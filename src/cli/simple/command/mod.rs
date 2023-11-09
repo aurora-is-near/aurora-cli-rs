@@ -663,7 +663,7 @@ fn to_account_id(id: Option<String>, client: &Client) -> anyhow::Result<AccountI
 }
 
 fn str_to_identifier(id: &str) -> anyhow::Result<Erc20Identifier> {
-    hex_to_address(&id).map(Into::into).or_else(|_| {
+    hex_to_address(id).map(Into::into).or_else(|_| {
         id.parse::<AccountId>()
             .map(Into::into)
             .map_err(|e| anyhow::anyhow!("{e}"))
