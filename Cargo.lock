@@ -257,7 +257,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-modexp"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.0#1aad2a057ab3bb5cb10ffac3a9ffa09ee64bfba3"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.1#99634869db649e865a67d588024700fe0dcc80b0"
 dependencies = [
  "hex",
  "num",
@@ -266,7 +266,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-precompiles"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.0#1aad2a057ab3bb5cb10ffac3a9ffa09ee64bfba3"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.1#99634869db649e865a67d588024700fe0dcc80b0"
 dependencies = [
  "aurora-engine-modexp",
  "aurora-engine-sdk",
@@ -285,7 +285,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-sdk"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.0#1aad2a057ab3bb5cb10ffac3a9ffa09ee64bfba3"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.1#99634869db649e865a67d588024700fe0dcc80b0"
 dependencies = [
  "aurora-engine-types",
  "base64 0.21.5",
@@ -296,7 +296,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-transactions"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.0#1aad2a057ab3bb5cb10ffac3a9ffa09ee64bfba3"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.1#99634869db649e865a67d588024700fe0dcc80b0"
 dependencies = [
  "aurora-engine-precompiles",
  "aurora-engine-sdk",
@@ -308,7 +308,7 @@ dependencies = [
 [[package]]
 name = "aurora-engine-types"
 version = "1.0.0"
-source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.0#1aad2a057ab3bb5cb10ffac3a9ffa09ee64bfba3"
+source = "git+https://github.com/aurora-is-near/aurora-engine.git?tag=3.3.1#99634869db649e865a67d588024700fe0dcc80b0"
 dependencies = [
  "base64 0.21.5",
  "borsh 0.10.3",

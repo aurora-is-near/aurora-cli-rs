@@ -284,7 +284,15 @@ Example JSON batch file (`batch_list.json`):
 - [`aurora-cli add-entry-to-whitelist`](#aurora-cli-add-entry-to-whitelist)
 - [`aurora-cli add-entry-to-whitelist-batch`](#aurora-cli-add-entry-to-whitelist-batch)
 - [`aurora-cli remove-entry-from-whitelist`](#aurora-cli-remove-entry-from-whitelist)
-  
+- [`aurora-cli set-key-manager`](#aurora-cli-set-key-manager)  
+- [`aurora-cli add-relayer-key`](#aurora-cli-add-relayer-key)
+- [`aurora-cli remove-relayer-key`](#aurora-cli-remove-relayer-key)       
+- [`aurora-cli get-upgrade-delay-blocks`](#aurora-cli-get-upgrade-delay-blocks) 
+- [`aurora-cli set-upgrade-delay-blocks`](#aurora-cli-set-upgrade-delay-blocks) 
+- [`aurora-cli get-erc20-from-nep141`](#aurora-cli-get-erc20-from-nep141)    
+- [`aurora-cli get-nep141-from-erc20`](#aurora-cli-get-nep141-from-erc20)    
+- [`aurora-cli get-erc20-metadata`](#aurora-cli-get-erc20-metadata)
+- [`aurora-cli set-erc20-metadata`](#aurora-cli-set-erc20-metadata)       
 
 ### `aurora-cli help`
 
@@ -331,6 +339,15 @@ Commands:
   add-entry-to-whitelist        Add entry into the whitelist
   add-entry-to-whitelist-batch  Add entries into the whitelist
   remove-entry-from-whitelist   Remove the entry from the whitelist
+  set-key-manager               Set relayer key manager
+  add-relayer-key               Add relayer public key
+  remove-relayer-key            Remove relayer public key
+  get-upgrade-delay-blocks      Get delay for upgrade in blocks
+  set-upgrade-delay-blocks      Set delay for upgrade in blocks
+  get-erc20-from-nep141         Get ERC-20 from NEP-141
+  get-nep141-from-erc20         Get NEP-141 from ERC-20
+  get-erc20-metadata            Get ERC-20 metadata
+  set-erc20-metadata            Set ERC-20 metadata
   help                          Print this message or the help of the given subcommand(s)
 
 Options:
@@ -849,3 +866,134 @@ Options:
   -h, --help           Print help
 ```
 
+### `aurora-cli set-key-manager`
+
+```console
+$ aurora-cli help set-key-manager
+Set relayer key manager
+
+Usage: aurora-cli set-key-manager [ACCOUNT_ID]
+
+Arguments:
+  [ACCOUNT_ID] AccountId of the key manager
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli add-relayer-key`
+
+```console
+$ aurora-cli help add-relayer-key
+Add relayer public key
+
+Usage: aurora-cli add-relayer-key --public-key <PUBLIC_KEY> --allowance <ALLOWANCE>
+
+Options:
+      --public-key <PUBLIC_KEY>  Public key
+      --allowance <ALLOWANCE>    Allowance
+  -h, --help                     Print help
+```
+
+### `aurora-cli remove-relayer-key`
+
+```console
+$ aurora-cli help remove-relayer-key
+Remove relayer public key
+
+Usage: aurora-cli remove-relayer-key <PUBLIC_KEY>
+
+Arguments:
+  <PUBLIC_KEY>  Public key
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli get-upgrade-delay-blocks`
+
+```console
+$ aurora-cli help  get-upgrade-delay-blocks
+Get delay for upgrade in blocks
+
+Usage: aurora-cli get-upgrade-delay-blocks
+
+Options:
+-h, --help  Print help
+```
+
+### `aurora-cli set-upgrade-delay-blocks`
+
+```console
+$ aurora-cli help set-upgrade-delay-blocks
+Set delay for upgrade in blocks
+
+Usage: aurora-cli set-upgrade-delay-blocks <BLOCKS>
+
+Arguments:
+  <BLOCKS>  Number blocks
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli get-erc20-from-nep141`
+
+```console
+$ aurora-cli help get-erc20-from-nep141
+Get ERC-20 from NEP-141
+
+Usage: aurora-cli get-erc20-from-nep141 <ACCOUNT_ID>
+
+Arguments:
+  <ACCOUNT_ID> Account id of NEP-141
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli get-nep141-from-erc20`
+
+```console
+$ aurora-cli help get-nep141-from-erc20
+Get NEP-141 from ERC-20
+
+Usage: aurora-cli get-nep141-from-erc20 <ADDRESS>
+
+Arguments:
+  <ADDRESS>  Address for ERC-20
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli get-erc20-metadata`
+
+```console
+$ aurora-cli help get-erc20-metadata
+Get ERC-20 metadata
+
+Usage: aurora-cli get-erc20-metadata <ERC20_ID>
+
+Arguments:
+  <ERC20_ID>  Address or account id of the ERC-20 contract
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli set-erc20-metadata`
+
+```console
+$ aurora-cli help set-erc20-metadata
+Set ERC-20 metadata
+
+Usage: aurora-cli set-erc20-metadata --erc20-id <ERC20_ID> --name <NAME> --symbol <SYMBOL> --decimals <DECIMALS>
+
+Options:
+      --erc20-id <ERC20_ID>  Address or account id of the ERC-20 contract
+      --name <NAME>          Name of the token
+      --symbol <SYMBOL>      Symbol of the token
+      --decimals <DECIMALS>  Decimals of the token
+  -h, --help                 Print help
+```

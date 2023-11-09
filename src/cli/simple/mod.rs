@@ -1,9 +1,10 @@
+use std::str::FromStr;
+
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use clap::{Parser, Subcommand};
 use lazy_static::lazy_static;
 use shadow_rs::shadow;
-use std::str::FromStr;
 
 pub mod command;
 
@@ -279,6 +280,36 @@ pub enum Command {
         /// Number blocks
         blocks: u64,
     },
+    /// Get ERC-20 from NEP-141
+    GetErc20FromNep141 {
+        /// Account id of NEP-141
+        account_id: String,
+    },
+    /// Get NEP-141 from ERC-20
+    GetNep141FromErc20 {
+        /// Address for ERC-20
+        address: String,
+    },
+    /// Get ERC-20 metadata
+    GetErc20Metadata {
+        /// Address or account id of the ERC-20 contract
+        erc20_id: String,
+    },
+    /// Set ERC-20 metadata
+    SetErc20Metadata {
+        /// Address or account id of the ERC-20 contract
+        #[arg(long)]
+        erc20_id: String,
+        /// Name of the token
+        #[arg(long)]
+        name: String,
+        /// Symbol of the token
+        #[arg(long)]
+        symbol: String,
+        /// Decimals of the token
+        #[arg(long)]
+        decimals: u8,
+    },
 }
 
 #[derive(Clone)]
@@ -447,6 +478,23 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::SetUpgradeDelayBlocks { blocks } => {
             command::set_upgrade_delay_blocks(client, blocks).await?;
+        }
+        Command::GetErc20FromNep141 { account_id } => {
+            command::get_erc20_from_nep141(client, account_id).await?;
+        }
+        Command::GetNep141FromErc20 { address } => {
+            command::get_nep141_from_erc20(client, address).await?;
+        }
+        Command::GetErc20Metadata { erc20_id } => {
+            command::get_erc20_metadata(client, erc20_id).await?;
+        }
+        Command::SetErc20Metadata {
+            erc20_id,
+            name,
+            symbol,
+            decimals,
+        } => {
+            command::set_erc20_metadata(client, erc20_id, name, symbol, decimals).await?;
         }
     }
 
