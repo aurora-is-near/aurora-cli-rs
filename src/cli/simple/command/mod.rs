@@ -1,7 +1,12 @@
+use std::fmt::{Display, Formatter};
+use std::{path::Path, str::FromStr};
+
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::borsh::{self, BorshDeserialize, BorshSerialize};
-use aurora_engine_types::parameters::connector::InitCallArgs;
+use aurora_engine_types::parameters::connector::{
+    Erc20Identifier, Erc20Metadata, InitCallArgs, SetErc20MetadataArgs,
+};
 use aurora_engine_types::parameters::engine::{
     GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs,
     RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, SubmitResult,
@@ -12,8 +17,6 @@ use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
-use std::fmt::{Display, Formatter};
-use std::{path::Path, str::FromStr};
 
 use crate::{
     client::Client,
@@ -578,6 +581,58 @@ pub async fn set_upgrade_delay_blocks(client: Client, blocks: u64) -> anyhow::Re
     .await
 }
 
+/// Get ERC-20 address from account id of NEP-141.
+pub async fn get_erc20_from_nep141(client: Client, account_id: String) -> anyhow::Result<()> {
+    let args = account_id.try_to_vec()?;
+    get_value::<HexString>(client, "get_erc20_from_nep141", Some(args)).await
+}
+
+/// Get NEP-141 account id from address of ERC-20.
+pub async fn get_nep141_from_erc20(client: Client, address: String) -> anyhow::Result<()> {
+    let args = hex_to_address(&address)?.as_bytes().to_vec();
+    get_value::<AccountId>(client, "get_nep141_from_erc20", Some(args)).await
+}
+
+/// Get a metadata of ERC-20 contract.
+pub async fn get_erc20_metadata(client: Client, identifier: String) -> anyhow::Result<()> {
+    let args = str_to_identifier(&identifier)
+        .and_then(|id| serde_json::to_vec(&id).map_err(Into::into))?;
+    let result = client.near().view_call("get_erc20_metadata", args).await?;
+    let output = serde_json::from_slice::<Erc20Metadata>(&result.result)
+        .and_then(|metadata| serde_json::to_string_pretty(&metadata))?;
+
+    println!("{output}");
+
+    Ok(())
+}
+
+/// Set a metadata of ERC-20 contract.
+pub async fn set_erc20_metadata(
+    client: Client,
+    identifier: String,
+    name: String,
+    symbol: String,
+    decimals: u8,
+) -> anyhow::Result<()> {
+    let erc20_identifier = str_to_identifier(&identifier)?;
+    let args = serde_json::to_vec(&SetErc20MetadataArgs {
+        erc20_identifier,
+        metadata: Erc20Metadata {
+            name,
+            symbol,
+            decimals,
+        },
+    })?;
+
+    contract_call!(
+        "set_erc20_metadata",
+        "ERC-20 metadata has been set successfully",
+        "Error while setting ERC-20 metadata"
+    )
+    .proceed(client, args)
+    .await
+}
+
 async fn get_value<T: FromCallResult + Display>(
     client: Client,
     method_name: &str,
@@ -605,6 +660,14 @@ fn to_account_id(id: Option<String>, client: &Client) -> anyhow::Result<AccountI
         },
         |id| id.parse().map_err(|e| anyhow::anyhow!("{e}")),
     )
+}
+
+fn str_to_identifier(id: &str) -> anyhow::Result<Erc20Identifier> {
+    hex_to_address(id).map(Into::into).or_else(|_| {
+        id.parse::<AccountId>()
+            .map(Into::into)
+            .map_err(|e| anyhow::anyhow!("{e}"))
+    })
 }
 
 struct HexString(String);
@@ -653,6 +716,12 @@ impl FromCallResult for String {
 impl FromCallResult for HexString {
     fn from_result(result: CallResult) -> anyhow::Result<Self> {
         Ok(Self(hex::encode(result.result)))
+    }
+}
+
+impl FromCallResult for AccountId {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        Self::try_from(result.result).map_err(|e| anyhow::anyhow!("{e}"))
     }
 }
 
