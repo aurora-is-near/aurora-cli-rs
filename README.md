@@ -292,7 +292,9 @@ Example JSON batch file (`batch_list.json`):
 - [`aurora-cli get-erc20-from-nep141`](#aurora-cli-get-erc20-from-nep141)    
 - [`aurora-cli get-nep141-from-erc20`](#aurora-cli-get-nep141-from-erc20)    
 - [`aurora-cli get-erc20-metadata`](#aurora-cli-get-erc20-metadata)
-- [`aurora-cli set-erc20-metadata`](#aurora-cli-set-erc20-metadata)       
+- [`aurora-cli set-erc20-metadata`](#aurora-cli-set-erc20-metadata)    
+- [`aurora-cli mirror-erc20-token`](#aurora-cli-mirrot-erc20-token)
+- [`aurora-cli set-eth-connector-account-id`](#aurora-cli-set-eth-connector-account-id)
 
 ### `aurora-cli help`
 
@@ -348,6 +350,8 @@ Commands:
   get-nep141-from-erc20         Get NEP-141 from ERC-20
   get-erc20-metadata            Get ERC-20 metadata
   set-erc20-metadata            Set ERC-20 metadata
+  mirror-erc20-token            Mirror ERC-20 token
+  set-eth-connector-account-id  Set eth connector account id
   help                          Print this message or the help of the given subcommand(s)
 
 Options:
@@ -996,4 +1000,32 @@ Options:
       --symbol <SYMBOL>      Symbol of the token
       --decimals <DECIMALS>  Decimals of the token
   -h, --help                 Print help
+```
+
+### `aurora-cli mirror-erc20-token`
+
+```console
+$ aurora-cli help mirror-erc20-token
+Mirror ERC-20 token
+
+Usage: aurora-cli mirror-erc20-token --contract-id <CONTRACT_ID> --nep141 <NEP141>
+
+Options:
+      --contract-id <CONTRACT_ID>  Account of contract where ERC-20 has been deployed
+      --nep141 <NEP141>            Account of corresponding NEP-141
+  -h, --help                       Print help
+```
+
+### `aurora-cli set-eth-connector-account-id`
+
+```console
+$ aurora-cli help set-eth-connector-account-id 
+Set eth connector account id
+
+Usage: aurora-cli set-eth-connector-account-id [OPTIONS] --account-id <ACCOUNT_ID>
+
+Options:
+      --account-id <ACCOUNT_ID>      Account id of eth connector
+      --withdraw-ser <WITHDRAW_SER>  Serialization type in withdraw method
+  -h, --help
 ```
