@@ -293,7 +293,7 @@ Example JSON batch file (`batch_list.json`):
 - [`aurora-cli get-nep141-from-erc20`](#aurora-cli-get-nep141-from-erc20)    
 - [`aurora-cli get-erc20-metadata`](#aurora-cli-get-erc20-metadata)
 - [`aurora-cli set-erc20-metadata`](#aurora-cli-set-erc20-metadata)    
-- [`aurora-cli mirror-erc20-token`](#aurora-cli-mirrot-erc20-token)
+- [`aurora-cli mirror-erc20-token`](#aurora-cli-mirror-erc20-token)
 - [`aurora-cli set-eth-connector-account-id`](#aurora-cli-set-eth-connector-account-id)
 
 ### `aurora-cli help`
