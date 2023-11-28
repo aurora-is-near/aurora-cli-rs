@@ -5,7 +5,8 @@ use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::borsh::{self, BorshDeserialize, BorshSerialize};
 use aurora_engine_types::parameters::connector::{
-    Erc20Identifier, Erc20Metadata, InitCallArgs, SetErc20MetadataArgs,
+    Erc20Identifier, Erc20Metadata, InitCallArgs, MirrorErc20TokenArgs, SetErc20MetadataArgs,
+    SetEthConnectorContractAccountArgs, WithdrawSerializeType,
 };
 use aurora_engine_types::parameters::engine::{
     GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs,
@@ -18,6 +19,7 @@ use aurora_engine_types::{types::Wei, H256, U256};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
 
+use crate::cli::simple::WithdrawSerialization;
 use crate::{
     client::Client,
     utils::{self, hex_to_address, hex_to_arr, hex_to_vec, near_to_yocto, secret_key_from_hex},
@@ -628,6 +630,51 @@ pub async fn set_erc20_metadata(
         "set_erc20_metadata",
         "ERC-20 metadata has been set successfully",
         "Error while setting ERC-20 metadata"
+    )
+    .proceed(client, args)
+    .await
+}
+
+/// Mirror ERC-20 contract.
+pub async fn mirror_erc20_token(
+    client: Client,
+    contract_id: String,
+    nep141: String,
+) -> anyhow::Result<()> {
+    let args = MirrorErc20TokenArgs {
+        contract_id: contract_id.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
+        nep141: nep141.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
+    }
+    .try_to_vec()?;
+
+    contract_call!(
+        "mirror_erc20_token",
+        "ERC-20 token has been mirrored successfully",
+        "Error while mirroring ERC-20 token"
+    )
+    .proceed(client, args)
+    .await
+}
+
+/// Set ETH connector account id
+pub async fn set_eth_connector_account_id(
+    client: Client,
+    account_id: String,
+    withdraw_ser: Option<WithdrawSerialization>,
+) -> anyhow::Result<()> {
+    let args = SetEthConnectorContractAccountArgs {
+        account: account_id.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
+        withdraw_serialize_type: withdraw_ser.map_or(WithdrawSerializeType::Borsh, |s| match s {
+            WithdrawSerialization::Borsh => WithdrawSerializeType::Borsh,
+            WithdrawSerialization::Json => WithdrawSerializeType::Json,
+        }),
+    }
+    .try_to_vec()?;
+
+    contract_call!(
+        "set_eth_connector_contract_account",
+        "ETH connector account has been set successfully",
+        "Error while setting ETH connector account"
     )
     .proceed(client, args)
     .await

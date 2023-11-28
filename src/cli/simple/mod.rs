@@ -310,6 +310,24 @@ pub enum Command {
         #[arg(long)]
         decimals: u8,
     },
+    /// Mirror ERC-20 token
+    MirrorErc20Token {
+        /// Account of contract where ERC-20 has been deployed
+        #[arg(long)]
+        contract_id: String,
+        /// Account of corresponding NEP-141
+        #[arg(long)]
+        nep141: String,
+    },
+    /// Set eth connector account id
+    SetEthConnectorAccountId {
+        /// Account id of eth connector
+        #[arg(long)]
+        account_id: String,
+        /// Serialization type in withdraw method
+        #[arg(long)]
+        withdraw_ser: Option<WithdrawSerialization>,
+    },
 }
 
 #[derive(Clone)]
@@ -327,7 +345,25 @@ impl FromStr for Network {
             "localnet" => Ok(Self::Localnet),
             "mainnet" => Ok(Self::Mainnet),
             "testnet" => Ok(Self::Testnet),
-            _ => anyhow::bail!("unknown network"),
+            _ => anyhow::bail!("unknown network: {s}"),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum WithdrawSerialization {
+    Borsh,
+    Json,
+}
+
+impl FromStr for WithdrawSerialization {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "borsh" => Ok(Self::Borsh),
+            "json" => Ok(Self::Json),
+            _ => anyhow::bail!("unknown withdraw serialization type: {s}"),
         }
     }
 }
@@ -495,6 +531,18 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             decimals,
         } => {
             command::set_erc20_metadata(client, erc20_id, name, symbol, decimals).await?;
+        }
+        Command::MirrorErc20Token {
+            contract_id,
+            nep141,
+        } => {
+            command::mirror_erc20_token(client, contract_id, nep141).await?;
+        }
+        Command::SetEthConnectorAccountId {
+            account_id,
+            withdraw_ser,
+        } => {
+            command::set_eth_connector_account_id(client, account_id, withdraw_ser).await?;
         }
     }
 
