@@ -3,7 +3,7 @@ use std::{path::Path, str::FromStr};
 
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
-use aurora_engine_types::borsh::{self, BorshDeserialize, BorshSerialize};
+use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
 use aurora_engine_types::parameters::connector::{
     Erc20Identifier, Erc20Metadata, InitCallArgs, MirrorErc20TokenArgs, SetErc20MetadataArgs,
     SetEthConnectorContractAccountArgs, WithdrawSerializeType,
@@ -13,6 +13,7 @@ use aurora_engine_types::parameters::engine::{
     RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, SubmitResult,
     TransactionStatus,
 };
+use aurora_engine_types::parameters::xcc::FundXccArgs;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
@@ -202,8 +203,9 @@ pub async fn deploy_evm_code(
             let result = SubmitResult::try_from_slice(bytes)?;
             if let TransactionStatus::Succeed(bytes) = result.status {
                 format!(
-                    "Contract has been deployed to address: 0x{} successfully",
-                    hex::encode(bytes)
+                    "Contract has been deployed to address: 0x{} successfully, gas used: {}",
+                    hex::encode(bytes),
+                    result.gas_used,
                 )
             } else {
                 format!("Transaction reverted: {result:?}")
@@ -328,6 +330,19 @@ pub async fn call(
     Ok(())
 }
 
+/// Upgrade Aurora Contract with provided code.
+pub async fn upgrade<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::Result<()> {
+    let code = std::fs::read(path)?;
+
+    contract_call!(
+        "upgrade",
+        "The aurora contract has been upgraded successfully",
+        "Error while upgrading the aurora smart contract"
+    )
+    .proceed(client, code)
+    .await
+}
+
 /// Stage code for delayed upgrade.
 pub async fn stage_upgrade<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
@@ -365,6 +380,11 @@ pub async fn factory_update(client: Client, path: String) -> anyhow::Result<()> 
     .await
 }
 
+/// Returns the address of the `wNEAR` ERC-20 contract
+pub async fn factory_get_wnear_address(client: Client) -> anyhow::Result<()> {
+    get_value::<HexString>(client, "factory_get_wnear_address", None).await
+}
+
 /// Sets the address for the `wNEAR` ERC-20 contract
 pub async fn factory_set_wnear_address(client: Client, address: String) -> anyhow::Result<()> {
     let args: [u8; 20] = hex_to_arr(&address)?;
@@ -376,13 +396,6 @@ pub async fn factory_set_wnear_address(client: Client, address: String) -> anyho
     )
     .proceed(client, args.to_vec())
     .await
-}
-
-// TODO: Use it from aurora_engine_types::parameters::xcc module.
-#[derive(Debug, Clone, PartialEq, Eq, BorshDeserialize, BorshSerialize)]
-struct FundXccArgs {
-    pub target: Address,
-    pub wnear_account_id: Option<AccountId>,
 }
 
 /// Create and/or fund an XCC sub-account directly
