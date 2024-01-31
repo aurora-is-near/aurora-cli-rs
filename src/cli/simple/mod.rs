@@ -215,10 +215,10 @@ pub enum Command {
     SetSiloParams {
         /// Fixed gas in EthGas.
         #[arg(long, short)]
-        cost: u64,
-        /// Rollback EVM address.
+        gas: u64,
+        /// Fallback EVM address.
         #[arg(long, short)]
-        rollback_address: String,
+        fallback_address: String,
     },
     /// Return a status of the whitelist
     GetWhitelistStatus {
@@ -483,10 +483,10 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             command::silo::set_fixed_gas(client, cost).await?;
         }
         Command::SetSiloParams {
-            cost,
-            rollback_address,
+            gas,
+            fallback_address,
         } => {
-            command::silo::set_silo_params(client, cost, rollback_address).await?;
+            command::silo::set_silo_params(client, gas, fallback_address).await?;
         }
         Command::GetWhitelistStatus { kind } => {
             command::silo::get_whitelist_status(client, kind).await?;
