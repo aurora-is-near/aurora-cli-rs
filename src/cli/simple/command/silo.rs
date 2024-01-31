@@ -36,12 +36,12 @@ pub async fn set_fixed_gas(client: Client, cost: u64) -> anyhow::Result<()> {
 
 pub async fn set_silo_params(
     client: Client,
-    cost: u64,
-    rollback_address: String,
+    gas: u64,
+    fallback_address: String,
 ) -> anyhow::Result<()> {
     let args = Some(SiloParamsArgs {
-        fixed_gas: EthGas::new(cost),
-        erc20_fallback_address: hex_to_address(&rollback_address)?,
+        fixed_gas: EthGas::new(gas),
+        erc20_fallback_address: hex_to_address(&fallback_address)?,
     })
     .try_to_vec()?;
 

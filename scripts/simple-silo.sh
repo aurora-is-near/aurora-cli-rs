@@ -86,7 +86,7 @@ sleep 2
 result=$(aurora-cli --engine $ENGINE_ACCOUNT get-fixed-gas || error_exit)
 assert_eq "none" "$result"
 # Set fixed gas
-aurora-cli --engine $ENGINE_ACCOUNT set-silo-params --cost 0 --rollback-address \
+aurora-cli --engine $ENGINE_ACCOUNT set-silo-params --gas 0 --fallback-address \
   0x7e5f4552091a69125d5dfcb7b8c2659029395bdf || error_exit
 sleep 1
 # Get fixed gas
