@@ -7,7 +7,7 @@ pub mod simple;
 pub use advanced::{aurora, near, process_tx_data, run, Cli, Command};
 
 #[cfg(feature = "simple")]
-pub use simple::{command, run, Cli, Command};
+pub use simple::{command, run, Cli};
 
 /// NEAR Endpoints.
 const NEAR_MAINNET_ENDPOINT: &str = "https://archival-rpc.mainnet.near.org/";

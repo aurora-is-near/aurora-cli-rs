@@ -850,11 +850,11 @@ impl ContractCall<'_> {
                 OutputFormat::Plain => println!("{}", self.success_message),
                 OutputFormat::Json => {
                     let formatted = to_string_pretty(&result.transaction_outcome)?;
-                    println!("{}", formatted);
+                    println!("{formatted}");
                 }
                 OutputFormat::Toml => {
                     let formatted = toml::to_string_pretty(&result.transaction_outcome)?;
-                    println!("{}", formatted);
+                    println!("{formatted}");
                 }
             },
         }
