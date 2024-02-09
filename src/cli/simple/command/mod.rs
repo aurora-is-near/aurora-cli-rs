@@ -20,8 +20,8 @@ use aurora_engine_types::{types::Wei, H256, U256};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::{to_string_pretty, Value};
 
-use crate::cli::simple::WithdrawSerialization;
 use crate::cli::simple::OutputFormat;
+use crate::cli::simple::WithdrawSerialization;
 use crate::{
     client::Context,
     utils::{self, hex_to_address, hex_to_arr, hex_to_vec, near_to_yocto, secret_key_from_hex},
@@ -149,7 +149,13 @@ pub async fn init(
         ("new_eth_connector".to_string(), eth_connector_init_args),
     ];
 
-    match context.client.near().contract_call_batch(batch).await?.status {
+    match context
+        .client
+        .near()
+        .contract_call_batch(batch)
+        .await?
+        .status
+    {
         FinalExecutionStatus::Failure(e) => {
             anyhow::bail!("Error while initializing Aurora EVM: {e}")
         }
@@ -226,7 +232,12 @@ pub async fn create_account(
     account: &str,
     initial_balance: f64,
 ) -> anyhow::Result<()> {
-    match context.client.near().create_account(account, initial_balance).await {
+    match context
+        .client
+        .near()
+        .create_account(account, initial_balance)
+        .await
+    {
         Ok(result) => println!("{result}"),
         Err(e) => eprintln!("{e:?}"),
     }
@@ -538,7 +549,10 @@ pub async fn paused_precompiles(context: Context) -> anyhow::Result<()> {
 }
 
 /// Set relayer key manager.
-pub async fn set_key_manager(context: Context, key_manager: Option<AccountId>) -> anyhow::Result<()> {
+pub async fn set_key_manager(
+    context: Context,
+    key_manager: Option<AccountId>,
+) -> anyhow::Result<()> {
     let message = key_manager.as_ref().map_or_else(
         || "has been removed".to_string(),
         |account_id| format!("{account_id} has been set"),
@@ -616,7 +630,11 @@ pub async fn get_nep141_from_erc20(context: Context, address: String) -> anyhow:
 pub async fn get_erc20_metadata(context: Context, identifier: String) -> anyhow::Result<()> {
     let args = str_to_identifier(&identifier)
         .and_then(|id| serde_json::to_vec(&id).map_err(Into::into))?;
-    let result = context.client.near().view_call("get_erc20_metadata", args).await?;
+    let result = context
+        .client
+        .near()
+        .view_call("get_erc20_metadata", args)
+        .await?;
     let output = serde_json::from_slice::<Erc20Metadata>(&result.result)
         .and_then(|metadata| serde_json::to_string_pretty(&metadata))?;
 
@@ -828,19 +846,17 @@ impl ContractCall<'_> {
             FinalExecutionStatus::Failure(e) => {
                 anyhow::bail!("{}: {e}", self.error_message)
             }
-            FinalExecutionStatus::SuccessValue(_) => {
-                match context.output_format {
-                    OutputFormat::Plain => println!("{}", self.success_message),
-                    OutputFormat::Json => {
-                        let formatted = to_string_pretty(&result.transaction_outcome)?;
-                        println!("{}", formatted);
-                    },
-                    OutputFormat::Toml => {
-                        let formatted = toml::to_string_pretty(&result.transaction_outcome)?;
-                        println!("{}", formatted);
-                    },
+            FinalExecutionStatus::SuccessValue(_) => match context.output_format {
+                OutputFormat::Plain => println!("{}", self.success_message),
+                OutputFormat::Json => {
+                    let formatted = to_string_pretty(&result.transaction_outcome)?;
+                    println!("{}", formatted);
                 }
-            }
+                OutputFormat::Toml => {
+                    let formatted = toml::to_string_pretty(&result.transaction_outcome)?;
+                    println!("{}", formatted);
+                }
+            },
         }
 
         Ok(())
