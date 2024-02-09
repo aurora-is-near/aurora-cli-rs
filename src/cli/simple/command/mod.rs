@@ -1,5 +1,4 @@
 use std::fmt::{Display, Formatter};
-use std::process::Output;
 use std::{path::Path, str::FromStr};
 
 use aurora_engine_sdk::types::near_account_to_evm_address;
@@ -98,7 +97,7 @@ pub async fn get_block_hash(context: Context, height: u64) -> anyhow::Result<()>
 /// Deploy Aurora EVM smart contract.
 pub async fn deploy_aurora<P: AsRef<Path> + Send>(context: Context, path: P) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
-    let result = match context.near().deploy_contract(code).await {
+    let result = match context.client.near().deploy_contract(code).await {
         Ok(outcome) => match outcome.status {
             FinalExecutionStatus::SuccessValue(_) => {
                 "Aurora EVM has been deployed successfully".to_string()
@@ -150,7 +149,7 @@ pub async fn init(
         ("new_eth_connector".to_string(), eth_connector_init_args),
     ];
 
-    match context.near().contract_call_batch(batch).await?.status {
+    match context.client.near().contract_call_batch(batch).await?.status {
         FinalExecutionStatus::Failure(e) => {
             anyhow::bail!("Error while initializing Aurora EVM: {e}")
         }
@@ -191,6 +190,7 @@ pub async fn deploy_evm_code(
         };
 
     let result = context
+        .client
         .near()
         .send_aurora_transaction(&sk, None, Wei::zero(), input)
         .await?;
@@ -226,7 +226,7 @@ pub async fn create_account(
     account: &str,
     initial_balance: f64,
 ) -> anyhow::Result<()> {
-    match context.near().create_account(account, initial_balance).await {
+    match context.client.near().create_account(account, initial_balance).await {
         Ok(result) => println!("{result}"),
         Err(e) => eprintln!("{e:?}"),
     }
@@ -236,7 +236,7 @@ pub async fn create_account(
 
 /// View new NEAR account.
 pub async fn view_account(context: Context, account: &str) -> anyhow::Result<()> {
-    match context.near().view_account(account).await {
+    match context.client.near().view_account(account).await {
         Ok(result) => println!("{result}"),
         Err(e) => eprintln!("{e:?}"),
     }
@@ -259,6 +259,7 @@ pub async fn view_call(
     let tokens = utils::abi::parse_args(&func.inputs, &args)?;
     let input = func.encode_input(&tokens)?;
     let result = context
+        .client
         .near()
         .view_contract_call(Address::default(), target, Wei::zero(), input)
         .await?;
@@ -302,6 +303,7 @@ pub async fn call(
         .map_or_else(Wei::zero, Wei::new);
 
     let result = context
+        .client
         .near()
         .send_aurora_transaction(&sk, Some(target), amount, input)
         .await?;
@@ -614,7 +616,7 @@ pub async fn get_nep141_from_erc20(context: Context, address: String) -> anyhow:
 pub async fn get_erc20_metadata(context: Context, identifier: String) -> anyhow::Result<()> {
     let args = str_to_identifier(&identifier)
         .and_then(|id| serde_json::to_vec(&id).map_err(Into::into))?;
-    let result = context.near().view_call("get_erc20_metadata", args).await?;
+    let result = context.client.near().view_call("get_erc20_metadata", args).await?;
     let output = serde_json::from_slice::<Erc20Metadata>(&result.result)
         .and_then(|metadata| serde_json::to_string_pretty(&metadata))?;
 
@@ -701,6 +703,7 @@ async fn get_value<T: FromCallResult + Display>(
     args: Option<Vec<u8>>,
 ) -> anyhow::Result<()> {
     let result = context
+        .client
         .near()
         .view_call(method_name, args.unwrap_or_default())
         .await?;
@@ -714,6 +717,7 @@ fn to_account_id(id: Option<String>, context: &Context) -> anyhow::Result<Accoun
     id.map_or_else(
         || {
             context
+                .client
                 .near()
                 .engine_account_id
                 .to_string()
@@ -812,6 +816,7 @@ impl ContractCall<'_> {
     ) -> anyhow::Result<()> {
         let yocto = near_to_yocto(deposit);
         let result = context
+            .client
             .near()
             .contract_call_with_deposit(self.method, args, yocto)
             .await?;

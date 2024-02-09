@@ -401,7 +401,8 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Network::Testnet => super::NEAR_TESTNET_ENDPOINT,
         Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
     };
-    let context = crate::client::Context::new(near_rpc, &args.engine, args.near_key_path, args.output_format);
+    let client = crate::client::Client::new(near_rpc, &args.engine, args.near_key_path);
+    let context = crate::client::Context::new(client, args.output_format);
 
     match args.command {
         Command::GetChainId => command::get_chain_id(context).await?,

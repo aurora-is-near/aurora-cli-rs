@@ -25,24 +25,36 @@ type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
     near_jsonrpc_client::methods::broadcast_tx_commit::RpcTransactionError,
 >;
 
-#[cfg(feature = "simple")]
 pub struct Context {
+    pub client: Client,
+    pub output_format: OutputFormat,
+}
+
+impl Context {
+    pub fn new(client: Client, output_format: OutputFormat) -> Self {
+        Self {
+            client,
+            output_format,
+        }
+    }
+}
+
+#[cfg(feature = "simple")]
+pub struct Client {
     near_rpc: String,
     #[cfg(feature = "advanced")]
     aurora_rpc: String,
     engine_account_id: AccountId,
     signer_key_path: Option<String>,
-    pub output_format: OutputFormat,
 }
 
 #[cfg(feature = "simple")]
-impl Context {
-    pub fn new(near_rpc: &str, engine_account: &str, signer_key_path: Option<String>, output_format: OutputFormat) -> Self {
+impl Client {
+    pub fn new(near_rpc: &str, engine_account: &str, signer_key_path: Option<String>) -> Self {
         Self {
             near_rpc: near_rpc.to_string(),
             engine_account_id: engine_account.parse().expect("wrong engine account format"),
             signer_key_path,
-            output_format,
         }
     }
 
