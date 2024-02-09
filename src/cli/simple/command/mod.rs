@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::process::Output;
 use std::{path::Path, str::FromStr};
 
 use aurora_engine_sdk::types::near_account_to_evm_address;
@@ -21,8 +22,9 @@ use near_primitives::views::{CallResult, FinalExecutionStatus};
 use serde_json::Value;
 
 use crate::cli::simple::WithdrawSerialization;
+use crate::cli::simple::OutputFormat;
 use crate::{
-    client::Client,
+    client::Context,
     utils::{self, hex_to_address, hex_to_arr, hex_to_vec, near_to_yocto, secret_key_from_hex},
 };
 
@@ -40,61 +42,61 @@ macro_rules! contract_call {
 }
 
 /// Return `chain_id` of the current network.
-pub async fn get_chain_id(client: Client) -> anyhow::Result<()> {
+pub async fn get_chain_id(client: Context) -> anyhow::Result<()> {
     get_value::<U256>(client, "get_chain_id", None).await
 }
 
 /// Return version of the Aurora EVM.
-pub async fn get_version(client: Client) -> anyhow::Result<()> {
+pub async fn get_version(client: Context) -> anyhow::Result<()> {
     get_value::<String>(client, "get_version", None).await
 }
 
 /// Return owner of the Aurora EVM.
-pub async fn get_owner(client: Client) -> anyhow::Result<()> {
+pub async fn get_owner(client: Context) -> anyhow::Result<()> {
     get_value::<String>(client, "get_owner", None).await
 }
 
 /// Return bridge prover of the Aurora EVM.
-pub async fn get_bridge_prover(client: Client) -> anyhow::Result<()> {
+pub async fn get_bridge_prover(client: Context) -> anyhow::Result<()> {
     get_value::<String>(client, "get_bridge_prover", None).await
 }
 
 /// Return nonce for the address.
-pub async fn get_nonce(client: Client, address: String) -> anyhow::Result<()> {
+pub async fn get_nonce(client: Context, address: String) -> anyhow::Result<()> {
     let address = hex_to_vec(&address)?;
     get_value::<U256>(client, "get_nonce", Some(address)).await
 }
 
 /// Return a height, after which an upgrade could be done.
-pub async fn get_upgrade_index(client: Client) -> anyhow::Result<()> {
+pub async fn get_upgrade_index(client: Context) -> anyhow::Result<()> {
     get_value::<u64>(client, "get_upgrade_index", None).await
 }
 
 /// Return a delay in block for an upgrade.
-pub async fn get_upgrade_delay_blocks(client: Client) -> anyhow::Result<()> {
+pub async fn get_upgrade_delay_blocks(client: Context) -> anyhow::Result<()> {
     get_value::<u64>(client, "get_upgrade_delay_blocks", None).await
 }
 
 /// Return ETH balance of the address.
-pub async fn get_balance(client: Client, address: String) -> anyhow::Result<()> {
+pub async fn get_balance(client: Context, address: String) -> anyhow::Result<()> {
     let address = hex_to_vec(&address)?;
     get_value::<U256>(client, "get_balance", Some(address)).await
 }
 
 /// Return a hex code of the smart contract.
-pub async fn get_code(client: Client, address: String) -> anyhow::Result<()> {
+pub async fn get_code(client: Context, address: String) -> anyhow::Result<()> {
     let address = hex_to_vec(&address)?;
     get_value::<HexString>(client, "get_code", Some(address)).await
 }
 
 /// Return a block hash of the specified height.
-pub async fn get_block_hash(client: Client, height: u64) -> anyhow::Result<()> {
+pub async fn get_block_hash(client: Context, height: u64) -> anyhow::Result<()> {
     let height = height.to_le_bytes().to_vec();
     get_value::<HexString>(client, "get_block_hash", Some(height)).await
 }
 
 /// Deploy Aurora EVM smart contract.
-pub async fn deploy_aurora<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::Result<()> {
+pub async fn deploy_aurora<P: AsRef<Path> + Send>(client: Context, path: P) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
     let result = match client.near().deploy_contract(code).await {
         Ok(outcome) => match outcome.status {
@@ -113,7 +115,7 @@ pub async fn deploy_aurora<P: AsRef<Path> + Send>(client: Client, path: P) -> an
 
 /// Initialize Aurora EVM smart contract.
 pub async fn init(
-    client: Client,
+    client: Context,
     chain_id: u64,
     owner_id: Option<String>,
     bridge_prover: Option<String>,
@@ -165,7 +167,7 @@ pub async fn init(
 
 /// Deploy EVM byte code.
 pub async fn deploy_evm_code(
-    client: Client,
+    client: Context,
     code: String,
     abi_path: Option<String>,
     args: Option<String>,
@@ -220,7 +222,7 @@ pub async fn deploy_evm_code(
 
 /// Creates new NEAR account.
 pub async fn create_account(
-    client: Client,
+    client: Context,
     account: &str,
     initial_balance: f64,
 ) -> anyhow::Result<()> {
@@ -233,7 +235,7 @@ pub async fn create_account(
 }
 
 /// View new NEAR account.
-pub async fn view_account(client: Client, account: &str) -> anyhow::Result<()> {
+pub async fn view_account(client: Context, account: &str) -> anyhow::Result<()> {
     match client.near().view_account(account).await {
         Ok(result) => println!("{result}"),
         Err(e) => eprintln!("{e:?}"),
@@ -244,7 +246,7 @@ pub async fn view_account(client: Client, account: &str) -> anyhow::Result<()> {
 
 /// Read-only call of the EVM smart contract.
 pub async fn view_call(
-    client: Client,
+    client: Context,
     address: String,
     function: String,
     args: Option<String>,
@@ -278,7 +280,7 @@ pub async fn view_call(
 
 /// Modifying call of the EVM smart contract.
 pub async fn call(
-    client: Client,
+    client: Context,
     address: String,
     function: String,
     args: Option<String>,
@@ -331,7 +333,7 @@ pub async fn call(
 }
 
 /// Upgrade Aurora Contract with provided code.
-pub async fn upgrade<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::Result<()> {
+pub async fn upgrade<P: AsRef<Path> + Send>(client: Context, path: P) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
 
     contract_call!(
@@ -344,7 +346,7 @@ pub async fn upgrade<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::
 }
 
 /// Stage code for delayed upgrade.
-pub async fn stage_upgrade<P: AsRef<Path> + Send>(client: Client, path: P) -> anyhow::Result<()> {
+pub async fn stage_upgrade<P: AsRef<Path> + Send>(client: Context, path: P) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
 
     contract_call!(
@@ -357,7 +359,7 @@ pub async fn stage_upgrade<P: AsRef<Path> + Send>(client: Client, path: P) -> an
 }
 
 /// Deploy staged upgrade.
-pub async fn deploy_upgrade(client: Client) -> anyhow::Result<()> {
+pub async fn deploy_upgrade(client: Context) -> anyhow::Result<()> {
     contract_call!(
         "deploy_upgrade",
         "The upgrade has been applied successfully",
@@ -368,7 +370,7 @@ pub async fn deploy_upgrade(client: Client) -> anyhow::Result<()> {
 }
 
 /// Updates the bytecode for user's router contracts.
-pub async fn factory_update(client: Client, path: String) -> anyhow::Result<()> {
+pub async fn factory_update(client: Context, path: String) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
 
     contract_call!(
@@ -381,12 +383,12 @@ pub async fn factory_update(client: Client, path: String) -> anyhow::Result<()> 
 }
 
 /// Returns the address of the `wNEAR` ERC-20 contract
-pub async fn factory_get_wnear_address(client: Client) -> anyhow::Result<()> {
+pub async fn factory_get_wnear_address(client: Context) -> anyhow::Result<()> {
     get_value::<HexString>(client, "factory_get_wnear_address", None).await
 }
 
 /// Sets the address for the `wNEAR` ERC-20 contract
-pub async fn factory_set_wnear_address(client: Client, address: String) -> anyhow::Result<()> {
+pub async fn factory_set_wnear_address(client: Context, address: String) -> anyhow::Result<()> {
     let args: [u8; 20] = hex_to_arr(&address)?;
 
     contract_call!(
@@ -400,7 +402,7 @@ pub async fn factory_set_wnear_address(client: Client, address: String) -> anyho
 
 /// Create and/or fund an XCC sub-account directly
 pub async fn fund_xcc_sub_account(
-    client: Client,
+    client: Context,
     target: String,
     account_id: Option<String>,
     deposit: f64,
@@ -423,7 +425,7 @@ pub async fn fund_xcc_sub_account(
 }
 
 /// Set a new owner of the Aurora EVM.
-pub async fn set_owner(client: Client, account_id: String) -> anyhow::Result<()> {
+pub async fn set_owner(client: Context, account_id: String) -> anyhow::Result<()> {
     let args = SetOwnerArgs {
         new_owner: account_id.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
     }
@@ -439,7 +441,7 @@ pub async fn set_owner(client: Client, account_id: String) -> anyhow::Result<()>
 }
 
 /// Register relayer address.
-pub async fn register_relayer(client: Client, address: String) -> anyhow::Result<()> {
+pub async fn register_relayer(client: Context, address: String) -> anyhow::Result<()> {
     let args = hex_to_vec(&address)?;
 
     contract_call!(
@@ -452,7 +454,7 @@ pub async fn register_relayer(client: Client, address: String) -> anyhow::Result
 }
 
 /// Return value in storage for key at address.
-pub async fn get_storage_at(client: Client, address: String, key: String) -> anyhow::Result<()> {
+pub async fn get_storage_at(client: Context, address: String, key: String) -> anyhow::Result<()> {
     let address = hex_to_address(&address)?;
     let key = H256::from_str(&key)?;
     let input = GetStorageAtArgs {
@@ -503,7 +505,7 @@ pub fn gen_near_key(account_id: &str, key_type: KeyType) -> anyhow::Result<()> {
 }
 
 /// Pause precompiles with mask.
-pub async fn pause_precompiles(client: Client, mask: u32) -> anyhow::Result<()> {
+pub async fn pause_precompiles(client: Context, mask: u32) -> anyhow::Result<()> {
     let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
 
     contract_call!(
@@ -516,7 +518,7 @@ pub async fn pause_precompiles(client: Client, mask: u32) -> anyhow::Result<()> 
 }
 
 /// Resume precompiles with mask.
-pub async fn resume_precompiles(client: Client, mask: u32) -> anyhow::Result<()> {
+pub async fn resume_precompiles(client: Context, mask: u32) -> anyhow::Result<()> {
     let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
 
     contract_call!(
@@ -529,12 +531,12 @@ pub async fn resume_precompiles(client: Client, mask: u32) -> anyhow::Result<()>
 }
 
 /// Return paused precompiles.
-pub async fn paused_precompiles(client: Client) -> anyhow::Result<()> {
+pub async fn paused_precompiles(client: Context) -> anyhow::Result<()> {
     get_value::<u32>(client, "paused_precompiles", None).await
 }
 
 /// Set relayer key manager.
-pub async fn set_key_manager(client: Client, key_manager: Option<AccountId>) -> anyhow::Result<()> {
+pub async fn set_key_manager(client: Context, key_manager: Option<AccountId>) -> anyhow::Result<()> {
     let message = key_manager.as_ref().map_or_else(
         || "has been removed".to_string(),
         |account_id| format!("{account_id} has been set"),
@@ -552,7 +554,7 @@ pub async fn set_key_manager(client: Client, key_manager: Option<AccountId>) -> 
 
 /// Add relayer public key.
 pub async fn add_relayer_key(
-    client: Client,
+    client: Context,
     public_key: PublicKey,
     allowance: f64,
 ) -> anyhow::Result<()> {
@@ -568,7 +570,7 @@ pub async fn add_relayer_key(
 }
 
 /// Remove relayer public key.
-pub async fn remove_relayer_key(client: Client, public_key: PublicKey) -> anyhow::Result<()> {
+pub async fn remove_relayer_key(client: Context, public_key: PublicKey) -> anyhow::Result<()> {
     let args = serde_json::to_vec(&RelayerKeyArgs { public_key })?;
 
     contract_call!(
@@ -581,7 +583,7 @@ pub async fn remove_relayer_key(client: Client, public_key: PublicKey) -> anyhow
 }
 
 /// Set a delay in blocks for an upgrade.
-pub async fn set_upgrade_delay_blocks(client: Client, blocks: u64) -> anyhow::Result<()> {
+pub async fn set_upgrade_delay_blocks(client: Context, blocks: u64) -> anyhow::Result<()> {
     let args = SetUpgradeDelayBlocksArgs {
         upgrade_delay_blocks: blocks,
     }
@@ -597,19 +599,19 @@ pub async fn set_upgrade_delay_blocks(client: Client, blocks: u64) -> anyhow::Re
 }
 
 /// Get ERC-20 address from account id of NEP-141.
-pub async fn get_erc20_from_nep141(client: Client, account_id: String) -> anyhow::Result<()> {
+pub async fn get_erc20_from_nep141(client: Context, account_id: String) -> anyhow::Result<()> {
     let args = account_id.try_to_vec()?;
     get_value::<HexString>(client, "get_erc20_from_nep141", Some(args)).await
 }
 
 /// Get NEP-141 account id from address of ERC-20.
-pub async fn get_nep141_from_erc20(client: Client, address: String) -> anyhow::Result<()> {
+pub async fn get_nep141_from_erc20(client: Context, address: String) -> anyhow::Result<()> {
     let args = hex_to_address(&address)?.as_bytes().to_vec();
     get_value::<AccountId>(client, "get_nep141_from_erc20", Some(args)).await
 }
 
 /// Get a metadata of ERC-20 contract.
-pub async fn get_erc20_metadata(client: Client, identifier: String) -> anyhow::Result<()> {
+pub async fn get_erc20_metadata(client: Context, identifier: String) -> anyhow::Result<()> {
     let args = str_to_identifier(&identifier)
         .and_then(|id| serde_json::to_vec(&id).map_err(Into::into))?;
     let result = client.near().view_call("get_erc20_metadata", args).await?;
@@ -623,7 +625,7 @@ pub async fn get_erc20_metadata(client: Client, identifier: String) -> anyhow::R
 
 /// Set a metadata of ERC-20 contract.
 pub async fn set_erc20_metadata(
-    client: Client,
+    client: Context,
     identifier: String,
     name: String,
     symbol: String,
@@ -650,7 +652,7 @@ pub async fn set_erc20_metadata(
 
 /// Mirror ERC-20 contract.
 pub async fn mirror_erc20_token(
-    client: Client,
+    client: Context,
     contract_id: String,
     nep141: String,
 ) -> anyhow::Result<()> {
@@ -671,7 +673,7 @@ pub async fn mirror_erc20_token(
 
 /// Set ETH connector account id
 pub async fn set_eth_connector_account_id(
-    client: Client,
+    client: Context,
     account_id: String,
     withdraw_ser: Option<WithdrawSerialization>,
 ) -> anyhow::Result<()> {
@@ -694,7 +696,7 @@ pub async fn set_eth_connector_account_id(
 }
 
 async fn get_value<T: FromCallResult + Display>(
-    client: Client,
+    client: Context,
     method_name: &str,
     args: Option<Vec<u8>>,
 ) -> anyhow::Result<()> {
@@ -708,7 +710,7 @@ async fn get_value<T: FromCallResult + Display>(
     Ok(())
 }
 
-fn to_account_id(id: Option<String>, client: &Client) -> anyhow::Result<AccountId> {
+fn to_account_id(id: Option<String>, client: &Context) -> anyhow::Result<AccountId> {
     id.map_or_else(
         || {
             client
@@ -798,13 +800,13 @@ struct ContractCall<'a> {
 }
 
 impl ContractCall<'_> {
-    async fn proceed(&self, client: Client, args: Vec<u8>) -> anyhow::Result<()> {
+    async fn proceed(&self, client: Context, args: Vec<u8>) -> anyhow::Result<()> {
         self.proceed_with_deposit(client, args, 0.0).await
     }
 
     async fn proceed_with_deposit(
         &self,
-        client: Client,
+        client: Context,
         args: Vec<u8>,
         deposit: f64,
     ) -> anyhow::Result<()> {
@@ -822,7 +824,11 @@ impl ContractCall<'_> {
                 anyhow::bail!("{}: {e}", self.error_message)
             }
             FinalExecutionStatus::SuccessValue(_) => {
-                println!("{}", self.success_message);
+                match client.output_format {
+                    OutputFormat::Plain => println!("{}", self.success_message),
+                    OutputFormat::Json => println!("{:?}", result.transaction_outcome),
+                    OutputFormat::Toml => println!("{:?}", result.transaction_outcome),
+                }
             }
         }
 

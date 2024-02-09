@@ -11,6 +11,8 @@ use thiserror::Error;
 pub use aurora::AuroraClient;
 pub use near::NearClient;
 
+use crate::cli::simple::OutputFormat;
+
 #[cfg(feature = "advanced")]
 mod aurora;
 mod near;
@@ -24,21 +26,23 @@ type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
 >;
 
 #[cfg(feature = "simple")]
-pub struct Client {
+pub struct Context {
     near_rpc: String,
     #[cfg(feature = "advanced")]
     aurora_rpc: String,
     engine_account_id: AccountId,
     signer_key_path: Option<String>,
+    pub output_format: OutputFormat,
 }
 
 #[cfg(feature = "simple")]
-impl Client {
-    pub fn new(near_rpc: &str, engine_account: &str, signer_key_path: Option<String>) -> Self {
+impl Context {
+    pub fn new(near_rpc: &str, engine_account: &str, signer_key_path: Option<String>, output_format: OutputFormat) -> Self {
         Self {
             near_rpc: near_rpc.to_string(),
             engine_account_id: engine_account.parse().expect("wrong engine account format"),
             signer_key_path,
+            output_format,
         }
     }
 

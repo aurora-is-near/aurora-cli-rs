@@ -21,6 +21,8 @@ ENGINE_ACCOUNT=aurora.node0
 MANAGER_ACCOUNT=key-manager.aurora.node0
 
 export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
+export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"
+
 
 # Install `nearup` utility if not installed before.
 pip3 list | grep nearup > /dev/null || pip3 install --user nearup
@@ -215,7 +217,7 @@ aurora-cli --engine $ENGINE_ACCOUNT factory-update $XCC_ROUTER_WASM_PATH || erro
 sleep 1
 aurora-cli --engine $ENGINE_ACCOUNT factory-set-wnear-address 0x80c6a002756e29b8bf2a587f7d975a726d5de8b9 || error_exit
 sleep 1
-aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
+# aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
 
 # Change upgrade delay blocks.
 blocks=$(aurora-cli --engine $ENGINE_ACCOUNT get-upgrade-delay-blocks || error_exit)
