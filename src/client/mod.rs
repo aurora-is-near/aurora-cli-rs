@@ -34,7 +34,7 @@ pub struct Context {
 
 #[cfg(feature = "simple")]
 impl Context {
-    pub fn new(client: Client, output_format: OutputFormat) -> Self {
+    pub const fn new(client: Client, output_format: OutputFormat) -> Self {
         Self {
             client,
             output_format,
