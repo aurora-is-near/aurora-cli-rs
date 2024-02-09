@@ -11,6 +11,7 @@ use thiserror::Error;
 pub use aurora::AuroraClient;
 pub use near::NearClient;
 
+#[cfg(feature = "simple")]
 use crate::cli::simple::OutputFormat;
 
 #[cfg(feature = "advanced")]
