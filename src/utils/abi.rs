@@ -85,7 +85,9 @@ pub fn parse_arg(arg: &str, kind: &ethabi::ParamType) -> anyhow::Result<Token> {
         }
         ethabi::ParamType::Tuple(tuple_kinds) => {
             let value: Value = serde_json::from_str(arg)?;
-            let Value::Array(values) = value else { anyhow::bail!("Expected Array"); };
+            let Value::Array(values) = value else {
+                anyhow::bail!("Expected Array");
+            };
             if values.len() != tuple_kinds.len() {
                 anyhow::bail!("Incorrect number of args for tuple size");
             }

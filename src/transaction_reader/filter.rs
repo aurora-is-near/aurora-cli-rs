@@ -81,7 +81,9 @@ pub struct GeneralGasFilter {
 
 impl Filter for GeneralGasFilter {
     fn pass(&self, data: &TxData) -> bool {
-        let Some(near_gas_used) = data.gas_profile.get("TOTAL") else { return false };
+        let Some(near_gas_used) = data.gas_profile.get("TOTAL") else {
+            return false;
+        };
         let evm_gas_used = match &data.status {
             TxStatus::Executed(submit_result) => &submit_result.gas_used,
             _ => return false,
