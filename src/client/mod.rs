@@ -25,11 +25,13 @@ type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
     near_jsonrpc_client::methods::broadcast_tx_commit::RpcTransactionError,
 >;
 
+#[cfg(feature = "simple")]
 pub struct Context {
     pub client: Client,
     pub output_format: OutputFormat,
 }
 
+#[cfg(feature = "simple")]
 impl Context {
     pub fn new(client: Client, output_format: OutputFormat) -> Self {
         Self {
