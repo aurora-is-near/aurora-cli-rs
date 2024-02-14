@@ -357,8 +357,9 @@ impl FromStr for Network {
     }
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub enum OutputFormat {
+    #[default]
     Plain,
     Json,
     Toml,
