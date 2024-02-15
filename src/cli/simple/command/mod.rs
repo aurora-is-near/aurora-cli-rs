@@ -18,7 +18,7 @@ use aurora_engine_types::public_key::{KeyType, PublicKey};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
 use near_primitives::views::{CallResult, FinalExecutionStatus};
-use serde_json::{to_string_pretty, Value};
+use serde_json::Value;
 
 use crate::cli::simple::OutputFormat;
 use crate::cli::simple::WithdrawSerialization;
@@ -849,7 +849,7 @@ impl ContractCall<'_> {
             FinalExecutionStatus::SuccessValue(_) => match context.output_format {
                 OutputFormat::Plain => println!("{}", self.success_message),
                 OutputFormat::Json => {
-                    let formatted = to_string_pretty(&result.transaction_outcome)?;
+                    let formatted = serde_json::to_string_pretty(&result.transaction_outcome)?;
                     println!("{formatted}");
                 }
                 OutputFormat::Toml => {

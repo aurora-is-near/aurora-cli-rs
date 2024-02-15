@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::str::FromStr;
 
 use aurora_engine_types::account_id::AccountId;
@@ -21,8 +22,7 @@ fn get_version() -> &'static str {
 
 /// Simple command line interface for communication with Aurora Engine
 #[derive(Parser)]
-#[command(author, long_about = None)]
-#[command(version = get_version())]
+#[command(author, long_about = None, version = get_version())]
 pub struct Cli {
     /// NEAR network ID
     #[arg(long, default_value = "localnet")]
@@ -337,8 +337,9 @@ pub enum Command {
     },
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub enum Network {
+    #[default]
     Localnet,
     Mainnet,
     Testnet,
