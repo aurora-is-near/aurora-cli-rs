@@ -1,6 +1,4 @@
-#[cfg(feature = "simple")]
-use std::str::FromStr;
-
+use crate::utils;
 use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
 #[cfg(feature = "advanced")]
 use aurora_engine_types::parameters::engine::SubmitResult;
@@ -21,8 +19,8 @@ use near_primitives::{
     hash::CryptoHash, transaction::SignedTransaction, types::AccountId, views,
     views::FinalExecutionOutcomeView,
 };
-
-use crate::utils;
+#[cfg(feature = "simple")]
+use std::str::FromStr;
 
 #[cfg(feature = "advanced")]
 use super::TransactionOutcome;

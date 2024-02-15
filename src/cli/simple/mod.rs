@@ -1,11 +1,9 @@
-use std::fmt::Display;
-use std::str::FromStr;
-
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use clap::{Parser, Subcommand};
 use lazy_static::lazy_static;
 use shadow_rs::shadow;
+use std::str::FromStr;
 
 pub mod command;
 
