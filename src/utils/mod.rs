@@ -83,7 +83,7 @@ pub fn hex_to_arr<const SIZE: usize>(hex: &str) -> anyhow::Result<[u8; SIZE]> {
     let mut output = [0u8; SIZE];
 
     hex::decode_to_slice(hex.trim_start_matches("0x"), &mut output)
-        .map(|_| output)
+        .map(|()| output)
         .map_err(|e| anyhow::anyhow!("Couldn't create array from the hex: {hex}, {e}"))
 }
 

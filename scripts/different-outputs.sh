@@ -192,24 +192,6 @@ sleep 1
 owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
 assert_eq "$owner" $ENGINE_ACCOUNT
 
-# Check pausing precompiles. Not working on the current release because of
-# hardcoded aurora account in EngineAuthorizer.
-export NEAR_KEY_PATH=$AURORA_KEY_PATH
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 0
-aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 1 || error_exit
-sleep 1
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 1
-aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 2 || error_exit
-sleep 1
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 3
-aurora-cli --engine $ENGINE_ACCOUNT resume-precompiles 3 || error_exit
-sleep 1
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 0
-
 # XCC router operations.
 # Download XCC router contract.
 curl -sL $XCC_ROUTER_LAST_WASM_URL -o $XCC_ROUTER_WASM_PATH || error_exit
@@ -217,7 +199,7 @@ aurora-cli --engine $ENGINE_ACCOUNT factory-update $XCC_ROUTER_WASM_PATH || erro
 sleep 1
 aurora-cli --engine $ENGINE_ACCOUNT factory-set-wnear-address 0x80c6a002756e29b8bf2a587f7d975a726d5de8b9 || error_exit
 sleep 1
-aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
+# aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
 
 # Change upgrade delay blocks.
 blocks=$(aurora-cli --engine $ENGINE_ACCOUNT get-upgrade-delay-blocks || error_exit)

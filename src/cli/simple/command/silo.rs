@@ -9,17 +9,17 @@ use std::fmt::{Display, Formatter};
 
 use super::{get_value, ContractCall};
 use crate::cli::command::FromCallResult;
-use crate::client::Client;
+use crate::client::Context;
 use crate::contract_call;
 use crate::utils::hex_to_address;
 
 /// Return fixed gas cost.
-pub async fn get_fixed_gas_cost(client: Client) -> anyhow::Result<()> {
+pub async fn get_fixed_gas_cost(client: Context) -> anyhow::Result<()> {
     get_value::<FixedGas>(client, "get_fixed_gas", None).await
 }
 
 /// Set fixed gas cost.
-pub async fn set_fixed_gas(client: Client, cost: u64) -> anyhow::Result<()> {
+pub async fn set_fixed_gas(client: Context, cost: u64) -> anyhow::Result<()> {
     let args = FixedGasArgs {
         fixed_gas: Some(EthGas::new(cost)),
     }
@@ -35,7 +35,7 @@ pub async fn set_fixed_gas(client: Client, cost: u64) -> anyhow::Result<()> {
 }
 
 pub async fn set_silo_params(
-    client: Client,
+    client: Context,
     gas: u64,
     fallback_address: String,
 ) -> anyhow::Result<()> {
@@ -55,7 +55,7 @@ pub async fn set_silo_params(
 }
 
 /// Get a status of the whitelist.
-pub async fn get_whitelist_status(client: Client, kind: String) -> anyhow::Result<()> {
+pub async fn get_whitelist_status(client: Context, kind: String) -> anyhow::Result<()> {
     let args = WhitelistKindArgs {
         kind: get_kind(&kind)?,
     }
@@ -65,7 +65,7 @@ pub async fn get_whitelist_status(client: Client, kind: String) -> anyhow::Resul
 }
 
 /// Set a status of the whitelist.
-pub async fn set_whitelist_status(client: Client, kind: String, status: u8) -> anyhow::Result<()> {
+pub async fn set_whitelist_status(client: Context, kind: String, status: u8) -> anyhow::Result<()> {
     let args = WhitelistStatusArgs {
         kind: get_kind(&kind)?,
         active: status > 0,
@@ -84,7 +84,7 @@ pub async fn set_whitelist_status(client: Client, kind: String, status: u8) -> a
 
 /// Add an entry to the whitelist.
 pub async fn add_entry_to_whitelist(
-    client: Client,
+    client: Context,
     kind: String,
     entry: String,
 ) -> anyhow::Result<()> {
@@ -100,7 +100,7 @@ pub async fn add_entry_to_whitelist(
 }
 
 /// Add a batch of entries to the whitelist.
-pub async fn add_entry_to_whitelist_batch(client: Client, path: String) -> anyhow::Result<()> {
+pub async fn add_entry_to_whitelist_batch(client: Context, path: String) -> anyhow::Result<()> {
     let args = std::fs::read_to_string(path)
         .and_then(|string| serde_json::from_str::<Vec<WhitelistArgs>>(&string).map_err(Into::into))
         .and_then(|entries| entries.try_to_vec())?;
@@ -116,7 +116,7 @@ pub async fn add_entry_to_whitelist_batch(client: Client, path: String) -> anyho
 
 /// Remove an entry from the whitelist.
 pub async fn remove_entry_from_whitelist(
-    client: Client,
+    client: Context,
     kind: String,
     entry: String,
 ) -> anyhow::Result<()> {

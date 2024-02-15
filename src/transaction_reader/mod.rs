@@ -105,7 +105,7 @@ fn get_gas_profile(value: &Value) -> Option<HashMap<String, u128>> {
         }
     })?;
     let profile = get_recursive(outcome.get("metadata")?, &["gas_profile"])?.as_array()?;
-    for entry in profile.iter() {
+    for entry in profile {
         let entry = entry.as_object()?;
         let name = entry.get("cost")?.as_str()?;
         let amount = entry.get("gas_used")?.as_str()?;
