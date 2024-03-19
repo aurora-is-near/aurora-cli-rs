@@ -20,6 +20,7 @@ use near_primitives::{
 };
 #[cfg(feature = "simple")]
 use std::str::FromStr;
+use std::time::Duration;
 
 #[cfg(feature = "advanced")]
 use super::TransactionOutcome;
@@ -27,7 +28,7 @@ use crate::utils;
 
 // The maximum amount of prepaid NEAR gas required for paying for a transaction.
 const NEAR_GAS: u64 = 300_000_000_000_000;
-const TIMEOUT: u64 = 20;
+const TIMEOUT: Duration = Duration::from_secs(20);
 
 pub struct NearClient {
     client: JsonRpcClient,
@@ -43,7 +44,8 @@ impl NearClient {
             reqwest::header::HeaderValue::from_static("application/json"),
         );
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(TIMEOUT))
+            .timeout(TIMEOUT)
+            .connect_timeout(TIMEOUT)
             .default_headers(headers)
             .build()
             .map(JsonRpcClient::with)
@@ -195,14 +197,14 @@ impl NearClient {
         deposit: u128,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
         self.near_broadcast_tx(
-            vec![Action::FunctionCall(
+            vec![Action::FunctionCall(Box::new(
                 near_primitives::transaction::FunctionCallAction {
                     method_name: method_name.to_string(),
                     args,
                     gas: NEAR_GAS,
                     deposit,
                 },
-            )],
+            ))],
             None,
         )
         .await
@@ -217,12 +219,12 @@ impl NearClient {
         let actions = batch
             .into_iter()
             .map(|(method_name, args)| {
-                Action::FunctionCall(near_primitives::transaction::FunctionCallAction {
+                Action::FunctionCall(Box::new(near_primitives::transaction::FunctionCallAction {
                     method_name,
                     args,
                     gas,
                     deposit: 0,
-                })
+                }))
             })
             .collect();
 
@@ -237,14 +239,14 @@ impl NearClient {
         nonce_override: u64,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
         self.near_broadcast_tx(
-            vec![Action::FunctionCall(
+            vec![Action::FunctionCall(Box::new(
                 near_primitives::transaction::FunctionCallAction {
                     method_name: method_name.to_string(),
                     args,
                     gas: NEAR_GAS,
                     deposit: 0,
                 },
-            )],
+            ))],
             Some(nonce_override),
         )
         .await
@@ -263,7 +265,7 @@ impl NearClient {
             signed_transaction: SignedTransaction::from_actions(
                 nonce,
                 signer.account_id.clone(),
-                self.engine_account_id.parse().unwrap(),
+                self.engine_account_id.as_str().parse().unwrap(),
                 &signer,
                 actions,
                 block_hash,

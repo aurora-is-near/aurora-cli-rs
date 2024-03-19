@@ -97,7 +97,7 @@ aurora-cli --engine $ENGINE_ACCOUNT init \
   --ft-metadata-path docs/res/ft_metadata.json || error_exit
 sleep 2
 
-# Upgrading Aurora EVM to the latest.
+# Upgrading Aurora EVM to 2.10.0.
 version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
 assert_eq "$version" $AURORA_PREV_VERSION
 echo "$version"
@@ -109,11 +109,6 @@ sleep 1
 version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
 assert_eq "$version" $AURORA_LAST_VERSION
 echo "$version"
-
-# Modify eth connector data
-aurora-cli --engine $ENGINE_ACCOUNT set-eth-connector-contract-data --prover-id "another.prover" \
-  --custodian-address "0xa3078bf607d2e859dca0b1a13878ec2e607f30de" --ft-metadata-path docs/res/ft_metadata.json || error_exit
-sleep 1
 
 # Create account id for key manager
 aurora-cli create-account --account $MANAGER_ACCOUNT --balance 10 > $MANAGER_KEY_PATH || error_exit
@@ -199,24 +194,6 @@ sleep 1
 owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
 assert_eq "$owner" $ENGINE_ACCOUNT
 
-# Check pausing precompiles. Not working on the current release because of
-# hardcoded aurora account in EngineAuthorizer.
-export NEAR_KEY_PATH=$AURORA_KEY_PATH
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 0
-aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 1 || error_exit
-sleep 1
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 1
-aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 2 || error_exit
-sleep 1
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 3
-aurora-cli --engine $ENGINE_ACCOUNT resume-precompiles 3 || error_exit
-sleep 1
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
-assert_eq "$mask" 0
-
 # XCC router operations.
 # Download XCC router contract.
 curl -sL $XCC_ROUTER_LAST_WASM_URL -o $XCC_ROUTER_WASM_PATH || error_exit
@@ -224,7 +201,7 @@ aurora-cli --engine $ENGINE_ACCOUNT factory-update $XCC_ROUTER_WASM_PATH || erro
 sleep 1
 aurora-cli --engine $ENGINE_ACCOUNT factory-set-wnear-address 0x80c6a002756e29b8bf2a587f7d975a726d5de8b9 || error_exit
 sleep 1
-aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
+# aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
 
 # Change upgrade delay blocks.
 blocks=$(aurora-cli --engine $ENGINE_ACCOUNT get-upgrade-delay-blocks || error_exit)

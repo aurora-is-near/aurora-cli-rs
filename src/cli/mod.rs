@@ -4,14 +4,14 @@ mod advanced;
 pub mod simple;
 
 #[cfg(feature = "advanced")]
-pub use advanced::{aurora, near, process_tx_data, run, Cli, Command};
+pub use advanced::{run, Cli};
 
 #[cfg(feature = "simple")]
-pub use simple::{command, run, Cli, Command};
+pub use simple::{command, run, Cli};
 
 /// NEAR Endpoints.
-const NEAR_MAINNET_ENDPOINT: &str = "https://archival-rpc.mainnet.near.org/";
-const NEAR_TESTNET_ENDPOINT: &str = "https://archival-rpc.testnet.near.org/";
+const NEAR_MAINNET_ENDPOINT: &str = "https://rpc.mainnet.near.org/";
+const NEAR_TESTNET_ENDPOINT: &str = "https://rpc.testnet.near.org/";
 #[cfg(feature = "simple")]
 const NEAR_LOCAL_ENDPOINT: &str = "http://127.0.0.1:3030/";
 /// Aurora Endpoints.
