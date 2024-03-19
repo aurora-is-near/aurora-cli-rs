@@ -2,8 +2,8 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
-AURORA_PREV_VERSION="2.10.2"
-AURORA_LAST_VERSION="3.1.0"
+AURORA_PREV_VERSION="3.6.0"
+AURORA_LAST_VERSION=$(curl -s https://api.github.com/repos/aurora-is-near/aurora-engine/releases/latest | jq -r .tag_name)
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
 ENGINE_PREV_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_PREV_VERSION/aurora-mainnet.wasm"
@@ -11,7 +11,6 @@ ENGINE_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/d
 XCC_ROUTER_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-factory-mainnet.wasm"
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
 XCC_ROUTER_WASM_PATH="/tmp/aurora-factory-mainnet.wasm"
-USER_BASE_BIN=$(python3 -m site --user-base)/bin
 NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
 AURORA_KEY_PATH=$NEARCORE_HOME/node0/aurora_key.json
 MANAGER_KEY_PATH=$NEARCORE_HOME/node0/manager_key.json
@@ -19,13 +18,15 @@ RELAYER_KEY_PATH=$NEARCORE_HOME/node0/relayer_key.json
 AURORA_SECRET_KEY=27cb3ddbd18037b38d7fb9ae3433a9d6f5cd554a4ba5768c8a15053f688ee167
 ENGINE_ACCOUNT=aurora.node0
 MANAGER_ACCOUNT=key-manager.aurora.node0
+VENV=/tmp/venv
 
-export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
 export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"
 
 
 # Install `nearup` utility if not installed before.
-pip3 list | grep nearup > /dev/null || pip3 install --user nearup
+python3 -m venv $VENV
+source $VENV/bin/activate
+pip list | grep nearup > /dev/null || pip install nearup > /dev/null
 
 start_node() {
   cmd="nearup run localnet --home $NEARCORE_HOME"
@@ -45,7 +46,8 @@ finish() {
   # Stop NEAR node.
   stop_node
   # Cleanup
-  rm -rf $NEARCORE_HOME
+  deactivate
+  rm -rf $NEARCORE_HOME $VENV
 
   if [[ -z "$1" ]]; then
     exit 0
@@ -95,7 +97,7 @@ aurora-cli --engine $ENGINE_ACCOUNT init \
   --ft-metadata-path docs/res/ft_metadata.json || error_exit
 sleep 2
 
-# Upgrading Aurora EVM to 2.10.0.
+# Upgrading Aurora EVM to the latest.
 version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
 assert_eq "$version" $AURORA_PREV_VERSION
 echo "$version"
@@ -107,6 +109,11 @@ sleep 1
 version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
 assert_eq "$version" $AURORA_LAST_VERSION
 echo "$version"
+
+# Modify eth connector data
+aurora-cli --engine $ENGINE_ACCOUNT set-eth-connector-contract-data --prover-id "another.prover" \
+  --custodian-address "0xa3078bf607d2e859dca0b1a13878ec2e607f30de" --ft-metadata-path docs/res/ft_metadata.json || error_exit
+sleep 1
 
 # Create account id for key manager
 aurora-cli create-account --account $MANAGER_ACCOUNT --balance 10 > $MANAGER_KEY_PATH || error_exit

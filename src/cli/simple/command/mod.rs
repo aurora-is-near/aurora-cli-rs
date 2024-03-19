@@ -715,6 +715,31 @@ pub async fn set_eth_connector_account_id(
     .await
 }
 
+/// Set internal ETH connector data (prover id, custodian address and FT metadata).
+pub async fn set_eth_connector_contract_data<P: AsRef<Path> + Send>(
+    context: Context,
+    prover_id: String,
+    custodian_address: String,
+    ft_metadata_path: P,
+) -> anyhow::Result<()> {
+    let args = InitCallArgs {
+        prover_account: prover_id.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
+        eth_custodian_address: custodian_address.trim_start_matches("0x").to_string(),
+        metadata: utils::ft_metadata::parse_ft_metadata(
+            std::fs::read_to_string(ft_metadata_path).ok(),
+        )?,
+    }
+    .try_to_vec()?;
+
+    contract_call!(
+        "set_eth_connector_contract_data",
+        "ETH connector data has been set successfully",
+        "Error while setting ETH connector data"
+    )
+    .proceed(context, args)
+    .await
+}
+
 async fn get_value<T: FromCallResult + Display>(
     context: Context,
     method_name: &str,
@@ -846,8 +871,13 @@ impl ContractCall<'_> {
             FinalExecutionStatus::Failure(e) => {
                 anyhow::bail!("{}: {e}", self.error_message)
             }
-            FinalExecutionStatus::SuccessValue(_) => match context.output_format {
-                OutputFormat::Plain => println!("{}", self.success_message),
+            FinalExecutionStatus::SuccessValue(output) => match context.output_format {
+                // TODO: The output could be serialized with JSON or Borsh.
+                // TODO: In the case of Borsh we should provide a type for deserializing the output in the corresponding object.
+                OutputFormat::Plain => match to_string_pretty(&output) {
+                    Ok(msg) if !output.is_empty() => println!("{}\n{msg}", self.success_message),
+                    Ok(_) | Err(_) => println!("{}", self.success_message),
+                },
                 OutputFormat::Json => {
                     let formatted = to_string_pretty(&result.transaction_outcome)?;
                     println!("{formatted}");

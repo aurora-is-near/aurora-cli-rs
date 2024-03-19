@@ -2,16 +2,17 @@
 
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
-AURORA_LAST_VERSION="2.9.2"
+AURORA_LAST_VERSION=$(curl -s https://api.github.com/repos/aurora-is-near/aurora-engine/releases/latest | jq -r .tag_name)
 ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-mainnet.wasm"
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
-USER_BASE_BIN=$(python3 -m site --user-base)/bin
+VENV=/tmp/venv
 
-export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
 export NEARCORE_HOME="/tmp/localnet"
 
 # Install `nearup` utility if not installed before.
-pip3 list | grep nearup > /dev/null || pip3 install --user nearup
+python3 -m venv $VENV
+source $VENV/bin/activate
+pip list | grep nearup > /dev/null || pip install nearup > /dev/null
 
 start_node() {
   cmd="nearup run localnet --home $NEARCORE_HOME --num-nodes 1"
@@ -27,7 +28,8 @@ finish() {
   # Stop NEAR node.
   nearup stop > /dev/null 2>&1
   # Cleanup
-  rm -rf $NEARCORE_HOME
+  deactivate
+  rm -rf $NEARCORE_HOME $VENV
 
   if [[ -z "$1" ]]; then
     exit 0
