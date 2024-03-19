@@ -30,6 +30,9 @@ pub struct Cli {
     /// Aurora EVM account
     #[arg(long, value_name = "ACCOUNT_ID", default_value = "aurora")]
     pub engine: String,
+    /// The way output of a command would be formatted
+    #[arg(long, default_value = "plain")]
+    pub output_format: OutputFormat,
     /// Path to file with NEAR account id and secret key in JSON format
     #[arg(long)]
     pub near_key_path: Option<String>,
@@ -215,10 +218,10 @@ pub enum Command {
     SetSiloParams {
         /// Fixed gas in EthGas.
         #[arg(long, short)]
-        cost: u64,
-        /// Rollback EVM address.
+        gas: u64,
+        /// Fallback EVM address.
         #[arg(long, short)]
-        rollback_address: String,
+        fallback_address: String,
     },
     /// Return a status of the whitelist
     GetWhitelistStatus {
@@ -332,6 +335,18 @@ pub enum Command {
         #[arg(long)]
         withdraw_ser: Option<WithdrawSerialization>,
     },
+    /// Set eth connector data
+    SetEthConnectorContractData {
+        /// Prover account id
+        #[arg(long)]
+        prover_id: String,
+        /// Custodian ETH address
+        #[arg(long)]
+        custodian_address: String,
+        /// Path to the file with the metadata of the fungible token
+        #[arg(long)]
+        ft_metadata_path: String,
+    },
 }
 
 #[derive(Clone)]
@@ -350,6 +365,27 @@ impl FromStr for Network {
             "mainnet" => Ok(Self::Mainnet),
             "testnet" => Ok(Self::Testnet),
             _ => anyhow::bail!("unknown network: {s}"),
+        }
+    }
+}
+
+#[derive(Default, Clone)]
+pub enum OutputFormat {
+    #[default]
+    Plain,
+    Json,
+    Toml,
+}
+
+impl FromStr for OutputFormat {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "plain" => Ok(Self::Plain),
+            "json" => Ok(Self::Json),
+            "toml" => Ok(Self::Toml),
+            _ => anyhow::bail!("unknown output format: {s}"),
         }
     }
 }
@@ -379,18 +415,19 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
     };
     let client = crate::client::Client::new(near_rpc, &args.engine, args.near_key_path);
+    let context = crate::client::Context::new(client, args.output_format);
 
     match args.command {
-        Command::GetChainId => command::get_chain_id(client).await?,
-        Command::GetVersion => command::get_version(client).await?,
-        Command::GetOwner => command::get_owner(client).await?,
-        Command::SetOwner { account_id } => command::set_owner(client, account_id).await?,
-        Command::RegisterRelayer { address } => command::register_relayer(client, address).await?,
-        Command::GetBridgeProver => command::get_bridge_prover(client).await?,
-        Command::GetNonce { address } => command::get_nonce(client, address).await?,
-        Command::GetCode { address } => command::get_code(client, address).await?,
-        Command::GetBalance { address } => command::get_balance(client, address).await?,
-        Command::GetBlockHash { height } => command::get_block_hash(client, height).await?,
+        Command::GetChainId => command::get_chain_id(context).await?,
+        Command::GetVersion => command::get_version(context).await?,
+        Command::GetOwner => command::get_owner(context).await?,
+        Command::SetOwner { account_id } => command::set_owner(context, account_id).await?,
+        Command::RegisterRelayer { address } => command::register_relayer(context, address).await?,
+        Command::GetBridgeProver => command::get_bridge_prover(context).await?,
+        Command::GetNonce { address } => command::get_nonce(context, address).await?,
+        Command::GetCode { address } => command::get_code(context, address).await?,
+        Command::GetBalance { address } => command::get_balance(context, address).await?,
+        Command::GetBlockHash { height } => command::get_block_hash(context, height).await?,
         Command::Call {
             address,
             function,
@@ -400,7 +437,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             aurora_secret_key,
         } => {
             command::call(
-                client,
+                context,
                 address,
                 function,
                 args,
@@ -415,28 +452,28 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             function,
             args,
             abi_path,
-        } => command::view_call(client, address, function, args, abi_path).await?,
-        Command::PausePrecompiles { mask } => command::pause_precompiles(client, mask).await?,
-        Command::ResumePrecompiles { mask } => command::resume_precompiles(client, mask).await?,
-        Command::PausedPrecompiles => command::paused_precompiles(client).await?,
-        Command::GetUpgradeIndex => command::get_upgrade_index(client).await?,
-        Command::FactoryUpdate { path } => command::factory_update(client, path).await?,
-        Command::FactoryGetWnearAddress => command::factory_get_wnear_address(client).await?,
+        } => command::view_call(context, address, function, args, abi_path).await?,
+        Command::PausePrecompiles { mask } => command::pause_precompiles(context, mask).await?,
+        Command::ResumePrecompiles { mask } => command::resume_precompiles(context, mask).await?,
+        Command::PausedPrecompiles => command::paused_precompiles(context).await?,
+        Command::GetUpgradeIndex => command::get_upgrade_index(context).await?,
+        Command::FactoryUpdate { path } => command::factory_update(context, path).await?,
+        Command::FactoryGetWnearAddress => command::factory_get_wnear_address(context).await?,
         Command::FactorySetWnearAddress { address } => {
-            command::factory_set_wnear_address(client, address).await?;
+            command::factory_set_wnear_address(context, address).await?;
         }
         Command::FundXccSubAccount {
             target,
             wnear_account_id,
             deposit,
         } => {
-            command::fund_xcc_sub_account(client, target, wnear_account_id, deposit).await?;
+            command::fund_xcc_sub_account(context, target, wnear_account_id, deposit).await?;
         }
-        Command::Upgrade { path } => command::upgrade(client, path).await?,
-        Command::StageUpgrade { path } => command::stage_upgrade(client, path).await?,
-        Command::DeployUpgrade => command::deploy_upgrade(client).await?,
+        Command::Upgrade { path } => command::upgrade(context, path).await?,
+        Command::StageUpgrade { path } => command::stage_upgrade(context, path).await?,
+        Command::DeployUpgrade => command::deploy_upgrade(context).await?,
         Command::GetStorageAt { address, key } => {
-            command::get_storage_at(client, address, key).await?;
+            command::get_storage_at(context, address, key).await?;
         }
         Command::Deploy {
             code,
@@ -444,14 +481,14 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             args,
             aurora_secret_key,
         } => {
-            command::deploy_evm_code(client, code, abi_path, args, aurora_secret_key.as_deref())
+            command::deploy_evm_code(context, code, abi_path, args, aurora_secret_key.as_deref())
                 .await?;
         }
-        Command::DeployAurora { path } => command::deploy_aurora(client, path).await?,
+        Command::DeployAurora { path } => command::deploy_aurora(context, path).await?,
         Command::CreateAccount { account, balance } => {
-            command::create_account(client, &account, balance).await?;
+            command::create_account(context, &account, balance).await?;
         }
-        Command::ViewAccount { account } => command::view_account(client, &account).await?,
+        Command::ViewAccount { account } => command::view_account(context, &account).await?,
         Command::Init {
             chain_id,
             owner_id,
@@ -461,7 +498,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             ft_metadata_path,
         } => {
             command::init(
-                client,
+                context,
                 chain_id,
                 owner_id,
                 bridge_prover_id,
@@ -478,57 +515,57 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             key_type,
         } => command::gen_near_key(&account_id, key_type)?,
         // Silo Specific Methods
-        Command::GetFixedGas => command::silo::get_fixed_gas_cost(client).await?,
+        Command::GetFixedGas => command::silo::get_fixed_gas_cost(context).await?,
         Command::SetFixedGas { cost } => {
-            command::silo::set_fixed_gas(client, cost).await?;
+            command::silo::set_fixed_gas(context, cost).await?;
         }
         Command::SetSiloParams {
-            cost,
-            rollback_address,
+            gas,
+            fallback_address,
         } => {
-            command::silo::set_silo_params(client, cost, rollback_address).await?;
+            command::silo::set_silo_params(context, gas, fallback_address).await?;
         }
         Command::GetWhitelistStatus { kind } => {
-            command::silo::get_whitelist_status(client, kind).await?;
+            command::silo::get_whitelist_status(context, kind).await?;
         }
         Command::SetWhitelistStatus { kind, status } => {
-            command::silo::set_whitelist_status(client, kind, status).await?;
+            command::silo::set_whitelist_status(context, kind, status).await?;
         }
         Command::AddEntryToWhitelist { kind, entry } => {
-            command::silo::add_entry_to_whitelist(client, kind, entry).await?;
+            command::silo::add_entry_to_whitelist(context, kind, entry).await?;
         }
         Command::AddEntryToWhitelistBatch { path } => {
-            command::silo::add_entry_to_whitelist_batch(client, path).await?;
+            command::silo::add_entry_to_whitelist_batch(context, path).await?;
         }
         Command::RemoveEntryFromWhitelist { kind, entry } => {
-            command::silo::remove_entry_from_whitelist(client, kind, entry).await?;
+            command::silo::remove_entry_from_whitelist(context, kind, entry).await?;
         }
         Command::SetKeyManager { account_id } => {
-            command::set_key_manager(client, account_id).await?;
+            command::set_key_manager(context, account_id).await?;
         }
         Command::AddRelayerKey {
             public_key,
             allowance,
         } => {
-            command::add_relayer_key(client, public_key, allowance).await?;
+            command::add_relayer_key(context, public_key, allowance).await?;
         }
         Command::RemoveRelayerKey { public_key } => {
-            command::remove_relayer_key(client, public_key).await?;
+            command::remove_relayer_key(context, public_key).await?;
         }
         Command::GetUpgradeDelayBlocks => {
-            command::get_upgrade_delay_blocks(client).await?;
+            command::get_upgrade_delay_blocks(context).await?;
         }
         Command::SetUpgradeDelayBlocks { blocks } => {
-            command::set_upgrade_delay_blocks(client, blocks).await?;
+            command::set_upgrade_delay_blocks(context, blocks).await?;
         }
         Command::GetErc20FromNep141 { account_id } => {
-            command::get_erc20_from_nep141(client, account_id).await?;
+            command::get_erc20_from_nep141(context, account_id).await?;
         }
         Command::GetNep141FromErc20 { address } => {
-            command::get_nep141_from_erc20(client, address).await?;
+            command::get_nep141_from_erc20(context, address).await?;
         }
         Command::GetErc20Metadata { erc20_id } => {
-            command::get_erc20_metadata(client, erc20_id).await?;
+            command::get_erc20_metadata(context, erc20_id).await?;
         }
         Command::SetErc20Metadata {
             erc20_id,
@@ -536,19 +573,32 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             symbol,
             decimals,
         } => {
-            command::set_erc20_metadata(client, erc20_id, name, symbol, decimals).await?;
+            command::set_erc20_metadata(context, erc20_id, name, symbol, decimals).await?;
         }
         Command::MirrorErc20Token {
             contract_id,
             nep141,
         } => {
-            command::mirror_erc20_token(client, contract_id, nep141).await?;
+            command::mirror_erc20_token(context, contract_id, nep141).await?;
         }
         Command::SetEthConnectorAccountId {
             account_id,
             withdraw_ser,
         } => {
-            command::set_eth_connector_account_id(client, account_id, withdraw_ser).await?;
+            command::set_eth_connector_account_id(context, account_id, withdraw_ser).await?;
+        }
+        Command::SetEthConnectorContractData {
+            prover_id,
+            custodian_address,
+            ft_metadata_path,
+        } => {
+            command::set_eth_connector_contract_data(
+                context,
+                prover_id,
+                custodian_address,
+                ft_metadata_path,
+            )
+            .await?;
         }
     }
 

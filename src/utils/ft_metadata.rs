@@ -2,7 +2,9 @@ use aurora_engine_types::borsh::BorshDeserialize;
 use aurora_engine_types::parameters::connector::{FungibleReferenceHash, FungibleTokenMetadata};
 
 pub fn parse_ft_metadata(input: Option<String>) -> anyhow::Result<FungibleTokenMetadata> {
-    let Some(input) = input else { return Ok(default_ft_metadata()); };
+    let Some(input) = input else {
+        return Ok(default_ft_metadata());
+    };
     let json: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&input)?;
 
     Ok(FungibleTokenMetadata {

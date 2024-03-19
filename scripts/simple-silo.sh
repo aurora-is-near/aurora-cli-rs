@@ -5,16 +5,17 @@ export NEARCORE_HOME="/tmp/localnet"
 EVM_CODE=$(cat docs/res/Counter.hex)
 ABI_PATH=docs/res/Counter.abi
 ENGINE_WASM_PATH="docs/res/aurora-mainnet-silo.wasm"
-USER_BASE_BIN=$(python3 -m site --user-base)/bin
 NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
 AURORA_KEY_PATH=$NEARCORE_HOME/node0/aurora_key.json
 AURORA_SECRET_KEY=27cb3ddbd18037b38d7fb9ae3433a9d6f5cd554a4ba5768c8a15053f688ee167
 ENGINE_ACCOUNT=aurora.node0
+VENV=/tmp/venv
 
-export PATH="$PATH:$USER_BASE_BIN:$HOME/.cargo/bin"
 
 # Install `nearup` utility if not installed before.
-pip3 list | grep nearup > /dev/null || pip3 install --user nearup
+python3 -m venv $VENV
+source $VENV/bin/activate
+pip list | grep nearup > /dev/null || pip install nearup > /dev/null
 
 start_node() {
   cmd="nearup run localnet --home $NEARCORE_HOME"
@@ -34,7 +35,8 @@ finish() {
   # Stop NEAR node.
   stop_node
   # Cleanup
-  rm -rf $NEARCORE_HOME
+  deactivate
+  rm -rf $NEARCORE_HOME $VENV
 
   if [[ -z "$1" ]]; then
     exit 0
@@ -86,7 +88,7 @@ sleep 2
 result=$(aurora-cli --engine $ENGINE_ACCOUNT get-fixed-gas || error_exit)
 assert_eq "none" "$result"
 # Set fixed gas
-aurora-cli --engine $ENGINE_ACCOUNT set-silo-params --cost 0 --rollback-address \
+aurora-cli --engine $ENGINE_ACCOUNT set-silo-params --gas 0 --fallback-address \
   0x7e5f4552091a69125d5dfcb7b8c2659029395bdf || error_exit
 sleep 1
 # Get fixed gas
