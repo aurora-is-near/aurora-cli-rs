@@ -335,6 +335,18 @@ pub enum Command {
         #[arg(long)]
         withdraw_ser: Option<WithdrawSerialization>,
     },
+    /// Set eth connector data
+    SetEthConnectorContractData {
+        /// Prover account id
+        #[arg(long)]
+        prover_id: String,
+        /// Custodian ETH address
+        #[arg(long)]
+        custodian_address: String,
+        /// Path to the file with the metadata of the fungible token
+        #[arg(long)]
+        ft_metadata_path: String,
+    },
 }
 
 #[derive(Clone)]
@@ -574,6 +586,19 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             withdraw_ser,
         } => {
             command::set_eth_connector_account_id(context, account_id, withdraw_ser).await?;
+        }
+        Command::SetEthConnectorContractData {
+            prover_id,
+            custodian_address,
+            ft_metadata_path,
+        } => {
+            command::set_eth_connector_contract_data(
+                context,
+                prover_id,
+                custodian_address,
+                ft_metadata_path,
+            )
+            .await?;
         }
     }
 

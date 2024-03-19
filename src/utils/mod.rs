@@ -167,7 +167,7 @@ fn test_parsing_key_file() {
     std::fs::write(&file, json).unwrap();
 
     let signer: InMemorySigner = read_key_file(&file).unwrap();
-    assert_eq!(signer.account_id, "user.testnet".parse().unwrap());
+    assert_eq!(signer.account_id.as_str(), "user.testnet");
 
     let json = r#"{
       "account_id": "user.testnet",
@@ -176,7 +176,7 @@ fn test_parsing_key_file() {
     std::fs::write(&file, json).unwrap();
 
     let signer2: InMemorySigner = read_key_file(&file).unwrap();
-    assert_eq!(signer.account_id, "user.testnet".parse().unwrap());
+    assert_eq!(signer.account_id.as_str(), "user.testnet");
     assert_eq!(signer.public_key, signer2.public_key);
     assert_eq!(signer.secret_key, signer2.secret_key);
 }
