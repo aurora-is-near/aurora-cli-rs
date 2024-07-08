@@ -15,6 +15,7 @@ use aurora_engine_types::{
     H256, U256,
 };
 use clap::Subcommand;
+use near_primitives::version::PROTOCOL_VERSION;
 use near_primitives::{
     account::{AccessKey, Account},
     hash::CryptoHash,
@@ -652,7 +653,14 @@ pub async fn execute_command(
                 };
                 let aurora_account_record = StateRecord::Account {
                     account_id: aurora_id.clone(),
-                    account: Account::new(aurora_amount, 0, CryptoHash::default(), 0),
+                    account: Account::new(
+                        aurora_amount,
+                        0,
+                        0,
+                        CryptoHash::default(),
+                        0,
+                        PROTOCOL_VERSION,
+                    ),
                 };
                 records.0.push(aurora_key_record);
                 records.0.push(aurora_account_record);
