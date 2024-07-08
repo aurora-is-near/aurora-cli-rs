@@ -11,6 +11,9 @@ use thiserror::Error;
 pub use aurora::AuroraClient;
 pub use near::NearClient;
 
+#[cfg(feature = "simple")]
+use crate::cli::simple::OutputFormat;
+
 #[cfg(feature = "advanced")]
 mod aurora;
 mod near;
@@ -22,6 +25,22 @@ type NearQueryError =
 type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
     near_jsonrpc_client::methods::broadcast_tx_commit::RpcTransactionError,
 >;
+
+#[cfg(feature = "simple")]
+pub struct Context {
+    pub client: Client,
+    pub output_format: OutputFormat,
+}
+
+#[cfg(feature = "simple")]
+impl Context {
+    pub const fn new(client: Client, output_format: OutputFormat) -> Self {
+        Self {
+            client,
+            output_format,
+        }
+    }
+}
 
 #[cfg(feature = "simple")]
 pub struct Client {

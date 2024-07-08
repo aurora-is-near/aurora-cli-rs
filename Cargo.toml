@@ -3,7 +3,7 @@ name = "aurora-cli-rs"
 version = "0.1.0"
 authors = ["Aurora Labs <hello@aurora.dev>"]
 edition = "2021"
-rust-version = "1.70.0"
+rust-version = "1.75.0"
 homepage = "https://github.com/aurora-is-near/aurora-cli-rs"
 repository = "https://github.com/aurora-is-near/aurora-cli-rs"
 description = "Aurora CLI is a command line interface to bootstrap Aurora engine"
@@ -14,34 +14,36 @@ name = "aurora-cli"
 path = "src/main.rs"
 
 [features]
-default = [ "simple" ]
-simple = []
-advanced = []
+default = ["simple"]
+simple = ["toml"]
+advanced = ["near-chain-configs"]
 
 [dependencies]
-aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.3.0", features = ["std"] }
-aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.3.0", features = ["std"] }
-aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.3.0", features = ["std"] }
-aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.3.0", features = ["std", "impl-serde"] }
+aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.6.3", features = ["std"] }
+aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.6.3", features = ["std"] }
+aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.6.3", features = ["std"] }
+aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.6.3", features = ["std", "impl-serde"] }
 
 anyhow = "1"
+borsh = "1"
 bs58 = "0.5"
 clap = { version = "4", features = ["derive"] }
 ethabi = "18"
-hex = "0.4.3"
-lazy_static = "1.4.0"
+hex = "0.4"
+lazy_static = "1"
 libsecp256k1 = { version = "0.7", features = ["std"] }
-near-chain-configs = "0.17"
-near-crypto = "0.17"
-near-jsonrpc-client = "0.6"
-near-jsonrpc-primitives = "0.17"
-near-primitives = "0.17"
-reqwest = { version = "0.11", features = ["json"] }
+near-chain-configs = { version = "0.23", optional = true }
+near-crypto = "0.23"
+near-jsonrpc-client = "0.10"
+near-jsonrpc-primitives = "0.23"
+near-primitives = "0.23"
+reqwest = { version = "0.12", features = ["json"] }
 rand = "0.8"
-rlp = "0.5.0"
+rlp = "0.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-shadow-rs = "0.24"
+toml = { version = "0.8", optional = true }
+shadow-rs = "0.29"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 cmd_lib = "1.3.0"
@@ -53,4 +55,4 @@ assert_cmd = "2.0.12"
 predicates = "3.0.3"
 
 [build-dependencies]
-shadow-rs = "0.24"
+shadow-rs = "0.29"
