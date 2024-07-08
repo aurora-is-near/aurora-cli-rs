@@ -42,10 +42,14 @@ error_exit() {
   finish 1
 }
 
+wait_for_block() {
+  sleep 1.5
+}
+
 # Download `neard` and preparing config files.
 start_node
 nearup stop > /dev/null 2>&1
-sleep 2
+wait_for_block
 
 # Update configs and add aurora key.
 aurora-cli near init genesis --path $NEARCORE_HOME/node0/genesis.json
@@ -54,18 +58,18 @@ aurora-cli near init local-config -n $NEARCORE_HOME/node0/config.json -a $NEARCO
 # Start NEAR node.
 rm -rf $NEARCORE_HOME/node0/data
 start_node
-sleep 1
+wait_for_block
 
 # Download Aurora EVM.
 curl -sL $ENGINE_WASM_URL -o $ENGINE_WASM_PATH || error_exit
 
 # Deploy and init Aurora EVM smart contract.
 aurora-cli near write engine-init -w $ENGINE_WASM_PATH || error_exit
-sleep 2
+wait_for_block
 
 # Deploy EVM code.
 aurora-cli near write deploy-code $EVM_CODE || error_exit
-sleep 2
+wait_for_block
 
 # Run EVM view call.
 aurora-cli near read solidity -t 0x592186c059e3d9564cac6b1ada6f2dc7ff1d78e9 call-args-by-name \
