@@ -327,7 +327,7 @@ pub enum Command {
         nep141: String,
     },
     /// Set eth connector account id
-    SetEthConnectorAccountId {
+    SetEthConnectorContractAccount {
         /// Account id of eth connector
         #[arg(long)]
         account_id: String,
@@ -335,6 +335,8 @@ pub enum Command {
         #[arg(long)]
         withdraw_ser: Option<WithdrawSerialization>,
     },
+    /// Get eth connector account id
+    GetEthConnectorContractAccount,
     /// Set eth connector data
     SetEthConnectorContractData {
         /// Prover account id
@@ -347,6 +349,13 @@ pub enum Command {
         #[arg(long)]
         ft_metadata_path: String,
     },
+    /// Set eth connector paused flags
+    SetPausedFlags {
+        /// Pause mask
+        mask: u8,
+    },
+    /// Get eth connector paused flags
+    GetPausedFlags,
 }
 
 #[derive(Clone)]
@@ -581,11 +590,14 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         } => {
             command::mirror_erc20_token(context, contract_id, nep141).await?;
         }
-        Command::SetEthConnectorAccountId {
+        Command::SetEthConnectorContractAccount {
             account_id,
             withdraw_ser,
         } => {
-            command::set_eth_connector_account_id(context, account_id, withdraw_ser).await?;
+            command::set_eth_connector_contract_account(context, account_id, withdraw_ser).await?;
+        }
+        Command::GetEthConnectorContractAccount => {
+            command::get_eth_connector_contract_account(context).await?;
         }
         Command::SetEthConnectorContractData {
             prover_id,
@@ -599,6 +611,12 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
                 ft_metadata_path,
             )
             .await?;
+        }
+        Command::SetPausedFlags { mask } => {
+            command::set_paused_flags(context, mask).await?;
+        }
+        Command::GetPausedFlags => {
+            command::get_paused_flags(context).await?;
         }
     }
 

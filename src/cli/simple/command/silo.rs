@@ -1,4 +1,4 @@
-use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
+use aurora_engine_types::borsh::BorshDeserialize;
 use aurora_engine_types::parameters::silo::{
     FixedGasArgs, SiloParamsArgs, WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs,
     WhitelistKind, WhitelistKindArgs, WhitelistStatusArgs,
@@ -20,10 +20,9 @@ pub async fn get_fixed_gas_cost(client: Context) -> anyhow::Result<()> {
 
 /// Set fixed gas cost.
 pub async fn set_fixed_gas(client: Context, cost: u64) -> anyhow::Result<()> {
-    let args = FixedGasArgs {
+    let args = borsh::to_vec(&FixedGasArgs {
         fixed_gas: Some(EthGas::new(cost)),
-    }
-    .try_to_vec()?;
+    })?;
 
     contract_call!(
         "set_fixed_gas",
@@ -39,11 +38,10 @@ pub async fn set_silo_params(
     gas: u64,
     fallback_address: String,
 ) -> anyhow::Result<()> {
-    let args = Some(SiloParamsArgs {
+    let args = borsh::to_vec(&Some(SiloParamsArgs {
         fixed_gas: EthGas::new(gas),
         erc20_fallback_address: hex_to_address(&fallback_address)?,
-    })
-    .try_to_vec()?;
+    }))?;
 
     contract_call!(
         "set_silo_params",
@@ -56,21 +54,19 @@ pub async fn set_silo_params(
 
 /// Get a status of the whitelist.
 pub async fn get_whitelist_status(client: Context, kind: String) -> anyhow::Result<()> {
-    let args = WhitelistKindArgs {
+    let args = borsh::to_vec(&WhitelistKindArgs {
         kind: get_kind(&kind)?,
-    }
-    .try_to_vec()?;
+    })?;
 
     get_value::<WhitelistStatus>(client, "get_whitelist_status", Some(args)).await
 }
 
 /// Set a status of the whitelist.
 pub async fn set_whitelist_status(client: Context, kind: String, status: u8) -> anyhow::Result<()> {
-    let args = WhitelistStatusArgs {
+    let args = borsh::to_vec(&WhitelistStatusArgs {
         kind: get_kind(&kind)?,
         active: status > 0,
-    }
-    .try_to_vec()?;
+    })?;
     let str_status = if status == 0 { "disabled" } else { "enabled" };
 
     contract_call!(
@@ -103,7 +99,7 @@ pub async fn add_entry_to_whitelist(
 pub async fn add_entry_to_whitelist_batch(client: Context, path: String) -> anyhow::Result<()> {
     let args = std::fs::read_to_string(path)
         .and_then(|string| serde_json::from_str::<Vec<WhitelistArgs>>(&string).map_err(Into::into))
-        .and_then(|entries| entries.try_to_vec())?;
+        .and_then(|entries| borsh::to_vec(&entries))?;
 
     contract_call!(
         "add_entry_to_whitelist_batch",
@@ -158,7 +154,7 @@ fn get_whitelist_args(kind: &str, entry: &str) -> anyhow::Result<Vec<u8>> {
             })
         }
     })
-    .and_then(|list| list.try_to_vec().map_err(Into::into))
+    .and_then(|list| borsh::to_vec(&list).map_err(Into::into))
 }
 
 struct WhitelistStatus(WhitelistStatusArgs);

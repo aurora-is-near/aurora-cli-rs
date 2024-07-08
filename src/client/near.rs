@@ -1,4 +1,4 @@
-use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
+use aurora_engine_types::borsh::BorshDeserialize;
 #[cfg(feature = "advanced")]
 use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::parameters::engine::TransactionStatus;
@@ -113,7 +113,7 @@ impl NearClient {
             nep141: nep141.parse().unwrap(),
         };
         let result = self
-            .view_call("get_erc20_from_nep141", args.try_to_vec()?)
+            .view_call("get_erc20_from_nep141", borsh::to_vec(&args)?)
             .await?;
 
         Address::try_from_slice(&result.result).map_err(|e| anyhow::anyhow!(e))
@@ -138,7 +138,7 @@ impl NearClient {
             amount: amount.to_bytes(),
             input,
         };
-        let result = self.view_call("view", args.try_to_vec()?).await?;
+        let result = self.view_call("view", borsh::to_vec(&args)?).await?;
         let status = TransactionStatus::try_from_slice(&result.result)?;
         Ok(status)
     }
