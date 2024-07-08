@@ -2,7 +2,7 @@ use crate::{
     config::{Config, Network},
     utils,
 };
-use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
+use aurora_engine_types::borsh::BorshDeserialize;
 use aurora_engine_types::parameters::connector::{InitCallArgs, PauseEthConnectorCallArgs};
 use aurora_engine_types::parameters::engine::{
     DeployErc20TokenArgs, GetStorageAtArgs, NewCallArgs, NewCallArgsV2, SubmitResult,
@@ -15,6 +15,7 @@ use aurora_engine_types::{
     H256, U256,
 };
 use clap::Subcommand;
+use near_primitives::version::PROTOCOL_VERSION;
 use near_primitives::{
     account::{AccessKey, Account},
     hash::CryptoHash,
@@ -342,7 +343,7 @@ pub async fn execute_command(
                         sender,
                         aurora_engine_precompiles::xcc::cross_contract_call::ADDRESS,
                         Wei::zero(),
-                        precompile_args.try_to_vec().unwrap(),
+                        borsh::to_vec(&precompile_args).unwrap(),
                     )
                     .await?;
                 println!("{result:?}");
@@ -427,7 +428,7 @@ pub async fn execute_command(
                 };
                 let storage = {
                     let result = client
-                        .view_call("get_storage_at", input.try_to_vec()?)
+                        .view_call("get_storage_at", borsh::to_vec(&input)?)
                         .await?;
                     H256::from_slice(&result.result)
                 };
@@ -485,7 +486,7 @@ pub async fn execute_command(
                 let next_nonce = deploy_response.transaction.nonce + 1;
 
                 let new_response = client
-                    .contract_call_with_nonce("new", new_args.try_to_vec()?, next_nonce)
+                    .contract_call_with_nonce("new", borsh::to_vec(&new_args)?, next_nonce)
                     .await?;
                 assert_tx_success(&new_response);
                 let next_nonce = new_response.transaction.nonce + 1;
@@ -493,7 +494,7 @@ pub async fn execute_command(
                 let init_response = client
                     .contract_call_with_nonce(
                         "new_eth_connector",
-                        init_args.try_to_vec().unwrap(),
+                        borsh::to_vec(&init_args).unwrap(),
                         next_nonce,
                     )
                     .await?;
@@ -529,7 +530,7 @@ pub async fn execute_command(
                         &sk,
                         Some(aurora_engine_precompiles::xcc::cross_contract_call::ADDRESS),
                         Wei::zero(),
-                        precompile_args.try_to_vec().unwrap(),
+                        borsh::to_vec(&precompile_args).unwrap(),
                     )
                     .await?;
                 println!("{result:?}");
@@ -604,7 +605,7 @@ pub async fn execute_command(
             }
             WriteCommand::DeployERC20Token { nep141 } => {
                 let nep141: AccountId = nep141.parse().unwrap();
-                let input = DeployErc20TokenArgs { nep141 }.try_to_vec()?;
+                let input = borsh::to_vec(&DeployErc20TokenArgs { nep141 })?;
                 let tx_outcome = client.contract_call("deploy_erc20_token", input).await?;
                 println!("{tx_outcome:?}");
             }
@@ -615,10 +616,9 @@ pub async fn execute_command(
                 println!("{tx_outcome:?}");
             }
             WriteCommand::SetPausedFlags { paused_mask } => {
-                let input = PauseEthConnectorCallArgs {
+                let input = borsh::to_vec(&PauseEthConnectorCallArgs {
                     paused_mask: u8::from_str(&paused_mask).unwrap(),
-                }
-                .try_to_vec()?;
+                })?;
                 let tx_outcome = client.contract_call("set_paused_flags", input).await?;
                 println!("{tx_outcome:?}");
             }
@@ -653,7 +653,14 @@ pub async fn execute_command(
                 };
                 let aurora_account_record = StateRecord::Account {
                     account_id: aurora_id.clone(),
-                    account: Account::new(aurora_amount, 0, CryptoHash::default(), 0),
+                    account: Account::new(
+                        aurora_amount,
+                        0,
+                        0,
+                        CryptoHash::default(),
+                        0,
+                        PROTOCOL_VERSION,
+                    ),
                 };
                 records.0.push(aurora_key_record);
                 records.0.push(aurora_account_record);

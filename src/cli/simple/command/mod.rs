@@ -3,13 +3,13 @@ use std::{path::Path, str::FromStr};
 
 use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
-use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
+use aurora_engine_types::borsh::BorshDeserialize;
 use aurora_engine_types::parameters::connector::{
-    Erc20Identifier, Erc20Metadata, InitCallArgs, MirrorErc20TokenArgs, SetErc20MetadataArgs,
-    SetEthConnectorContractAccountArgs, WithdrawSerializeType,
+    Erc20Identifier, Erc20Metadata, InitCallArgs, MirrorErc20TokenArgs, PauseEthConnectorCallArgs,
+    PausedMask, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, WithdrawSerializeType,
 };
 use aurora_engine_types::parameters::engine::{
-    GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs,
+    GetStorageAtArgs, LegacyNewCallArgs, PausePrecompilesCallArgs, RelayerKeyArgs,
     RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, SubmitResult,
     TransactionStatus,
 };
@@ -94,6 +94,11 @@ pub async fn get_block_hash(context: Context, height: u64) -> anyhow::Result<()>
     get_value::<HexString>(context, "get_block_hash", Some(height)).await
 }
 
+/// Return an external ETH connector account id.
+pub async fn get_eth_connector_contract_account(context: Context) -> anyhow::Result<()> {
+    get_value::<String>(context, "get_eth_connector_contract_account", None).await
+}
+
 /// Deploy Aurora EVM smart contract.
 pub async fn deploy_aurora<P: AsRef<Path> + Send>(context: Context, path: P) -> anyhow::Result<()> {
     let code = std::fs::read(path)?;
@@ -125,14 +130,14 @@ pub async fn init(
     let owner_id = to_account_id(owner_id, &context)?;
     let prover_id = to_account_id(bridge_prover, &context)?;
 
-    let aurora_init_args = NewCallArgs::V2(NewCallArgsV2 {
+    let aurora_init_args = borsh::to_vec(&LegacyNewCallArgs {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
+        bridge_prover_id: prover_id.clone(),
         upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
-    })
-    .try_to_vec()?;
+    })?;
 
-    let eth_connector_init_args = InitCallArgs {
+    let eth_connector_init_args = borsh::to_vec(&InitCallArgs {
         prover_account: prover_id,
         eth_custodian_address: custodian_address.map_or_else(
             || Address::default().encode(),
@@ -141,8 +146,7 @@ pub async fn init(
         metadata: utils::ft_metadata::parse_ft_metadata(
             ft_metadata_path.and_then(|path| std::fs::read_to_string(path).ok()),
         )?,
-    }
-    .try_to_vec()?;
+    })?;
 
     let batch = vec![
         ("new".to_string(), aurora_init_args),
@@ -420,13 +424,12 @@ pub async fn fund_xcc_sub_account(
     account_id: Option<String>,
     deposit: f64,
 ) -> anyhow::Result<()> {
-    let args = FundXccArgs {
+    let args = borsh::to_vec(&FundXccArgs {
         target: hex_to_address(&target)?,
         wnear_account_id: account_id
             .map(|id| id.parse().map_err(|e| anyhow::anyhow!("{e}")))
             .transpose()?,
-    }
-    .try_to_vec()?;
+    })?;
 
     contract_call!(
         "fund_xcc_sub_account",
@@ -439,10 +442,9 @@ pub async fn fund_xcc_sub_account(
 
 /// Set a new owner of the Aurora EVM.
 pub async fn set_owner(context: Context, account_id: String) -> anyhow::Result<()> {
-    let args = SetOwnerArgs {
+    let args = borsh::to_vec(&SetOwnerArgs {
         new_owner: account_id.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
-    }
-    .try_to_vec()?;
+    })?;
 
     contract_call!(
         "set_owner",
@@ -470,11 +472,10 @@ pub async fn register_relayer(context: Context, address: String) -> anyhow::Resu
 pub async fn get_storage_at(context: Context, address: String, key: String) -> anyhow::Result<()> {
     let address = hex_to_address(&address)?;
     let key = H256::from_str(&key)?;
-    let input = GetStorageAtArgs {
+    let input = borsh::to_vec(&GetStorageAtArgs {
         address,
         key: key.0,
-    }
-    .try_to_vec()?;
+    })?;
 
     get_value::<H256>(context, "get_storage_at", Some(input)).await
 }
@@ -519,7 +520,7 @@ pub fn gen_near_key(account_id: &str, key_type: KeyType) -> anyhow::Result<()> {
 
 /// Pause precompiles with mask.
 pub async fn pause_precompiles(context: Context, mask: u32) -> anyhow::Result<()> {
-    let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
+    let args = borsh::to_vec(&PausePrecompilesCallArgs { paused_mask: mask })?;
 
     contract_call!(
         "pause_precompiles",
@@ -532,7 +533,7 @@ pub async fn pause_precompiles(context: Context, mask: u32) -> anyhow::Result<()
 
 /// Resume precompiles with mask.
 pub async fn resume_precompiles(context: Context, mask: u32) -> anyhow::Result<()> {
-    let args = PausePrecompilesCallArgs { paused_mask: mask }.try_to_vec()?;
+    let args = borsh::to_vec(&PausePrecompilesCallArgs { paused_mask: mask })?;
 
     contract_call!(
         "resume_precompiles",
@@ -546,6 +547,24 @@ pub async fn resume_precompiles(context: Context, mask: u32) -> anyhow::Result<(
 /// Return paused precompiles.
 pub async fn paused_precompiles(context: Context) -> anyhow::Result<()> {
     get_value::<u32>(context, "paused_precompiles", None).await
+}
+
+/// Set the paused mask for ETH connector.
+pub async fn set_paused_flags(context: Context, paused_mask: PausedMask) -> anyhow::Result<()> {
+    let args = borsh::to_vec(&PauseEthConnectorCallArgs { paused_mask })?;
+
+    contract_call!(
+        "set_paused_flags",
+        "The pause mask has been set successfully",
+        "Error while setting pause mask"
+    )
+    .proceed(context, args)
+    .await
+}
+
+/// Return the paused mask for ETH connector.
+pub async fn get_paused_flags(context: Context) -> anyhow::Result<()> {
+    get_value::<PausedMask>(context, "get_paused_flags", None).await
 }
 
 /// Set relayer key manager.
@@ -600,10 +619,9 @@ pub async fn remove_relayer_key(context: Context, public_key: PublicKey) -> anyh
 
 /// Set a delay in blocks for an upgrade.
 pub async fn set_upgrade_delay_blocks(context: Context, blocks: u64) -> anyhow::Result<()> {
-    let args = SetUpgradeDelayBlocksArgs {
+    let args = borsh::to_vec(&SetUpgradeDelayBlocksArgs {
         upgrade_delay_blocks: blocks,
-    }
-    .try_to_vec()?;
+    })?;
 
     contract_call!(
         "set_upgrade_delay_blocks",
@@ -616,7 +634,7 @@ pub async fn set_upgrade_delay_blocks(context: Context, blocks: u64) -> anyhow::
 
 /// Get ERC-20 address from account id of NEP-141.
 pub async fn get_erc20_from_nep141(context: Context, account_id: String) -> anyhow::Result<()> {
-    let args = account_id.try_to_vec()?;
+    let args = borsh::to_vec(&account_id)?;
     get_value::<HexString>(context, "get_erc20_from_nep141", Some(args)).await
 }
 
@@ -676,11 +694,10 @@ pub async fn mirror_erc20_token(
     contract_id: String,
     nep141: String,
 ) -> anyhow::Result<()> {
-    let args = MirrorErc20TokenArgs {
+    let args = borsh::to_vec(&MirrorErc20TokenArgs {
         contract_id: contract_id.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
         nep141: nep141.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
-    }
-    .try_to_vec()?;
+    })?;
 
     contract_call!(
         "mirror_erc20_token",
@@ -692,19 +709,18 @@ pub async fn mirror_erc20_token(
 }
 
 /// Set ETH connector account id
-pub async fn set_eth_connector_account_id(
+pub async fn set_eth_connector_contract_account(
     context: Context,
     account_id: String,
     withdraw_ser: Option<WithdrawSerialization>,
 ) -> anyhow::Result<()> {
-    let args = SetEthConnectorContractAccountArgs {
+    let args = borsh::to_vec(&SetEthConnectorContractAccountArgs {
         account: account_id.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
         withdraw_serialize_type: withdraw_ser.map_or(WithdrawSerializeType::Borsh, |s| match s {
             WithdrawSerialization::Borsh => WithdrawSerializeType::Borsh,
             WithdrawSerialization::Json => WithdrawSerializeType::Json,
         }),
-    }
-    .try_to_vec()?;
+    })?;
 
     contract_call!(
         "set_eth_connector_contract_account",
@@ -722,14 +738,13 @@ pub async fn set_eth_connector_contract_data<P: AsRef<Path> + Send>(
     custodian_address: String,
     ft_metadata_path: P,
 ) -> anyhow::Result<()> {
-    let args = InitCallArgs {
+    let args = borsh::to_vec(&InitCallArgs {
         prover_account: prover_id.parse().map_err(|e| anyhow::anyhow!("{e}"))?,
         eth_custodian_address: custodian_address.trim_start_matches("0x").to_string(),
         metadata: utils::ft_metadata::parse_ft_metadata(
             std::fs::read_to_string(ft_metadata_path).ok(),
         )?,
-    }
-    .try_to_vec()?;
+    })?;
 
     contract_call!(
         "set_eth_connector_contract_data",
@@ -831,6 +846,12 @@ impl FromCallResult for HexString {
 impl FromCallResult for AccountId {
     fn from_result(result: CallResult) -> anyhow::Result<Self> {
         Self::try_from(result.result).map_err(|e| anyhow::anyhow!("{e}"))
+    }
+}
+
+impl FromCallResult for PausedMask {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        Self::try_from_slice(&result.result).map_err(|e| anyhow::anyhow!("{e}"))
     }
 }
 

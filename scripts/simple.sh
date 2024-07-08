@@ -67,9 +67,13 @@ assert_eq() {
   fi
 }
 
+wait_for_block() {
+  sleep 1.5
+}
+
 # Start NEAR node.
 start_node
-sleep 1
+wait_for_block
 
 # Download Aurora EVM.
 curl -sL $ENGINE_PREV_WASM_URL -o $ENGINE_WASM_PATH || error_exit
@@ -77,11 +81,11 @@ curl -sL $ENGINE_PREV_WASM_URL -o $ENGINE_WASM_PATH || error_exit
 export NEAR_KEY_PATH=$NODE_KEY_PATH
 # Create an account for Aurora EVM.
 aurora-cli create-account --account $ENGINE_ACCOUNT --balance 100 > $AURORA_KEY_PATH || error_exit
-sleep 1
+wait_for_block
 
 # View info of created account.
 aurora-cli view-account $ENGINE_ACCOUNT || error_exit
-sleep 1
+wait_for_block
 
 # Deploy Aurora EVM.
 export NEAR_KEY_PATH=$AURORA_KEY_PATH
@@ -95,7 +99,7 @@ aurora-cli --engine $ENGINE_ACCOUNT init \
   --upgrade-delay-blocks 1 \
   --custodian-address 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D \
   --ft-metadata-path docs/res/ft_metadata.json || error_exit
-sleep 2
+wait_for_block
 
 # Upgrading Aurora EVM to the latest.
 version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
@@ -103,9 +107,9 @@ assert_eq "$version" $AURORA_PREV_VERSION
 echo "$version"
 curl -sL $ENGINE_LAST_WASM_URL -o $ENGINE_WASM_PATH || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT stage-upgrade $ENGINE_WASM_PATH || error_exit
-sleep 2
+wait_for_block
 aurora-cli --engine $ENGINE_ACCOUNT deploy-upgrade || error_exit
-sleep 1
+wait_for_block
 version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
 assert_eq "$version" $AURORA_LAST_VERSION
 echo "$version"
@@ -113,15 +117,15 @@ echo "$version"
 # Modify eth connector data
 aurora-cli --engine $ENGINE_ACCOUNT set-eth-connector-contract-data --prover-id "another.prover" \
   --custodian-address "0xa3078bf607d2e859dca0b1a13878ec2e607f30de" --ft-metadata-path docs/res/ft_metadata.json || error_exit
-sleep 1
+wait_for_block
 
 # Create account id for key manager
 aurora-cli create-account --account $MANAGER_ACCOUNT --balance 10 > $MANAGER_KEY_PATH || error_exit
-sleep 1
+wait_for_block
 
 # Set key manager
 aurora-cli --engine $ENGINE_ACCOUNT set-key-manager $MANAGER_ACCOUNT || error_exit
-sleep 1
+wait_for_block
 
 # Create new keys for relayer
 aurora-cli generate-near-key $ENGINE_ACCOUNT ed25519 > $RELAYER_KEY_PATH || error_exit
@@ -130,21 +134,21 @@ relayer_public_key="$(jq -r .public_key < $RELAYER_KEY_PATH)"
 # Add relayer key by key manager
 export NEAR_KEY_PATH=$MANAGER_KEY_PATH
 aurora-cli --engine $ENGINE_ACCOUNT add-relayer-key --public-key "$relayer_public_key" --allowance "0.5" || error_exit
-sleep 1
+wait_for_block
 
 # Deploy Hello World EVM code with relayer key.
 export NEAR_KEY_PATH=$RELAYER_KEY_PATH
 aurora-cli --engine $ENGINE_ACCOUNT deploy --code "$EVM_CODE" --aurora-secret-key $AURORA_SECRET_KEY || error_exit
-sleep 1
+wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f greet \
   --abi-path $ABI_PATH || error_exit)
 assert_eq "$result" "Hello, World!"
-sleep 1
+wait_for_block
 
 # Remove relayer key
 export NEAR_KEY_PATH=$MANAGER_KEY_PATH
 aurora-cli --engine $ENGINE_ACCOUNT remove-relayer-key "$relayer_public_key" || error_exit
-sleep 1
+wait_for_block
 
 # Deploy Counter EVM code.
 export NEAR_KEY_PATH=$AURORA_KEY_PATH
@@ -152,27 +156,27 @@ EVM_CODE=$(cat docs/res/Counter.hex)
 ABI_PATH=docs/res/Counter.abi
 aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --abi-path $ABI_PATH --args '{"init_value":"5"}' \
   --aurora-secret-key $AURORA_SECRET_KEY || error_exit
-sleep 1
+wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
   --abi-path $ABI_PATH || error_exit)
 assert_eq "$result" "5"
-sleep 1
+wait_for_block
 aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f increment \
   --abi-path $ABI_PATH \
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
-sleep 1
+wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
   --abi-path $ABI_PATH || error_exit)
 assert_eq "$result" "6"
-sleep 1
+wait_for_block
 aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f decrement \
   --abi-path $ABI_PATH \
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
-sleep 1
+wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
   --abi-path $ABI_PATH || error_exit)
 assert_eq "$result" "5"
-sleep 1
+wait_for_block
 
 # Check read operations.
 aurora-cli --engine $ENGINE_ACCOUNT get-chain-id || error_exit
@@ -186,16 +190,16 @@ assert_eq "$block_hash" "0xd31857e9ce14083a7a74092b71f9ac48b8c0d4988ad40074182c1
 
 # Register a new relayer address
 aurora-cli --engine $ENGINE_ACCOUNT register-relayer 0xf644ad75e048eaeb28844dd75bd384984e8cd508 || error_exit
-sleep 1
+wait_for_block
 
 # Set a new owner. The functionality has not been released yet.
 aurora-cli --engine $ENGINE_ACCOUNT set-owner node0 || error_exit
-sleep 1
+wait_for_block
 owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
 assert_eq "$owner" node0
 export NEAR_KEY_PATH=$NODE_KEY_PATH
 aurora-cli --engine $ENGINE_ACCOUNT set-owner aurora.node0 || error_exit
-sleep 1
+wait_for_block
 owner=$(aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit)
 assert_eq "$owner" $ENGINE_ACCOUNT
 
@@ -205,15 +209,15 @@ export NEAR_KEY_PATH=$AURORA_KEY_PATH
 mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
 assert_eq "$mask" 0
 aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 1 || error_exit
-sleep 1
+wait_for_block
 mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
 assert_eq "$mask" 1
 aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 2 || error_exit
-sleep 1
+wait_for_block
 mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
 assert_eq "$mask" 3
 aurora-cli --engine $ENGINE_ACCOUNT resume-precompiles 3 || error_exit
-sleep 1
+wait_for_block
 mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
 assert_eq "$mask" 0
 
@@ -221,16 +225,16 @@ assert_eq "$mask" 0
 # Download XCC router contract.
 curl -sL $XCC_ROUTER_LAST_WASM_URL -o $XCC_ROUTER_WASM_PATH || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT factory-update $XCC_ROUTER_WASM_PATH || error_exit
-sleep 1
+wait_for_block
 aurora-cli --engine $ENGINE_ACCOUNT factory-set-wnear-address 0x80c6a002756e29b8bf2a587f7d975a726d5de8b9 || error_exit
-sleep 1
+wait_for_block
 aurora-cli --engine $ENGINE_ACCOUNT fund-xcc-sub-account 0x43a4969cc2c22d0000c591ff4bd71983ea8a8be9 some_account.near 25.5 || error_exit
 
 # Change upgrade delay blocks.
 blocks=$(aurora-cli --engine $ENGINE_ACCOUNT get-upgrade-delay-blocks || error_exit)
 assert_eq "$blocks" 1 # 1 is set on init stage
 aurora-cli --engine $ENGINE_ACCOUNT set-upgrade-delay-blocks 5 || error_exit
-sleep 1
+wait_for_block
 blocks=$(aurora-cli --engine $ENGINE_ACCOUNT get-upgrade-delay-blocks || error_exit)
 assert_eq "$blocks" 5
 
