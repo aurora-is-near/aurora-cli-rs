@@ -28,7 +28,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
       - name: Install python-venv
-        run: apt install python3-venv
+        run: apt -y install python3-venv
       - name: Install aurora-cli
         uses: actions-rs/cargo@v1
         with:
