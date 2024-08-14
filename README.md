@@ -41,7 +41,7 @@ See also prior version [aurora-cli](https://github.com/aurora-is-near/aurora-cli
 
 - 📦 Install `aurora-cli-rs` and start interacting with it:
   *`cargo install --git https://github.com/aurora-is-near/aurora-cli-rs.git`*
-- 🔍 Check out what each command is for in the official Aurora [docs](https://doc.aurora.dev/tools/aurora-cli)
+- 🔍 Check out what each command is for in the [Commands Reference](#commands-reference) section
 - ✋ Have questions? Ask them at the official Aurora [forum](https://forum.aurora.dev/)
 
 ## Usage
@@ -78,6 +78,15 @@ Start NEAR node:
 ```shell
 nearup run localnet --home /tmp/localnet
 ```
+
+When running the `nearup run localnet` command on Apple’s M-based hardware, a local build of `neard` is required due to compatibility issues with the architecture.
+
+Start NEAR node (Apple's M-based hardware):
+```shell
+nearup run localnet --home /tmp/localnet --binary-path /path/to/nearcore/target/release
+```
+
+Replace `/path/to/nearcore/target/release` with the actual path to the locally built `neard` binary.
 
 ### **Prepare an account and create a private key file for Aurora EVM**
 
@@ -212,7 +221,9 @@ aurora-cli --engine aurora.node0 get-chain-id
 aurora-cli --engine aurora.node0 get-nonce 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf
 aurora-cli --engine aurora.node0 get-code 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf
 aurora-cli --engine aurora.node0 get-balance 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf
-aurora-cli --engine aurora.node0 get-storage-at --address 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf --key 0
+aurora-cli --engine aurora.node0 get-storage-at \
+  --address 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf \
+  --key 0x0000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ### **Silo methods**
@@ -291,7 +302,7 @@ Example JSON batch file (`batch_list.json`):
 ]
 ```
 
-## Reference
+## Commands Reference
 
 - [`aurora-cli help`](#aurora-cli-help)
 - [`aurora-cli create-account`](#aurora-cli-create-account)
