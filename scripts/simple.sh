@@ -178,6 +178,22 @@ result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c7
 assert_eq "$result" "5"
 wait_for_block
 
+# The start-hashchain command prerequisites: Change the key manager of the ENGINE_ACCOUNT to the ENGINE_ACCOUNT
+aurora-cli --engine $ENGINE_ACCOUNT set-key-manager $ENGINE_ACCOUNT || error_exit
+wait_for_block
+
+# The start-hashchain command prerequisites: The contract has to be paused
+aurora-cli --engine $ENGINE_ACCOUNT pause-contract
+wait_for_block
+
+# Start Hashchain. The aurora-engine resumes the contract automatically
+aurora-cli --engine $ENGINE_ACCOUNT start-hashchain --block-height 0 --block-hashchain 0000000000000000000000000000000000000000000000000000000000000000 
+wait_for_block
+
+# Change the key manager of the ENGINE_ACCOUNT back to the MANAGER_ACCOUNT
+aurora-cli --engine $ENGINE_ACCOUNT set-key-manager $MANAGER_ACCOUNT || error_exit
+wait_for_block
+
 # Check read operations.
 aurora-cli --engine $ENGINE_ACCOUNT get-chain-id || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit
