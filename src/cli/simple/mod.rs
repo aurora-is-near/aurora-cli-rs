@@ -445,7 +445,10 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::GetOwner => command::get_owner(context).await?,
         Command::SetOwner { account_id } => command::set_owner(context, account_id).await?,
         Command::RegisterRelayer { address } => command::register_relayer(context, address).await?,
-        Command::StartHashchain { block_height, block_hashchain } => command::start_hashchain(context, block_height, block_hashchain).await?,
+        Command::StartHashchain {
+            block_height,
+            block_hashchain,
+        } => command::start_hashchain(context, block_height, block_hashchain).await?,
         Command::PauseContract => command::pause_contract(context).await?,
         Command::ResumeContract => command::resume_contract(context).await?,
         Command::GetBridgeProver => command::get_bridge_prover(context).await?,

@@ -469,11 +469,17 @@ pub async fn register_relayer(context: Context, address: String) -> anyhow::Resu
 }
 
 /// Start hashchain
-pub async fn start_hashchain(context: Context, block_height: u64, block_hashchain: String) -> anyhow::Result<()> {
-    let args = borsh::to_vec(&aurora_engine_types::parameters::engine::StartHashchainArgs {
-        block_height,
-        block_hashchain: hex_to_arr(&block_hashchain)?,
-    })?;
+pub async fn start_hashchain(
+    context: Context,
+    block_height: u64,
+    block_hashchain: String,
+) -> anyhow::Result<()> {
+    let args = borsh::to_vec(
+        &aurora_engine_types::parameters::engine::StartHashchainArgs {
+            block_height,
+            block_hashchain: hex_to_arr(&block_hashchain)?,
+        },
+    )?;
 
     contract_call!(
         "start_hashchain",
