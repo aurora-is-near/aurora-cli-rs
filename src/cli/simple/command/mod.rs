@@ -468,6 +468,50 @@ pub async fn register_relayer(context: Context, address: String) -> anyhow::Resu
     .await
 }
 
+/// Start hashchain
+pub async fn start_hashchain(
+    context: Context,
+    block_height: u64,
+    block_hashchain: String,
+) -> anyhow::Result<()> {
+    let args = borsh::to_vec(
+        &aurora_engine_types::parameters::engine::StartHashchainArgs {
+            block_height,
+            block_hashchain: hex_to_arr(&block_hashchain)?,
+        },
+    )?;
+
+    contract_call!(
+        "start_hashchain",
+        "The HashChain has been started successfully",
+        "Error while starting the HashChain"
+    )
+    .proceed(context, args)
+    .await
+}
+
+/// Pause contract
+pub async fn pause_contract(context: Context) -> anyhow::Result<()> {
+    contract_call!(
+        "pause_contract",
+        "The contract has been paused successfully",
+        "Error while pausing the contract"
+    )
+    .proceed(context, vec![])
+    .await
+}
+
+/// Resume contract
+pub async fn resume_contract(context: Context) -> anyhow::Result<()> {
+    contract_call!(
+        "resume_contract",
+        "The contract has been resumed successfully",
+        "Error while resuming the contract"
+    )
+    .proceed(context, vec![])
+    .await
+}
+
 /// Return value in storage for key at address.
 pub async fn get_storage_at(context: Context, address: String, key: String) -> anyhow::Result<()> {
     let address = hex_to_address(&address)?;

@@ -111,6 +111,19 @@ pub enum Command {
     },
     /// Register relayer address
     RegisterRelayer { address: String },
+    /// Start hashchain
+    StartHashchain {
+        /// Height of the block to start the hashchain
+        #[arg(long)]
+        block_height: u64,
+        /// Hashchain of the block to start the hashchain
+        #[arg(long)]
+        block_hashchain: String,
+    },
+    /// Pause contract
+    PauseContract,
+    /// Resume contract
+    ResumeContract,
     /// Pause precompiles
     PausePrecompiles { mask: u32 },
     /// Resume precompiles
@@ -432,6 +445,12 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::GetOwner => command::get_owner(context).await?,
         Command::SetOwner { account_id } => command::set_owner(context, account_id).await?,
         Command::RegisterRelayer { address } => command::register_relayer(context, address).await?,
+        Command::StartHashchain {
+            block_height,
+            block_hashchain,
+        } => command::start_hashchain(context, block_height, block_hashchain).await?,
+        Command::PauseContract => command::pause_contract(context).await?,
+        Command::ResumeContract => command::resume_contract(context).await?,
         Command::GetBridgeProver => command::get_bridge_prover(context).await?,
         Command::GetNonce { address } => command::get_nonce(context, address).await?,
         Command::GetCode { address } => command::get_code(context, address).await?,
