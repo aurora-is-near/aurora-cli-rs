@@ -44,7 +44,7 @@ pub struct Cli {
 pub enum Command {
     /// Create new NEAR account
     CreateAccount {
-        /// AccountId
+        /// `AccountId`
         #[arg(long, short)]
         account: String,
         /// Initial account balance in NEAR
@@ -53,7 +53,7 @@ pub enum Command {
     },
     /// View NEAR account
     ViewAccount {
-        /// AccountId
+        /// `AccountId`
         account: String,
     },
     /// Deploy Aurora EVM smart contract
@@ -213,9 +213,9 @@ pub enum Command {
         #[arg(long)]
         seed: Option<u64>,
     },
-    /// Return randomly generated NEAR key for AccountId
+    /// Return randomly generated NEAR key for `AccountId`
     GenerateNearKey {
-        /// AccountId
+        /// `AccountId`
         account_id: String,
         /// Key type: ed25519 or secp256k1
         key_type: KeyType,
@@ -224,12 +224,12 @@ pub enum Command {
     GetFixedGas,
     /// Set fixed gas
     SetFixedGas {
-        /// Fixed gas in EthGas.
+        /// Fixed gas in `EthGas`.
         cost: u64,
     },
     /// Set SILO params.
     SetSiloParams {
-        /// Fixed gas in EthGas.
+        /// Fixed gas in `EthGas`.
         #[arg(long, short)]
         gas: u64,
         /// Fallback EVM address.
@@ -275,7 +275,7 @@ pub enum Command {
     },
     /// Set relayer key manager
     SetKeyManager {
-        /// AccountId of the key manager
+        /// `AccountId` of the key manager
         #[arg(value_parser = parse_account_id)]
         account_id: Option<AccountId>,
     },
