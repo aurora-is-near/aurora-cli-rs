@@ -6,7 +6,7 @@ use aurora_engine_types::{
     types::{Address, Wei},
     U256,
 };
-use near_crypto::InMemorySigner;
+use near_crypto::{InMemorySigner, Signer};
 use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
 };
@@ -265,10 +265,11 @@ impl NearClient {
             signed_transaction: SignedTransaction::from_actions(
                 nonce,
                 signer.account_id.clone(),
-                self.engine_account_id.as_str().parse().unwrap(),
-                &signer,
+                self.engine_account_id.as_str().parse()?,
+                &Signer::InMemory(signer),
                 actions,
                 block_hash,
+                0,
             ),
         };
         let response = self.client.call(request).await?;
@@ -294,7 +295,7 @@ impl NearClient {
                     new_account_id,
                     initial_balance,
                     new_key_pair.public_key(),
-                    &signer,
+                    &Signer::InMemory(signer),
                     block_hash,
                 ),
             }
@@ -305,7 +306,7 @@ impl NearClient {
                     nonce,
                     signer.account_id.clone(),
                     contract_id,
-                    &signer,
+                    &Signer::InMemory(signer),
                     initial_balance,
                     "create_account".to_string(),
                     serde_json::json!({
@@ -357,11 +358,12 @@ impl NearClient {
                 nonce,
                 signer.account_id.clone(),
                 signer.account_id.clone(),
-                &signer,
+                &Signer::InMemory(signer),
                 vec![Action::DeployContract(
                     near_primitives::transaction::DeployContractAction { code },
                 )],
                 block_hash,
+                0,
             ),
         };
 

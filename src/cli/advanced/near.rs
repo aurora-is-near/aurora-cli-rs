@@ -145,7 +145,7 @@ pub enum WriteCommand {
         #[clap(short, long)]
         wasm_path: String,
         /// Unique identifier for the chain. The default value is 1313161556 (Aurora localnet).
-        /// See https://chainlist.org/ for a list of taken chain IDs.
+        /// See [chainlist](https://chainlist.org/) for a list of taken chain IDs.
         #[clap(short, long)]
         chain_id: Option<u64>,
         /// Near account ID for the owner of the Engine contract.
@@ -167,8 +167,8 @@ pub enum WriteCommand {
         eth_custodian_address: Option<String>,
         /// The metadata for the ETH token the connector creates.
         /// The value is expected to be a value JSON string
-        /// (see https://nomicon.io/Standards/Tokens/FungibleToken/Metadata for fields).
-        /// The default value is 18 decimals with name and symbol equal to "localETH".
+        /// (see [FT metadata](https://nomicon.io/Standards/Tokens/FungibleToken/Metadata)
+        /// for fields). The default value is 18 decimals with name and symbol equal to "localETH".
         #[clap(short, long)]
         ft_metadata: Option<String>,
     },
