@@ -1,19 +1,16 @@
-use std::str::FromStr;
-
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
-use clap::{Parser, Subcommand};
-use lazy_static::lazy_static;
+use clap::{Parser, Subcommand, ValueEnum};
 use shadow_rs::shadow;
+use std::str::FromStr;
+use std::sync::LazyLock;
 
 pub mod command;
 
-lazy_static! {
-    static ref VERSION: String = {
-        shadow!(build);
-        format!("{}-{}", build::PKG_VERSION, build::SHORT_COMMIT)
-    };
-}
+static VERSION: LazyLock<String> = LazyLock::new(|| {
+    shadow!(build);
+    format!("{}-{}", build::PKG_VERSION, build::SHORT_COMMIT)
+});
 
 fn get_version() -> &'static str {
     VERSION.as_str()
@@ -25,7 +22,7 @@ fn get_version() -> &'static str {
 #[command(version = get_version())]
 pub struct Cli {
     /// NEAR network ID
-    #[arg(long, default_value = "localnet")]
+    #[arg(long, value_enum, default_value_t = Network::Localnet)]
     pub network: Network,
     /// Aurora EVM account
     #[arg(long, value_name = "ACCOUNT_ID", default_value = "aurora")]
@@ -44,7 +41,7 @@ pub struct Cli {
 pub enum Command {
     /// Create new NEAR account
     CreateAccount {
-        /// AccountId
+        /// `AccountId`
         #[arg(long, short)]
         account: String,
         /// Initial account balance in NEAR
@@ -53,7 +50,7 @@ pub enum Command {
     },
     /// View NEAR account
     ViewAccount {
-        /// AccountId
+        /// `AccountId`
         account: String,
     },
     /// Deploy Aurora EVM smart contract
@@ -177,6 +174,9 @@ pub enum Command {
         /// Arguments with values in JSON
         #[arg(long)]
         args: Option<String>,
+        /// Sender address
+        #[arg(long)]
+        from: String,
         /// Path to ABI of the contract
         #[arg(long)]
         abi_path: String,
@@ -213,9 +213,9 @@ pub enum Command {
         #[arg(long)]
         seed: Option<u64>,
     },
-    /// Return randomly generated NEAR key for AccountId
+    /// Return randomly generated NEAR key for `AccountId`
     GenerateNearKey {
-        /// AccountId
+        /// `AccountId`
         account_id: String,
         /// Key type: ed25519 or secp256k1
         key_type: KeyType,
@@ -224,18 +224,22 @@ pub enum Command {
     GetFixedGas,
     /// Set fixed gas
     SetFixedGas {
-        /// Fixed gas in EthGas.
+        /// Fixed gas in `EthGas`.
         cost: u64,
     },
+    /// Return Silo params
+    GetSiloParams,
     /// Set SILO params.
     SetSiloParams {
-        /// Fixed gas in EthGas.
+        /// Fixed gas in `EthGas`.
         #[arg(long, short)]
         gas: u64,
         /// Fallback EVM address.
         #[arg(long, short)]
         fallback_address: String,
     },
+    /// Disable SILO mode.
+    DisableSiloMode,
     /// Return a status of the whitelist
     GetWhitelistStatus {
         /// Kind of the whitelist.
@@ -275,7 +279,7 @@ pub enum Command {
     },
     /// Set relayer key manager
     SetKeyManager {
-        /// AccountId of the key manager
+        /// `AccountId` of the key manager
         #[arg(value_parser = parse_account_id)]
         account_id: Option<AccountId>,
     },
@@ -371,24 +375,11 @@ pub enum Command {
     GetPausedFlags,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, ValueEnum)]
 pub enum Network {
     Localnet,
     Mainnet,
     Testnet,
-}
-
-impl FromStr for Network {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "localnet" => Ok(Self::Localnet),
-            "mainnet" => Ok(Self::Mainnet),
-            "testnet" => Ok(Self::Testnet),
-            _ => anyhow::bail!("unknown network: {s}"),
-        }
-    }
 }
 
 #[derive(Default, Clone)]
@@ -479,8 +470,9 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             address,
             function,
             args,
+            from,
             abi_path,
-        } => command::view_call(context, address, function, args, abi_path).await?,
+        } => command::view_call(context, address, function, args, from, abi_path).await?,
         Command::PausePrecompiles { mask } => command::pause_precompiles(context, mask).await?,
         Command::ResumePrecompiles { mask } => command::resume_precompiles(context, mask).await?,
         Command::PausedPrecompiles => command::paused_precompiles(context).await?,
@@ -547,11 +539,15 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::SetFixedGas { cost } => {
             command::silo::set_fixed_gas(context, cost).await?;
         }
+        Command::GetSiloParams => command::silo::get_silo_params(context).await?,
         Command::SetSiloParams {
             gas,
             fallback_address,
         } => {
             command::silo::set_silo_params(context, gas, fallback_address).await?;
+        }
+        Command::DisableSiloMode => {
+            command::silo::disable_silo_mode(context).await?;
         }
         Command::GetWhitelistStatus { kind } => {
             command::silo::get_whitelist_status(context, kind).await?;

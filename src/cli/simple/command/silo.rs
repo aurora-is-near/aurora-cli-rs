@@ -33,6 +33,11 @@ pub async fn set_fixed_gas(client: Context, cost: u64) -> anyhow::Result<()> {
     .await
 }
 
+/// Return Silo parameters.
+pub async fn get_silo_params(client: Context) -> anyhow::Result<()> {
+    get_value::<SiloParams>(client, "get_silo_params", None).await
+}
+
 pub async fn set_silo_params(
     client: Context,
     gas: u64,
@@ -47,6 +52,19 @@ pub async fn set_silo_params(
         "set_silo_params",
         "The silo parameters have been set successfully",
         "Error while setting silo parameters"
+    )
+    .proceed(client, args)
+    .await
+}
+
+/// Turn off silo mode.
+pub async fn disable_silo_mode(client: Context) -> anyhow::Result<()> {
+    let args = borsh::to_vec(&None::<SiloParamsArgs>)?;
+
+    contract_call!(
+        "set_silo_params",
+        "The silo mode has been disabled successfully",
+        "Error while disabling silo mode"
     )
     .proceed(client, args)
     .await
@@ -189,5 +207,29 @@ impl Display for FixedGas {
             .fixed_gas
             .map_or("none".to_string(), |cost| cost.to_string());
         f.write_str(&value)
+    }
+}
+
+struct SiloParams(Option<SiloParamsArgs>);
+
+impl FromCallResult for SiloParams {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        let args = Option::<SiloParamsArgs>::try_from_slice(&result.result)?;
+        Ok(Self(args))
+    }
+}
+
+impl Display for SiloParams {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if let Some(params) = &self.0 {
+            let gas = params.fixed_gas;
+            let fallback_address = params.erc20_fallback_address.encode();
+
+            f.write_fmt(format_args!(
+                "FixedGas: {gas}, fallback address: 0x{fallback_address}"
+            ))
+        } else {
+            f.write_str("Silo mode is disabled")
+        }
     }
 }

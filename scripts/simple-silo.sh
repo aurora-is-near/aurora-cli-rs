@@ -126,7 +126,7 @@ aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --abi-path $ABI_PATH
   --aurora-secret-key $AURORA_SECRET_KEY || error_exit
 wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "5"
 wait_for_block
 
@@ -147,7 +147,7 @@ sleep 2
 
 # Check result
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "6"
 wait_for_block
 
@@ -159,7 +159,7 @@ wait_for_block
 
 # Check result
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D  || error_exit)
 assert_eq "$result" "5"
 wait_for_block
 
@@ -185,7 +185,7 @@ wait_for_block
 
 # Check result
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "4"
 wait_for_block
 

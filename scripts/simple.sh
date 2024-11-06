@@ -2,7 +2,7 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
-AURORA_PREV_VERSION="3.6.0"
+AURORA_PREV_VERSION="3.6.4"
 AURORA_LAST_VERSION=$(curl -s https://api.github.com/repos/aurora-is-near/aurora-engine/releases/latest | jq -r .tag_name)
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
@@ -95,7 +95,6 @@ sleep 4
 aurora-cli --engine $ENGINE_ACCOUNT init \
   --chain-id 1313161556 \
   --owner-id $ENGINE_ACCOUNT \
-  --bridge-prover-id "prover" \
   --upgrade-delay-blocks 1 \
   --custodian-address 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D \
   --ft-metadata-path docs/res/ft_metadata.json || error_exit
@@ -141,7 +140,7 @@ export NEAR_KEY_PATH=$RELAYER_KEY_PATH
 aurora-cli --engine $ENGINE_ACCOUNT deploy --code "$EVM_CODE" --aurora-secret-key $AURORA_SECRET_KEY || error_exit
 wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f greet \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "Hello, World!"
 wait_for_block
 
@@ -158,7 +157,7 @@ aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --abi-path $ABI_PATH
   --aurora-secret-key $AURORA_SECRET_KEY || error_exit
 wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "5"
 wait_for_block
 aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f increment \
@@ -166,7 +165,7 @@ aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
 wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "6"
 wait_for_block
 aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f decrement \
@@ -174,7 +173,7 @@ aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
 wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "5"
 wait_for_block
 
@@ -187,7 +186,7 @@ aurora-cli --engine $ENGINE_ACCOUNT pause-contract
 wait_for_block
 
 # Start Hashchain. The aurora-engine will resume the contract automatically
-aurora-cli --engine $ENGINE_ACCOUNT start-hashchain --block-height 0 --block-hashchain 0000000000000000000000000000000000000000000000000000000000000000 
+aurora-cli --engine $ENGINE_ACCOUNT start-hashchain --block-height 0 --block-hashchain 0000000000000000000000000000000000000000000000000000000000000000
 wait_for_block
 
 # Change the key manager of ENGINE_ACCOUNT back to MANAGER_ACCOUNT
