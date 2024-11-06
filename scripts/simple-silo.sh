@@ -87,6 +87,22 @@ aurora-cli --engine $ENGINE_ACCOUNT init \
   --ft-metadata-path docs/res/ft_metadata.json || error_exit
 sleep 2
 
+# Prerequisites for the start-hashchain command: Change the key manager of ENGINE_ACCOUNT to ENGINE_ACCOUNT
+aurora-cli --engine $ENGINE_ACCOUNT set-key-manager $ENGINE_ACCOUNT || error_exit
+wait_for_block
+
+# Prerequisites for the start-hashchain command: The contract must be paused
+aurora-cli --engine $ENGINE_ACCOUNT pause-contract
+wait_for_block
+
+# Start Hashchain. The aurora-engine will resume the contract automatically
+aurora-cli --engine $ENGINE_ACCOUNT start-hashchain --block-height 0 --block-hashchain 0000000000000000000000000000000000000000000000000000000000000000
+wait_for_block
+
+# Set eth connector params
+aurora-cli --engine $ENGINE_ACCOUNT set-eth-connector-contract-account --account-id 0f2bb8ad44996a7762256477fe3b42b27e63a00d.factory.bridge.near --withdraw-ser borsh
+wait_for_block
+
 # Silo methods
 # Get fixed gas
 result=$(aurora-cli --engine $ENGINE_ACCOUNT get-fixed-gas || error_exit)

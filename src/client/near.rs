@@ -264,7 +264,7 @@ impl NearClient {
             signed_transaction: SignedTransaction::from_actions(
                 nonce,
                 signer.account_id.clone(),
-                self.engine_account_id.as_str().parse().unwrap(),
+                self.engine_account_id.as_str().parse()?,
                 &signer.into(),
                 actions,
                 block_hash,

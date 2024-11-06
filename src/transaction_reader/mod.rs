@@ -187,17 +187,17 @@ enum TxStatus {
     Other(String),
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum FlatTxStatus {
     Succeeded,
     Reverted,
     GasLimit,
     IncorrectNonce,
-    Other,
+    Other(String),
 }
 
 impl TxStatus {
-    const fn flatten(&self) -> FlatTxStatus {
+    fn flatten(&self) -> FlatTxStatus {
         match self {
             Self::Executed(result) => match result.status {
                 TransactionStatus::Succeed(_) => FlatTxStatus::Succeeded,
@@ -205,7 +205,7 @@ impl TxStatus {
             },
             Self::GasLimit => FlatTxStatus::GasLimit,
             Self::IncorrectNonce => FlatTxStatus::IncorrectNonce,
-            Self::Other(_) => FlatTxStatus::Other,
+            Self::Other(msg) => FlatTxStatus::Other(msg.clone()),
         }
     }
 }

@@ -88,7 +88,7 @@ impl Aggregator for GroupByFlatStatus {
                 (FlatTxStatus::Reverted, 0),
                 (FlatTxStatus::GasLimit, 0),
                 (FlatTxStatus::IncorrectNonce, 0),
-                (FlatTxStatus::Other, 0),
+                (FlatTxStatus::Other(String::new()), 0),
             ];
             init_data.into_iter().collect()
         };
