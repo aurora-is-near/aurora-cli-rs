@@ -9,7 +9,7 @@ use aurora_engine_types::parameters::connector::{
     PausedMask, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, WithdrawSerializeType,
 };
 use aurora_engine_types::parameters::engine::{
-    GetStorageAtArgs, NewCallArgs, NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs,
+    GetStorageAtArgs, LegacyNewCallArgs, PausePrecompilesCallArgs, RelayerKeyArgs,
     RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, SubmitResult,
     TransactionStatus,
 };
@@ -130,11 +130,12 @@ pub async fn init(
     let owner_id = to_account_id(owner_id, &context)?;
     let prover_id = to_account_id(bridge_prover, &context)?;
 
-    let aurora_init_args = borsh::to_vec(&NewCallArgs::V2(NewCallArgsV2 {
+    let aurora_init_args = borsh::to_vec(&LegacyNewCallArgs {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
+        bridge_prover_id: prover_id.clone(),
         upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
-    }))?;
+    })?;
 
     let eth_connector_init_args = borsh::to_vec(&InitCallArgs {
         prover_account: prover_id,
