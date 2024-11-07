@@ -265,6 +265,7 @@ pub async fn view_call(
     address: String,
     function: String,
     args: Option<String>,
+    from: String,
     abi_path: String,
 ) -> anyhow::Result<()> {
     let target = hex_to_address(&address)?;
@@ -273,10 +274,11 @@ pub async fn view_call(
     let args: Value = args.map_or(Ok(Value::Null), |args| serde_json::from_str(&args))?;
     let tokens = utils::abi::parse_args(&func.inputs, &args)?;
     let input = func.encode_input(&tokens)?;
+    let from = hex_to_address(&from)?;
     let result = context
         .client
         .near()
-        .view_contract_call(Address::default(), target, Wei::zero(), input)
+        .view_contract_call(from, target, Wei::zero(), input)
         .await?;
 
     if let TransactionStatus::Succeed(bytes) = result {
@@ -338,6 +340,22 @@ pub async fn call(
                 TransactionStatus::OutOfFund => "out_of_fund",
                 TransactionStatus::OutOfOffset => "out_of_offset",
                 TransactionStatus::CallTooDeep => "call_too_deep",
+                TransactionStatus::StackUnderflow => "stack_underflow",
+                TransactionStatus::StackOverflow => "stack_overflow",
+                TransactionStatus::InvalidJump => "invalid_jump",
+                TransactionStatus::InvalidRange => "invalid_range",
+                TransactionStatus::DesignatedInvalid => "designated_invalid",
+                TransactionStatus::CreateCollision => "create_collision",
+                TransactionStatus::CreateContractLimit => "create_contract_limit",
+                TransactionStatus::InvalidCode(_) => "invalid_code",
+                TransactionStatus::PCUnderflow => "pc_underflow",
+                TransactionStatus::CreateEmpty => "create_empty",
+                TransactionStatus::MaxNonce => "max_nonce",
+                TransactionStatus::UsizeOverflow => "usize_overflow",
+                TransactionStatus::Other(_) => "other",
+                TransactionStatus::CreateContractStartingWithEF => {
+                    "create_contract_starting_with_ef"
+                }
             };
 
             (result.gas_used, status)

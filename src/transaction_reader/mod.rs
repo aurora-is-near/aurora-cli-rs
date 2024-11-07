@@ -183,6 +183,7 @@ enum TxStatus {
     Executed(SubmitResult),
     GasLimit,
     IncorrectNonce,
+    #[allow(dead_code)]
     Other(String),
 }
 
