@@ -10,7 +10,7 @@ on:
 jobs:
   shell_tests:
     name: Tests ${{ matrix.interface }} CLI
-    runs-on: [self-hosted, heavy]
+    runs-on: [ self-hosted, heavy ]
     strategy:
       matrix:
         interface: [ Advanced, Simple, Silo ]
@@ -27,10 +27,13 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
-      - name: Install aurora-cli (Advanced CLI)
+      - name: Install python-venv
+        run: |
+          apt update
+          apt -y install python3-venv
+      - name: Install aurora-cli
         uses: actions-rs/cargo@v1
         with:
           command: install
           args: ${{ matrix.args }}
       - run: ${{ matrix.script }}
-

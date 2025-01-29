@@ -1,4 +1,4 @@
-use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
+use aurora_engine_types::borsh::BorshDeserialize;
 #[cfg(feature = "advanced")]
 use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::parameters::engine::TransactionStatus;
@@ -11,12 +11,11 @@ use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
-use near_primitives::transaction::Action;
+use near_primitives::transaction::{Action, SignedTransaction};
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
 use near_primitives::{
-    hash::CryptoHash, transaction::SignedTransaction, types::AccountId, views,
-    views::FinalExecutionOutcomeView,
+    hash::CryptoHash, types::AccountId, views, views::FinalExecutionOutcomeView,
 };
 #[cfg(feature = "simple")]
 use std::str::FromStr;
@@ -113,7 +112,7 @@ impl NearClient {
             nep141: nep141.parse().unwrap(),
         };
         let result = self
-            .view_call("get_erc20_from_nep141", args.try_to_vec()?)
+            .view_call("get_erc20_from_nep141", borsh::to_vec(&args)?)
             .await?;
 
         Address::try_from_slice(&result.result).map_err(|e| anyhow::anyhow!(e))
@@ -138,7 +137,7 @@ impl NearClient {
             amount: amount.to_bytes(),
             input,
         };
-        let result = self.view_call("view", args.try_to_vec()?).await?;
+        let result = self.view_call("view", borsh::to_vec(&args)?).await?;
         let status = TransactionStatus::try_from_slice(&result.result)?;
         Ok(status)
     }
@@ -148,7 +147,7 @@ impl NearClient {
         method_name: &str,
         args: Vec<u8>,
     ) -> anyhow::Result<views::CallResult> {
-        let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
+        let request = near_jsonrpc_client::methods::query::RpcQueryRequest {
             block_reference: near_primitives::types::Finality::Final.into(),
             request: views::QueryRequest::CallFunction {
                 account_id: self.engine_account_id.clone(),
@@ -265,10 +264,11 @@ impl NearClient {
             signed_transaction: SignedTransaction::from_actions(
                 nonce,
                 signer.account_id.clone(),
-                self.engine_account_id.as_str().parse().unwrap(),
-                &signer,
+                self.engine_account_id.as_str().parse()?,
+                &signer.into(),
                 actions,
                 block_hash,
+                0,
             ),
         };
         let response = self.client.call(request).await?;
@@ -294,7 +294,7 @@ impl NearClient {
                     new_account_id,
                     initial_balance,
                     new_key_pair.public_key(),
-                    &signer,
+                    &signer.into(),
                     block_hash,
                 ),
             }
@@ -305,7 +305,7 @@ impl NearClient {
                     nonce,
                     signer.account_id.clone(),
                     contract_id,
-                    &signer,
+                    &signer.into(),
                     initial_balance,
                     "create_account".to_string(),
                     serde_json::json!({
@@ -357,11 +357,12 @@ impl NearClient {
                 nonce,
                 signer.account_id.clone(),
                 signer.account_id.clone(),
-                &signer,
+                &signer.into(),
                 vec![Action::DeployContract(
                     near_primitives::transaction::DeployContractAction { code },
                 )],
                 block_hash,
+                0,
             ),
         };
 
