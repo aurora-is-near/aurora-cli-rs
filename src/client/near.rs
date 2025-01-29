@@ -219,7 +219,8 @@ impl NearClient {
             .map(|(method_name, args)| (method_name, args, 0u128))
             .collect();
 
-        self.contract_call_batch_with_deposit(batch_with_deposit).await
+        self.contract_call_batch_with_deposit(batch_with_deposit)
+            .await
     }
 
     pub async fn contract_call_batch_with_deposit(
