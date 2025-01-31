@@ -163,6 +163,18 @@ pub enum Command {
         #[arg(long)]
         aurora_secret_key: Option<String>,
     },
+    /// Call a method of the smart contract
+    Call {
+        /// Address of the smart contract
+        #[arg(long)]
+        address: String,
+        /// Input data of the EVM transaction encoded in hex
+        #[arg(long)]
+        input: Option<String>,
+        /// Attached value in EVM transaction
+        #[arg(long)]
+        value: Option<u128>,
+    },
     /// Call a view method of the smart contract
     ViewCall {
         /// Address of the smart contract
@@ -182,7 +194,7 @@ pub enum Command {
         abi_path: String,
     },
     /// Call a modified method of the smart contract
-    Call {
+    Submit {
         /// Address of the smart contract
         #[arg(long, short)]
         address: String,
@@ -447,7 +459,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::GetCode { address } => command::get_code(context, address).await?,
         Command::GetBalance { address } => command::get_balance(context, address).await?,
         Command::GetBlockHash { height } => command::get_block_hash(context, height).await?,
-        Command::Call {
+        Command::Submit {
             address,
             function,
             args,
@@ -455,7 +467,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             value,
             aurora_secret_key,
         } => {
-            command::call(
+            command::submit(
                 context,
                 address,
                 function,
@@ -466,6 +478,11 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             )
             .await?;
         }
+        Command::Call {
+            address,
+            input,
+            value,
+        } => command::call(context, address, input, value).await?,
         Command::ViewCall {
             address,
             function,
