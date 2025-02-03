@@ -194,7 +194,7 @@ aurora-cli --engine $ENGINE_ACCOUNT set-whitelist-status --kind address --status
 wait_for_block
 
 # Submit decrement transaction
-aurora-cli --engine $ENGINE_ACCOUNT call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f decrement \
+aurora-cli --engine $ENGINE_ACCOUNT submit -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f decrement \
   --abi-path $ABI_PATH \
   --aurora-secret-key 591f4a18a51779f76ecb5943cb6b6e73bf5877520511b7209a342c176295805b || error_exit
 wait_for_block
