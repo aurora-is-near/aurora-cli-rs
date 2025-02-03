@@ -214,15 +214,29 @@ impl NearClient {
         &self,
         batch: Vec<(String, Vec<u8>)>,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        let batch_with_deposit: Vec<(String, Vec<u8>, u128)> = batch
+            .into_iter()
+            .map(|(method_name, args)| (method_name, args, 0u128))
+            .collect();
+
+        self.contract_call_batch_with_deposit(batch_with_deposit)
+            .await
+    }
+
+    #[allow(dead_code)]
+    pub async fn contract_call_batch_with_deposit(
+        &self,
+        batch: Vec<(String, Vec<u8>, u128)>,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
         let gas = NEAR_GAS / u64::try_from(batch.len())?;
         let actions = batch
             .into_iter()
-            .map(|(method_name, args)| {
+            .map(|(method_name, args, deposit)| {
                 Action::FunctionCall(Box::new(near_primitives::transaction::FunctionCallAction {
                     method_name,
                     args,
                     gas,
-                    deposit: 0,
+                    deposit,
                 }))
             })
             .collect();
