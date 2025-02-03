@@ -266,7 +266,7 @@ pub async fn call(
     value: Option<u128>,
 ) -> anyhow::Result<()> {
     let contract = hex_to_address(&address)?;
-    let input = input.map_or(Ok(vec![]), |data| hex::decode(data))?;
+    let input = input.map_or(Ok(vec![]), hex::decode)?;
     let args = borsh::to_vec(&CallArgs::V2(FunctionCallArgsV2 {
         contract,
         value: Wei::new_u128(value.unwrap_or_default()).to_bytes(),
@@ -277,9 +277,8 @@ pub async fn call(
     let result = context.client.near().contract_call("call", args).await?;
 
     match result.status {
-        FinalExecutionStatus::NotStarted => {}
-        FinalExecutionStatus::Started => {}
-        FinalExecutionStatus::Failure(_) => {}
+        FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {}
+        FinalExecutionStatus::Failure(failure) => println!("Bad execution status: {failure:?}"),
         FinalExecutionStatus::SuccessValue(result) => {
             let submit_result = SubmitResult::try_from_slice(&result)?;
             match submit_result.status {
