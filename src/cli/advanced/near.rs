@@ -631,7 +631,7 @@ pub async fn execute_command(
                 )?;
                 let records = genesis.force_read_records();
                 let aurora_id: near_primitives::account::id::AccountId =
-                    config.engine_account_id.parse().unwrap();
+                    config.engine_account_id.parse()?;
                 let contains_aurora = records.0.iter().any(|record| {
                     if let StateRecord::AccessKey { account_id, .. } = record {
                         account_id == &aurora_id
