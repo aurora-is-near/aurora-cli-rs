@@ -160,7 +160,7 @@ result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c7
   --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "5"
 wait_for_block
-aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f increment \
+aurora-cli --engine $ENGINE_ACCOUNT submit -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f increment \
   --abi-path $ABI_PATH \
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
 wait_for_block
@@ -168,7 +168,7 @@ result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c7
   --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "6"
 wait_for_block
-aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f decrement \
+aurora-cli --engine $ENGINE_ACCOUNT submit -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f decrement \
   --abi-path $ABI_PATH \
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
 wait_for_block

@@ -156,7 +156,7 @@ aurora-cli --engine $ENGINE_ACCOUNT add-entry-to-whitelist --kind account --entr
 wait_for_block
 
 # Submit increment transactions
-aurora-cli --engine $ENGINE_ACCOUNT call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f increment \
+aurora-cli --engine $ENGINE_ACCOUNT submit -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f increment \
   --abi-path $ABI_PATH \
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
 sleep 2
@@ -168,7 +168,7 @@ assert_eq "$result" "6"
 wait_for_block
 
 # Submit decrement transaction
-aurora-cli --engine $ENGINE_ACCOUNT call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f decrement \
+aurora-cli --engine $ENGINE_ACCOUNT submit -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f decrement \
   --abi-path $ABI_PATH \
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
 wait_for_block
