@@ -223,7 +223,7 @@ impl NearClient {
             .await
     }
 
-    #[allow(dead_code)]
+    #[cfg(feature = "simple")]
     pub async fn contract_call_batch_with_deposit(
         &self,
         batch: Vec<(String, Vec<u8>, u128)>,
