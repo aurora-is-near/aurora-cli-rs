@@ -1,19 +1,16 @@
-use std::str::FromStr;
-
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
-use clap::{Parser, Subcommand};
-use lazy_static::lazy_static;
+use clap::{Parser, Subcommand, ValueEnum};
 use shadow_rs::shadow;
+use std::str::FromStr;
+use std::sync::LazyLock;
 
 pub mod command;
 
-lazy_static! {
-    static ref VERSION: String = {
-        shadow!(build);
-        format!("{}-{}", build::PKG_VERSION, build::SHORT_COMMIT)
-    };
-}
+static VERSION: LazyLock<String> = LazyLock::new(|| {
+    shadow!(build);
+    format!("{}-{}", build::PKG_VERSION, build::SHORT_COMMIT)
+});
 
 fn get_version() -> &'static str {
     VERSION.as_str()
@@ -25,7 +22,7 @@ fn get_version() -> &'static str {
 #[command(version = get_version())]
 pub struct Cli {
     /// NEAR network ID
-    #[arg(long, default_value = "localnet")]
+    #[arg(long, value_enum, default_value_t = Network::Localnet)]
     pub network: Network,
     /// Aurora EVM account
     #[arg(long, value_name = "ACCOUNT_ID", default_value = "aurora")]
@@ -44,7 +41,7 @@ pub struct Cli {
 pub enum Command {
     /// Create new NEAR account
     CreateAccount {
-        /// AccountId
+        /// `AccountId`
         #[arg(long, short)]
         account: String,
         /// Initial account balance in NEAR
@@ -53,7 +50,7 @@ pub enum Command {
     },
     /// View NEAR account
     ViewAccount {
-        /// AccountId
+        /// `AccountId`
         account: String,
     },
     /// Deploy Aurora EVM smart contract
@@ -111,6 +108,19 @@ pub enum Command {
     },
     /// Register relayer address
     RegisterRelayer { address: String },
+    /// Start hashchain
+    StartHashchain {
+        /// Height of the block to start the hashchain
+        #[arg(long)]
+        block_height: u64,
+        /// Hashchain of the block to start the hashchain
+        #[arg(long)]
+        block_hashchain: String,
+    },
+    /// Pause contract
+    PauseContract,
+    /// Resume contract
+    ResumeContract,
     /// Pause precompiles
     PausePrecompiles { mask: u32 },
     /// Resume precompiles
@@ -153,6 +163,18 @@ pub enum Command {
         #[arg(long)]
         aurora_secret_key: Option<String>,
     },
+    /// Call a method of the smart contract
+    Call {
+        /// Address of the smart contract
+        #[arg(long)]
+        address: String,
+        /// Input data of the EVM transaction encoded in hex
+        #[arg(long)]
+        input: Option<String>,
+        /// Attached value in EVM transaction
+        #[arg(long)]
+        value: Option<u128>,
+    },
     /// Call a view method of the smart contract
     ViewCall {
         /// Address of the smart contract
@@ -164,12 +186,15 @@ pub enum Command {
         /// Arguments with values in JSON
         #[arg(long)]
         args: Option<String>,
+        /// Sender address
+        #[arg(long)]
+        from: String,
         /// Path to ABI of the contract
         #[arg(long)]
         abi_path: String,
     },
     /// Call a modified method of the smart contract
-    Call {
+    Submit {
         /// Address of the smart contract
         #[arg(long, short)]
         address: String,
@@ -200,9 +225,9 @@ pub enum Command {
         #[arg(long)]
         seed: Option<u64>,
     },
-    /// Return randomly generated NEAR key for AccountId
+    /// Return randomly generated NEAR key for `AccountId`
     GenerateNearKey {
-        /// AccountId
+        /// `AccountId`
         account_id: String,
         /// Key type: ed25519 or secp256k1
         key_type: KeyType,
@@ -211,18 +236,22 @@ pub enum Command {
     GetFixedGas,
     /// Set fixed gas
     SetFixedGas {
-        /// Fixed gas in EthGas.
+        /// Fixed gas in `EthGas`.
         cost: u64,
     },
+    /// Return Silo params
+    GetSiloParams,
     /// Set SILO params.
     SetSiloParams {
-        /// Fixed gas in EthGas.
+        /// Fixed gas in `EthGas`.
         #[arg(long, short)]
         gas: u64,
         /// Fallback EVM address.
         #[arg(long, short)]
         fallback_address: String,
     },
+    /// Disable SILO mode.
+    DisableSiloMode,
     /// Return a status of the whitelist
     GetWhitelistStatus {
         /// Kind of the whitelist.
@@ -262,7 +291,7 @@ pub enum Command {
     },
     /// Set relayer key manager
     SetKeyManager {
-        /// AccountId of the key manager
+        /// `AccountId` of the key manager
         #[arg(value_parser = parse_account_id)]
         account_id: Option<AccountId>,
     },
@@ -327,7 +356,7 @@ pub enum Command {
         nep141: String,
     },
     /// Set eth connector account id
-    SetEthConnectorAccountId {
+    SetEthConnectorContractAccount {
         /// Account id of eth connector
         #[arg(long)]
         account_id: String,
@@ -335,6 +364,8 @@ pub enum Command {
         #[arg(long)]
         withdraw_ser: Option<WithdrawSerialization>,
     },
+    /// Get eth connector account id
+    GetEthConnectorContractAccount,
     /// Set eth connector data
     SetEthConnectorContractData {
         /// Prover account id
@@ -347,26 +378,20 @@ pub enum Command {
         #[arg(long)]
         ft_metadata_path: String,
     },
+    /// Set eth connector paused flags
+    SetPausedFlags {
+        /// Pause mask
+        mask: u8,
+    },
+    /// Get eth connector paused flags
+    GetPausedFlags,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, ValueEnum)]
 pub enum Network {
     Localnet,
     Mainnet,
     Testnet,
-}
-
-impl FromStr for Network {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "localnet" => Ok(Self::Localnet),
-            "mainnet" => Ok(Self::Mainnet),
-            "testnet" => Ok(Self::Testnet),
-            _ => anyhow::bail!("unknown network: {s}"),
-        }
-    }
 }
 
 #[derive(Default, Clone)]
@@ -423,12 +448,18 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::GetOwner => command::get_owner(context).await?,
         Command::SetOwner { account_id } => command::set_owner(context, account_id).await?,
         Command::RegisterRelayer { address } => command::register_relayer(context, address).await?,
+        Command::StartHashchain {
+            block_height,
+            block_hashchain,
+        } => command::start_hashchain(context, block_height, block_hashchain).await?,
+        Command::PauseContract => command::pause_contract(context).await?,
+        Command::ResumeContract => command::resume_contract(context).await?,
         Command::GetBridgeProver => command::get_bridge_prover(context).await?,
         Command::GetNonce { address } => command::get_nonce(context, address).await?,
         Command::GetCode { address } => command::get_code(context, address).await?,
         Command::GetBalance { address } => command::get_balance(context, address).await?,
         Command::GetBlockHash { height } => command::get_block_hash(context, height).await?,
-        Command::Call {
+        Command::Submit {
             address,
             function,
             args,
@@ -436,7 +467,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             value,
             aurora_secret_key,
         } => {
-            command::call(
+            command::submit(
                 context,
                 address,
                 function,
@@ -447,12 +478,18 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             )
             .await?;
         }
+        Command::Call {
+            address,
+            input,
+            value,
+        } => command::call(context, address, input, value).await?,
         Command::ViewCall {
             address,
             function,
             args,
+            from,
             abi_path,
-        } => command::view_call(context, address, function, args, abi_path).await?,
+        } => command::view_call(context, address, function, args, from, abi_path).await?,
         Command::PausePrecompiles { mask } => command::pause_precompiles(context, mask).await?,
         Command::ResumePrecompiles { mask } => command::resume_precompiles(context, mask).await?,
         Command::PausedPrecompiles => command::paused_precompiles(context).await?,
@@ -519,11 +556,15 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::SetFixedGas { cost } => {
             command::silo::set_fixed_gas(context, cost).await?;
         }
+        Command::GetSiloParams => command::silo::get_silo_params(context).await?,
         Command::SetSiloParams {
             gas,
             fallback_address,
         } => {
             command::silo::set_silo_params(context, gas, fallback_address).await?;
+        }
+        Command::DisableSiloMode => {
+            command::silo::disable_silo_mode(context).await?;
         }
         Command::GetWhitelistStatus { kind } => {
             command::silo::get_whitelist_status(context, kind).await?;
@@ -581,11 +622,14 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         } => {
             command::mirror_erc20_token(context, contract_id, nep141).await?;
         }
-        Command::SetEthConnectorAccountId {
+        Command::SetEthConnectorContractAccount {
             account_id,
             withdraw_ser,
         } => {
-            command::set_eth_connector_account_id(context, account_id, withdraw_ser).await?;
+            command::set_eth_connector_contract_account(context, account_id, withdraw_ser).await?;
+        }
+        Command::GetEthConnectorContractAccount => {
+            command::get_eth_connector_contract_account(context).await?;
         }
         Command::SetEthConnectorContractData {
             prover_id,
@@ -599,6 +643,12 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
                 ft_metadata_path,
             )
             .await?;
+        }
+        Command::SetPausedFlags { mask } => {
+            command::set_paused_flags(context, mask).await?;
+        }
+        Command::GetPausedFlags => {
+            command::get_paused_flags(context).await?;
         }
     }
 

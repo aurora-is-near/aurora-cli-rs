@@ -72,6 +72,7 @@ impl Client {
 
 #[cfg(feature = "advanced")]
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum TransactionOutcome {
     Result(SubmitResult),
     Failure(near_primitives::errors::TxExecutionError),

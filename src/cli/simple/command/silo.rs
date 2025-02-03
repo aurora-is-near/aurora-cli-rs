@@ -1,4 +1,4 @@
-use aurora_engine_types::borsh::{BorshDeserialize, BorshSerialize};
+use aurora_engine_types::borsh::BorshDeserialize;
 use aurora_engine_types::parameters::silo::{
     FixedGasArgs, SiloParamsArgs, WhitelistAccountArgs, WhitelistAddressArgs, WhitelistArgs,
     WhitelistKind, WhitelistKindArgs, WhitelistStatusArgs,
@@ -20,10 +20,9 @@ pub async fn get_fixed_gas_cost(client: Context) -> anyhow::Result<()> {
 
 /// Set fixed gas cost.
 pub async fn set_fixed_gas(client: Context, cost: u64) -> anyhow::Result<()> {
-    let args = FixedGasArgs {
+    let args = borsh::to_vec(&FixedGasArgs {
         fixed_gas: Some(EthGas::new(cost)),
-    }
-    .try_to_vec()?;
+    })?;
 
     contract_call!(
         "set_fixed_gas",
@@ -34,16 +33,20 @@ pub async fn set_fixed_gas(client: Context, cost: u64) -> anyhow::Result<()> {
     .await
 }
 
+/// Return Silo parameters.
+pub async fn get_silo_params(client: Context) -> anyhow::Result<()> {
+    get_value::<SiloParams>(client, "get_silo_params", None).await
+}
+
 pub async fn set_silo_params(
     client: Context,
     gas: u64,
     fallback_address: String,
 ) -> anyhow::Result<()> {
-    let args = Some(SiloParamsArgs {
+    let args = borsh::to_vec(&Some(SiloParamsArgs {
         fixed_gas: EthGas::new(gas),
         erc20_fallback_address: hex_to_address(&fallback_address)?,
-    })
-    .try_to_vec()?;
+    }))?;
 
     contract_call!(
         "set_silo_params",
@@ -54,23 +57,34 @@ pub async fn set_silo_params(
     .await
 }
 
+/// Turn off silo mode.
+pub async fn disable_silo_mode(client: Context) -> anyhow::Result<()> {
+    let args = borsh::to_vec(&None::<SiloParamsArgs>)?;
+
+    contract_call!(
+        "set_silo_params",
+        "The silo mode has been disabled successfully",
+        "Error while disabling silo mode"
+    )
+    .proceed(client, args)
+    .await
+}
+
 /// Get a status of the whitelist.
 pub async fn get_whitelist_status(client: Context, kind: String) -> anyhow::Result<()> {
-    let args = WhitelistKindArgs {
+    let args = borsh::to_vec(&WhitelistKindArgs {
         kind: get_kind(&kind)?,
-    }
-    .try_to_vec()?;
+    })?;
 
     get_value::<WhitelistStatus>(client, "get_whitelist_status", Some(args)).await
 }
 
 /// Set a status of the whitelist.
 pub async fn set_whitelist_status(client: Context, kind: String, status: u8) -> anyhow::Result<()> {
-    let args = WhitelistStatusArgs {
+    let args = borsh::to_vec(&WhitelistStatusArgs {
         kind: get_kind(&kind)?,
         active: status > 0,
-    }
-    .try_to_vec()?;
+    })?;
     let str_status = if status == 0 { "disabled" } else { "enabled" };
 
     contract_call!(
@@ -103,7 +117,7 @@ pub async fn add_entry_to_whitelist(
 pub async fn add_entry_to_whitelist_batch(client: Context, path: String) -> anyhow::Result<()> {
     let args = std::fs::read_to_string(path)
         .and_then(|string| serde_json::from_str::<Vec<WhitelistArgs>>(&string).map_err(Into::into))
-        .and_then(|entries| entries.try_to_vec())?;
+        .and_then(|entries| borsh::to_vec(&entries))?;
 
     contract_call!(
         "add_entry_to_whitelist_batch",
@@ -158,7 +172,7 @@ fn get_whitelist_args(kind: &str, entry: &str) -> anyhow::Result<Vec<u8>> {
             })
         }
     })
-    .and_then(|list| list.try_to_vec().map_err(Into::into))
+    .and_then(|list| borsh::to_vec(&list).map_err(Into::into))
 }
 
 struct WhitelistStatus(WhitelistStatusArgs);
@@ -193,5 +207,29 @@ impl Display for FixedGas {
             .fixed_gas
             .map_or("none".to_string(), |cost| cost.to_string());
         f.write_str(&value)
+    }
+}
+
+struct SiloParams(Option<SiloParamsArgs>);
+
+impl FromCallResult for SiloParams {
+    fn from_result(result: CallResult) -> anyhow::Result<Self> {
+        let args = Option::<SiloParamsArgs>::try_from_slice(&result.result)?;
+        Ok(Self(args))
+    }
+}
+
+impl Display for SiloParams {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if let Some(params) = &self.0 {
+            let gas = params.fixed_gas;
+            let fallback_address = params.erc20_fallback_address.encode();
+
+            f.write_fmt(format_args!(
+                "FixedGas: {gas}, fallback address: 0x{fallback_address}"
+            ))
+        } else {
+            f.write_str("Silo mode is disabled")
+        }
     }
 }

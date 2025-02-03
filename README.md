@@ -20,6 +20,7 @@ on an Ethereum-compatible, high-throughput, scalable and future-safe platform, w
 for their users. Engine is the Aurora's implementation for it.
 
 ## What is Aurora CLI?
+
 Aurora CLI is a command line interface to bootstrap Aurora Engine with rapid speed built with rust.
 
 Aurora CLI comes pre-configuration with opinionated, sensible defaults for standard testing environments.
@@ -33,13 +34,14 @@ If other projects mention testing on Aurora, they are referring to the settings 
 See also prior version [aurora-cli](https://github.com/aurora-is-near/aurora-cli).
 
 ## Prerequisites
+
 - :crab: Rust
 
 ## Quickstart
 
-- 📦 Install `aurora-cli-rs` and start interacting with it: 
-    *`cargo install --git https://github.com/aurora-is-near/aurora-cli-rs.git`* 
-- 🔍 Check out what each command is for in the official Aurora [docs](https://doc.aurora.dev/tools/aurora-cli)
+- 📦 Install `aurora-cli-rs` and start interacting with it:
+  *`cargo install --git https://github.com/aurora-is-near/aurora-cli-rs.git`*
+- 🔍 Check out what each command is for in the [Commands Reference](#commands-reference) section
 - ✋ Have questions? Ask them at the official Aurora [forum](https://forum.aurora.dev/)
 
 ## Usage
@@ -48,12 +50,14 @@ In the following example, we will see how to deploy Aurora EVM on the `localnet`
 smart contract and will be interacting with it.
 
 ### **Requirements**
-- Rust 1.68.0 or newer
+
+- Rust 1.75.0 or newer
 - Python3
 
 First what we need to do is to install `aurora-cli`:
 
 ### **Installing aurora-cli**
+
 ```shell
 git clone https://github.com/aurora-engine/aurora-cli-rs
 cd aurora-cli-rs && cargo install --path . 
@@ -62,39 +66,59 @@ cd aurora-cli-rs && cargo install --path .
 Next we need to start a NEAR node locally. We can use the NEAR utility, `nearup`.
 
 ### **Start a NEAR node locally**
+
 Install `nearup`:
+
 ```shell
 pip3 install --user nearup
 ```
 
 Start NEAR node:
+
 ```shell
 nearup run localnet --home /tmp/localnet
 ```
 
+When running the `nearup run localnet` command on Apple’s M-based hardware, a local build of `neard` is required due to
+compatibility issues with the architecture.
+
+Start NEAR node (Apple's M-based hardware):
+
+```shell
+nearup run localnet --home /tmp/localnet --binary-path /path/to/nearcore/target/release
+```
+
+Replace `/path/to/nearcore/target/release` with the actual path to the locally built `neard` binary.
+
 ### **Prepare an account and create a private key file for Aurora EVM**
+
 ```shell
 aurora-cli --near-key-path /tmp/localnet/node0/validator_key.json create-account \
   --account aurora.node0 --balance 100 > /tmp/localnet/aurora_key.json
 ```
 
 Let's check if the account has been created successfully:
+
 ```shell
 aurora-cli view-account aurora.node0
 ```
 
 ### **Download and deploy Aurora EVM**
+
 To download the latest version, run the following command:
+
 ```shell
 curl -sL https://github.com/aurora-is-near/aurora-engine/releases/download/latest/aurora-mainnet.wasm -o /tmp/aurora-mainnet.wasm
 ```
 
 Deploy Aurora EVM:
+
 ```shell
 aurora-cli --near-key-path /tmp/localnet/aurora_key.json deploy-aurora /tmp/aurora-mainnet.wasm
 ```
 
 Initialize Aurora EVM:
+
 ```shell
 aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json init --chain-id 1313161556 --owner-id aurora.node0
 ```
@@ -105,19 +129,24 @@ And now we can deploy the EVM smart contract. In our example, it will be a simpl
 value and increment and decrement its value.
 
 But before that we need to generate a private key for signing transactions:
+
 ```shell
 aurora-cli key-pair --random
 ```
+
 The response should be similar to this:
+
 ```json
 {
   "address": "0xa003a6e0e1a1dc40aa9e496c1c058b2667c409f5",
   "secret_key": "3fac6dca1c6fc056b971a4e9090afbbfbdf3bc443e9cda595facb653cb1c01e1"
 }
 ```
-**_NOTE:_** The key should be used for demonstration only. 
+
+**_NOTE:_** The key should be used for demonstration only.
 
 Deploy EVM smart contract:
+
 ```shell
 aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json deploy \
   --code $(cat docs/res/Counter.hex) \
@@ -125,10 +154,13 @@ aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json d
   --args '{"init_value":"5"}' \
   --aurora-secret-key 3fac6dca1c6fc056b971a4e9090afbbfbdf3bc443e9cda595facb653cb1c01e1
 ```
+
 If everything went well, the response should be like this:
+
 ```
 Contract has been deployed to address: 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf successfully
 ```
+
 So. Now we have deployed the smart contract at address: `0x53a9fed853e02a39bf8d298f751374de8b5a6ddf`.
 
 ### **Interact with the smart contract**
@@ -136,36 +168,44 @@ So. Now we have deployed the smart contract at address: `0x53a9fed853e02a39bf8d2
 First, let's check that the current value is the same as we set in the
 initialization stage. For that, we will use the `view-call` operation, which doesn't demand a private key
 because it is a read-only operation:
+
 ```shell
 aurora-cli --engine aurora.node0 view-call -a 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf -f value \
   --abi-path docs/res/Counter.abi
 ```
+
 If we see `5` then everything is right.
 
 Now let's try to increment the value:
+
 ```shell
-aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json call \
+aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json submit \
   --address 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf \
   -f increment \
   --abi-path docs/res/Counter.abi \
   --aurora-secret-key 3fac6dca1c6fc056b971a4e9090afbbfbdf3bc443e9cda595facb653cb1c01e1
 ```
+
 In the response, we can see if the transaction was successful and the amount of gas used for the execution of this
 transaction.
 
 Let's make sure that our value was incremented:
+
 ```shell
 aurora-cli --engine aurora.node0 view-call -a 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf -f value \
   --abi-path docs/res/Counter.abi
 ```
+
 So, if we can see `6` in the output then the demo was successful. That's it!
 
 ### **Build aurora-cli with the advanced command line interface (Advanced CLI)**
 
 Advanced CLI provides more options andadvanced features. You can try it by building with the following command:
+
 ```shell
 cargo install --path . --no-default-features -F advanced
 ```
+
 Documentation on how to work with the advanced version of `aurora-cli` can be found [here](docs/localnet.md).
 
 ### **Browse Deployed EVM Metadata**
@@ -183,49 +223,66 @@ aurora-cli --engine aurora.node0 get-chain-id
 aurora-cli --engine aurora.node0 get-nonce 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf
 aurora-cli --engine aurora.node0 get-code 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf
 aurora-cli --engine aurora.node0 get-balance 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf
-aurora-cli --engine aurora.node0 get-storage-at --address 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf --key 0
+aurora-cli --engine aurora.node0 get-storage-at \
+  --address 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf \
+  --key 0x0000000000000000000000000000000000000000000000000000000000000000
 ```
 
 ### **Silo methods**
 
-Retrieves the current fixed gas set in the Silo contract. 
+Retrieves the current fixed gas set in the Silo contract.
+
 ```shell
 aurora-cli --engine aurora.node0 get-fixed-gas
 ```
+
 Sets the fixed gas in the Silo contract to a specific value.
+
 ```shell
 aurora-cli --engine aurora.node0 set-fixed-gas 0
 ```
+
 Check whitelists statuses
+
 ```shell
 aurora-cli --engine aurora.node0 get-whitelist-status admin
 aurora-cli --engine aurora.node0 get-whitelist-status evm-admin
 aurora-cli --engine aurora.node0 get-whitelist-status account
 aurora-cli --engine aurora.node0 get-whitelist-status address
 ```
+
 Add whitelist entry
+
 ```shell
 aurora-cli --engine aurora.node0 add-entry-to-whitelist --kind <whitelist-kind> --entry <entry-value>
 ```
+
 Remove whitelist entry
+
 ```shell
 aurora-cli --engine aurora.node0 remove-entry-from-whitelist --kind <whitelist-kind> --entry <entry-value>
 ```
+
 Disable whitelist status
+
 ```shell
 aurora-cli --engine aurora.node0 set-whitelist-status --kind <whitelist-kind> --status 0
 ```
-Replace `<whitelist-kind>` with the desired whitelist type (admin, evm-admin, account, or address), and `<entry-value>` with the address or account to be whitelisted or removed.
 
+Replace `<whitelist-kind>` with the desired whitelist type (admin, evm-admin, account, or address), and `<entry-value>`
+with the address or account to be whitelisted or removed.
 
 Add whitelist batch
+
 ```shell
 aurora-cli --engine aurora.node0 add-entry-to-whitelist-batch path/to/batch_list.json
 ```
 
-The batch should be provided in a JSON format. Each entry in the JSON array should have two properties: `kind` and either `account_id` or `address`, depending on the type of whitelist being updated.
+The batch should be provided in a JSON format. Each entry in the JSON array should have two properties: `kind` and
+either `account_id` or `address`, depending on the type of whitelist being updated.
 
 Example JSON batch file (`batch_list.json`):
+
 ```json
 [
   {
@@ -247,7 +304,7 @@ Example JSON batch file (`batch_list.json`):
 ]
 ```
 
-## Reference
+## Commands Reference
 
 - [`aurora-cli help`](#aurora-cli-help)
 - [`aurora-cli create-account`](#aurora-cli-create-account)
@@ -270,31 +327,42 @@ Example JSON batch file (`batch_list.json`):
 - [`aurora-cli resume-precompiles`](#aurora-cli-resume-precompiles)
 - [`aurora-cli paused-precompiles`](#aurora-cli-paused-precompiles)
 - [`aurora-cli factory-update`](#aurora-cli-factory-update)
+- [`aurora-cli factory-get-wnear-address`](#aurora-cli-factory-get-wnear-address)
 - [`aurora-cli factory-set-wnear-address`](#aurora-cli-factory-set-wnear-address)
 - [`aurora-cli fund-xcc-sub-account`](#aurora-cli-fund-xcc-sub-account)
+- [`aurora-cli upgrade`](#aurora-cli-upgrade)
 - [`aurora-cli stage-upgrade`](#aurora-cli-stage-upgrade)
 - [`aurora-cli deploy-upgrade`](#aurora-cli-deploy-upgrade)
 - [`aurora-cli deploy`](#aurora-cli-deploy)
 - [`aurora-cli view-call`](#aurora-cli-view-call)
 - [`aurora-cli call`](#aurora-cli-call)
+- [`aurora-cli submit`](#aurora-cli-submit)
 - [`aurora-cli encode-address`](#aurora-cli-encode-address)
 - [`aurora-cli key-pair`](#aurora-cli-key-pair)
+- [`aurora-cli generate-near-key`](#aurora-cli-generate-near-key)
+- [`aurora-cli get-fixed-gas`](#aurora-cli-get-fixed-gas)
+- [`aurora-cli set-fixed-gas`](#aurora-cli-set-fixed-gas)
+- [`aurora-cli set-silo-params`](#aurora-cli-set-silo-params)
 - [`aurora-cli get-whitelist-status`](#aurora-cli-get-whitelist-status)
 - [`aurora-cli set-whitelist-status`](#aurora-cli-set-whitelist-status)
 - [`aurora-cli add-entry-to-whitelist`](#aurora-cli-add-entry-to-whitelist)
 - [`aurora-cli add-entry-to-whitelist-batch`](#aurora-cli-add-entry-to-whitelist-batch)
 - [`aurora-cli remove-entry-from-whitelist`](#aurora-cli-remove-entry-from-whitelist)
-- [`aurora-cli set-key-manager`](#aurora-cli-set-key-manager)  
+- [`aurora-cli set-key-manager`](#aurora-cli-set-key-manager)
 - [`aurora-cli add-relayer-key`](#aurora-cli-add-relayer-key)
-- [`aurora-cli remove-relayer-key`](#aurora-cli-remove-relayer-key)       
-- [`aurora-cli get-upgrade-delay-blocks`](#aurora-cli-get-upgrade-delay-blocks) 
-- [`aurora-cli set-upgrade-delay-blocks`](#aurora-cli-set-upgrade-delay-blocks) 
-- [`aurora-cli get-erc20-from-nep141`](#aurora-cli-get-erc20-from-nep141)    
-- [`aurora-cli get-nep141-from-erc20`](#aurora-cli-get-nep141-from-erc20)    
+- [`aurora-cli remove-relayer-key`](#aurora-cli-remove-relayer-key)
+- [`aurora-cli get-upgrade-delay-blocks`](#aurora-cli-get-upgrade-delay-blocks)
+- [`aurora-cli set-upgrade-delay-blocks`](#aurora-cli-set-upgrade-delay-blocks)
+- [`aurora-cli get-erc20-from-nep141`](#aurora-cli-get-erc20-from-nep141)
+- [`aurora-cli get-nep141-from-erc20`](#aurora-cli-get-nep141-from-erc20)
 - [`aurora-cli get-erc20-metadata`](#aurora-cli-get-erc20-metadata)
-- [`aurora-cli set-erc20-metadata`](#aurora-cli-set-erc20-metadata)    
+- [`aurora-cli set-erc20-metadata`](#aurora-cli-set-erc20-metadata)
 - [`aurora-cli mirror-erc20-token`](#aurora-cli-mirror-erc20-token)
-- [`aurora-cli set-eth-connector-account-id`](#aurora-cli-set-eth-connector-account-id)
+- [`aurora-cli set-eth-connector-contract-account`](#aurora-cli-set-eth-connector-contract-account)
+- [`aurora-cli get-eth-connector-contract-account`](#aurora-cli-get-eth-connector-contract-account)
+- [`aurora-cli set-eth-connector-contract-data`](#aurora-cli-set-eth-connector-contract-data)
+- [`aurora-cli get-paused_flags`](#aurora-cli-get-paused-flags)
+- [`aurora-cli set-paused_flags`](#aurora-cli-set-paused-flags)
 
 ### `aurora-cli help`
 
@@ -305,54 +373,63 @@ Simple command line interface for communication with Aurora Engine
 Usage: aurora-cli [OPTIONS] <COMMAND>
 
 Commands:
-  create-account                Create new NEAR account
-  view-account                  View NEAR account
-  deploy-aurora                 Deploy Aurora EVM smart contract
-  init                          Initialize Aurora EVM and ETH connector
-  get-chain-id                  Return chain id of the network
-  get-nonce                     Return next nonce for address
-  get-block-hash                Return block hash of the specified height
-  get-code                      Return smart contract's code for contract address
-  get-balance                   Return balance for address
-  get-upgrade-index             Return a height for a staged upgrade
-  get-version                   Return Aurora EVM version
-  get-owner                     Return Aurora EVM owner
-  set-owner                     Set a new owner of Aurora EVM
-  get-bridge-prover             Return bridge prover
-  get-storage-at                Return a value from storage at address with key
-  register-relayer              Register relayer address
-  pause-precompiles             Pause precompiles
-  resume-precompiles            Resume precompiles
-  paused-precompiles            Return paused precompiles
-  factory-update                Updates the bytecode for user's router contracts
-  factory-set-wnear-address     Sets the address for the `wNEAR` ERC-20 contract
-  fund-xcc-sub-account          Create and/or fund an XCC sub-account directly
-  stage-upgrade                 Stage a new code for upgrade
-  deploy-upgrade                Deploy staged upgrade
-  deploy                        Deploy EVM smart contract's code in hex
-  view-call                     Call a view method of the smart contract
-  call                          Call a modified method of the smart contract
-  encode-address                Encode address
-  key-pair                      Return Public and Secret ED25519 keys
-  get-fixed-gas                 Return fixed gas per transaction
-  set-fixed-gas                 Set fixed gas per transaction
-  get-whitelist-status          Return a status of the whitelist
-  set-whitelist-status          Set a status for the whitelist
-  add-entry-to-whitelist        Add entry into the whitelist
-  add-entry-to-whitelist-batch  Add entries into the whitelist
-  remove-entry-from-whitelist   Remove the entry from the whitelist
-  set-key-manager               Set relayer key manager
-  add-relayer-key               Add relayer public key
-  remove-relayer-key            Remove relayer public key
-  get-upgrade-delay-blocks      Get delay for upgrade in blocks
-  set-upgrade-delay-blocks      Set delay for upgrade in blocks
-  get-erc20-from-nep141         Get ERC-20 from NEP-141
-  get-nep141-from-erc20         Get NEP-141 from ERC-20
-  get-erc20-metadata            Get ERC-20 metadata
-  set-erc20-metadata            Set ERC-20 metadata
-  mirror-erc20-token            Mirror ERC-20 token
-  set-eth-connector-account-id  Set eth connector account id
-  help                          Print this message or the help of the given subcommand(s)
+  create-account                      Create new NEAR account
+  view-account                        View NEAR account
+  deploy-aurora                       Deploy Aurora EVM smart contract
+  init                                Initialize Aurora EVM and ETH connector
+  get-chain-id                        Return chain id of the network
+  get-nonce                           Return next nonce for address
+  get-block-hash                      Return block hash of the specified height
+  get-code                            Return smart contract's code for contract address
+  get-balance                         Return balance for address
+  get-upgrade-index                   Return a height for a staged upgrade
+  get-version                         Return Aurora EVM version
+  get-owner                           Return Aurora EVM owner
+  set-owner                           Set a new owner of Aurora EVM
+  get-bridge-prover                   Return bridge prover
+  get-storage-at                      Return a value from storage at address with key
+  register-relayer                    Register relayer address
+  pause-precompiles                   Pause precompiles
+  resume-precompiles                  Resume precompiles
+  paused-precompiles                  Return paused precompiles
+  factory-update                      Updates the bytecode for user's router contracts
+  factory-get-wnear-address           Return the address of the `wNEAR` ERC-20 contract
+  factory-set-wnear-address           Sets the address for the `wNEAR` ERC-20 contract
+  fund-xcc-sub-account                Create and/or fund an XCC sub-account directly
+  upgrade                             Upgrade contract with provided code
+  stage-upgrade                       Stage a new code for upgrade
+  deploy-upgrade                      Deploy staged upgrade
+  deploy                              Deploy EVM smart contract's code in hex
+  call                                Call a method of the smart contract
+  view-call                           Call a view method of the smart contract
+  submit                              Call a modified method of the smart contract
+  encode-address                      Encode address
+  key-pair                            Return Public and Secret ED25519 keys
+  generate-near-key                   Return randomly generated NEAR key for AccountId
+  get-fixed-gas                       Return fixed gas
+  set-fixed-gas                       Set fixed gas
+  set-silo-params                     Set SILO params
+  get-whitelist-status                Return a status of the whitelist
+  set-whitelist-status                Set a status for the whitelist
+  add-entry-to-whitelist              Add entry into the whitelist
+  add-entry-to-whitelist-batch        Add entries into the whitelist
+  remove-entry-from-whitelist         Remove the entry from the whitelist
+  set-key-manager                     Set relayer key manager
+  add-relayer-key                     Add relayer public key
+  remove-relayer-key                  Remove relayer public key
+  get-upgrade-delay-blocks            Get delay for upgrade in blocks
+  set-upgrade-delay-blocks            Set delay for upgrade in blocks
+  get-erc20-from-nep141               Get ERC-20 from NEP-141
+  get-nep141-from-erc20               Get NEP-141 from ERC-20
+  get-erc20-metadata                  Get ERC-20 metadata
+  set-erc20-metadata                  Set ERC-20 metadata
+  mirror-erc20-token                  Mirror ERC-20 token
+  set-eth-connector-contract-account  Set eth connector account id
+  get-eth-connector-contract-account  Get eth connector account id
+  set-eth-connector-contract-data     Set eth connector data
+  set-paused-flags                    Set eth connector paused flags
+  get-paused-flags                    Get eth connector paused flags
+  help                                Print this message or the help of the given subcommand(s)
 
 Options:
       --network <NETWORK>              NEAR network ID [default: localnet]
@@ -654,6 +731,18 @@ Options:
   -h, --help  Print help
 ```
 
+### `aurora-cli factory-get-wnear-address`
+
+```console
+$ aurora-cli help factory-get-wnear-address
+Return the address of the `wNEAR` ERC-20 contract
+
+Usage: aurora-cli factory-get-wnear-address
+
+Options:
+  -h, --help  Print help
+```
+
 ### `aurora-cli factory-set-wnear-address`
 
 ```console
@@ -693,6 +782,21 @@ $ aurora-cli help stage-upgrade
 Stage a new code for upgrade
 
 Usage: aurora-cli stage-upgrade <PATH>
+
+Arguments:
+  <PATH>  
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli upgrade`
+
+```console
+$ aurora-cli help upgrade
+Upgrade contract with provided code
+
+Usage: aurora-cli upgrade <PATH>
 
 Arguments:
   <PATH>  
@@ -747,8 +851,23 @@ Options:
 
 ### `aurora-cli call`
 
+```console"
+$ aurora-cli help call
+Call a method of the smart contract
+
+Usage: aurora-cli call [OPTIONS] --address <ADDRESS>
+
+Options:
+      --address <ADDRESS>  Address of the smart contract
+      --input <INPUT>      Input data of the EVM transaction encoded in hex
+      --value <VALUE>      Attached value in EVM transaction
+  -h, --help               Print help
+ ```
+
+### `aurora-cli submit`
+
 ```console
-aurora-cli help call
+$ aurora-cli help submit
 Call a modified method of the smart contract
 
 Usage: aurora-cli call [OPTIONS] --address <ADDRESS> --function <FUNCTION> --abi-path <ABI_PATH>
@@ -792,11 +911,62 @@ Options:
   -h, --help         Print help
 ```
 
-  Return a status of the whitelist
-  Set a status for the whitelist
-  Add entry into the whitelist
-  Add entries into the whitelist
-  Remove the entry from the whitelist
+### `aurora-cli generate-near-key`
+
+```console
+$ aurora-cli help generate-near-key
+Return randomly generated NEAR key for AccountId
+
+Usage: aurora-cli generate-near-key <ACCOUNT_ID> <KEY_TYPE>
+
+Arguments:
+  <ACCOUNT_ID>  AccountId
+  <KEY_TYPE>    Key type: ed25519 or secp256k1
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli get-fixed-gas`
+
+```console
+$ aurora-cli help get-fixed-gas
+Return fixed gas
+
+Usage: aurora-cli get-fixed-gas
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli set-fixed-gas`
+
+```console
+$ aurora-cli help set-fixed-gas
+Set fixed gas
+
+Usage: aurora-cli set-fixed-gas <COST>
+
+Arguments:
+  <COST>  Fixed gas in EthGas
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli set-silo-params`
+
+```console
+$ aurora-cli help set-silo-params
+Set SILO params
+
+Usage: aurora-cli set-silo-params --gas <GAS> --fallback-address <FALLBACK_ADDRESS>
+
+Options:
+  -g, --gas <GAS>                            Fixed gas in EthGas
+  -f, --fallback-address <FALLBACK_ADDRESS>  Fallback EVM address
+  -h, --help                                 Print help
+```
 
 ### `aurora-cli get-whitelist-status`
 
@@ -830,7 +1000,7 @@ Options:
 ### `aurora-cli add-entry-to-whitelist`
 
 ```console
-aurora-cli help add-entry-to-whitelist
+$ aurora-cli help add-entry-to-whitelist
 Add entry into the whitelist
 
 Usage: aurora-cli add-entry-to-whitelist --kind <KIND> --entry <ENTRY>
@@ -1016,16 +1186,74 @@ Options:
   -h, --help                       Print help
 ```
 
-### `aurora-cli set-eth-connector-account-id`
+### `aurora-cli set-eth-connector-contract-account`
 
 ```console
-$ aurora-cli help set-eth-connector-account-id 
+$ aurora-cli help set-eth-connector-contract-account
 Set eth connector account id
 
-Usage: aurora-cli set-eth-connector-account-id [OPTIONS] --account-id <ACCOUNT_ID>
+Usage: aurora-cli set-eth-connector-contract-account [OPTIONS] --account-id <ACCOUNT_ID>
 
 Options:
       --account-id <ACCOUNT_ID>      Account id of eth connector
       --withdraw-ser <WITHDRAW_SER>  Serialization type in withdraw method
+  -h, --help           
+```
+
+### `aurora-cli get-eth-connector-contract-account`
+
+```console
+$ aurora-cli help get-eth-connector-contract-account
+Get eth connector account id
+
+Usage: aurora-cli get-eth-connector-contract-account
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli set-eth-connector-contract-data`
+
+```console
+$ aurora-cli help set-eth-connector-contract-data
+Set eth connector data
+
+Usage: aurora-cli set-eth-connector-contract-data --prover-id <PROVER_ID> --custodian-address <CUSTODIAN_ADDRESS> --ft-metadata-path <FT_METADATA_PATH>
+
+Options:
+      --prover-id <PROVER_ID>
+          Prover account id
+      --custodian-address <CUSTODIAN_ADDRESS>
+          Custodian ETH address
+      --ft-metadata-path <FT_METADATA_PATH>
+          Path to the file with the metadata of the fungible token
   -h, --help
+          Print help
+```
+
+### `aurora-cli set-paused-flags`
+
+```console
+$ aurora-cli help set-paused-flags
+Set eth connector paused flags
+
+Usage: aurora-cli set-paused-flags <MASK>
+
+Arguments:
+  <MASK>  Pause mask
+
+Options:
+  -h, --help  Print help
+```
+
+### `aurora-cli get-paused-flags`
+
+```console
+$ aurora-cli help get-paused-flags
+Get eth connector paused flags
+
+Usage: aurora-cli get-paused-flags
+
+Options:
+  -h, --help  Print help
 ```
