@@ -9,8 +9,8 @@ use aurora_engine_types::parameters::connector::{
     PausedMask, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, WithdrawSerializeType,
 };
 use aurora_engine_types::parameters::engine::{
-    GetStorageAtArgs, LegacyNewCallArgs, PausePrecompilesCallArgs, RelayerKeyArgs,
-    RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, SubmitResult,
+    CallArgs, FunctionCallArgsV2, GetStorageAtArgs, LegacyNewCallArgs, PausePrecompilesCallArgs,
+    RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, SubmitResult,
     TransactionStatus,
 };
 use aurora_engine_types::parameters::xcc::FundXccArgs;
@@ -259,6 +259,45 @@ pub async fn view_account(context: Context, account: &str) -> anyhow::Result<()>
     Ok(())
 }
 
+pub async fn call(
+    context: Context,
+    address: String,
+    input: Option<String>,
+    value: Option<u128>,
+) -> anyhow::Result<()> {
+    let contract = hex_to_address(&address)?;
+    let input = input.map_or(Ok(vec![]), hex::decode)?;
+    let args = borsh::to_vec(&CallArgs::V2(FunctionCallArgsV2 {
+        contract,
+        value: Wei::new_u128(value.unwrap_or_default()).to_bytes(),
+        input,
+    }))
+    .unwrap_or_default();
+
+    let result = context.client.near().contract_call("call", args).await?;
+
+    match result.status {
+        FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {}
+        FinalExecutionStatus::Failure(failure) => println!("Bad execution status: {failure:?}"),
+        FinalExecutionStatus::SuccessValue(result) => {
+            let submit_result = SubmitResult::try_from_slice(&result)?;
+            match submit_result.status {
+                TransactionStatus::Succeed(_) => {
+                    println!("The call has been executed successfully");
+                }
+                TransactionStatus::Revert(_) => {
+                    println!("The call has been reverted");
+                }
+                _ => {
+                    println!("The call has been failed");
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Read-only call of the EVM smart contract.
 pub async fn view_call(
     context: Context,
@@ -297,7 +336,7 @@ pub async fn view_call(
 }
 
 /// Modifying call of the EVM smart contract.
-pub async fn call(
+pub async fn submit(
     context: Context,
     address: String,
     function: String,

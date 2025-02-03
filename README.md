@@ -79,9 +79,11 @@ Start NEAR node:
 nearup run localnet --home /tmp/localnet
 ```
 
-When running the `nearup run localnet` command on Apple’s M-based hardware, a local build of `neard` is required due to compatibility issues with the architecture.
+When running the `nearup run localnet` command on Apple’s M-based hardware, a local build of `neard` is required due to
+compatibility issues with the architecture.
 
 Start NEAR node (Apple's M-based hardware):
+
 ```shell
 nearup run localnet --home /tmp/localnet --binary-path /path/to/nearcore/target/release
 ```
@@ -177,7 +179,7 @@ If we see `5` then everything is right.
 Now let's try to increment the value:
 
 ```shell
-aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json call \
+aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json submit \
   --address 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf \
   -f increment \
   --abi-path docs/res/Counter.abi \
@@ -334,6 +336,7 @@ Example JSON batch file (`batch_list.json`):
 - [`aurora-cli deploy`](#aurora-cli-deploy)
 - [`aurora-cli view-call`](#aurora-cli-view-call)
 - [`aurora-cli call`](#aurora-cli-call)
+- [`aurora-cli submit`](#aurora-cli-submit)
 - [`aurora-cli encode-address`](#aurora-cli-encode-address)
 - [`aurora-cli key-pair`](#aurora-cli-key-pair)
 - [`aurora-cli generate-near-key`](#aurora-cli-generate-near-key)
@@ -397,8 +400,9 @@ Commands:
   stage-upgrade                       Stage a new code for upgrade
   deploy-upgrade                      Deploy staged upgrade
   deploy                              Deploy EVM smart contract's code in hex
+  call                                Call a method of the smart contract
   view-call                           Call a view method of the smart contract
-  call                                Call a modified method of the smart contract
+  submit                              Call a modified method of the smart contract
   encode-address                      Encode address
   key-pair                            Return Public and Secret ED25519 keys
   generate-near-key                   Return randomly generated NEAR key for AccountId
@@ -847,8 +851,23 @@ Options:
 
 ### `aurora-cli call`
 
-```console
+```console"
 $ aurora-cli help call
+Call a method of the smart contract
+
+Usage: aurora-cli call [OPTIONS] --address <ADDRESS>
+
+Options:
+      --address <ADDRESS>  Address of the smart contract
+      --input <INPUT>      Input data of the EVM transaction encoded in hex
+      --value <VALUE>      Attached value in EVM transaction
+  -h, --help               Print help
+ ```
+
+### `aurora-cli submit`
+
+```console
+$ aurora-cli help submit
 Call a modified method of the smart contract
 
 Usage: aurora-cli call [OPTIONS] --address <ADDRESS> --function <FUNCTION> --abi-path <ABI_PATH>
