@@ -145,7 +145,7 @@ pub async fn remove_entry_from_whitelist(
     .await
 }
 
-fn get_kind(kind: &str) -> anyhow::Result<WhitelistKind> {
+pub fn get_kind(kind: &str) -> anyhow::Result<WhitelistKind> {
     Ok(match kind {
         "admin" => WhitelistKind::Admin,
         "evm-admin" => WhitelistKind::EvmAdmin,
@@ -155,7 +155,7 @@ fn get_kind(kind: &str) -> anyhow::Result<WhitelistKind> {
     })
 }
 
-fn get_whitelist_args(kind: &str, entry: &str) -> anyhow::Result<Vec<u8>> {
+pub fn get_whitelist_args(kind: &str, entry: &str) -> anyhow::Result<Vec<u8>> {
     let kind = get_kind(kind)?;
 
     Ok(match kind {
