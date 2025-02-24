@@ -7,6 +7,7 @@ use aurora_engine_types::{
     U256,
 };
 use near_crypto::InMemorySigner;
+#[cfg(feature = "simple")]
 use near_jsonrpc_client::methods::tx::{
     RpcTransactionResponse, RpcTransactionStatusRequest, TransactionInfo,
 };
@@ -17,6 +18,7 @@ use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_primitives::transaction::{Action, SignedTransaction};
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
+#[cfg(feature = "simple")]
 use near_primitives::views::TxExecutionStatus;
 use near_primitives::{
     hash::CryptoHash, types::AccountId, views, views::FinalExecutionOutcomeView,
