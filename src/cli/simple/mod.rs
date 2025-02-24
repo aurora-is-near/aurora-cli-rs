@@ -385,6 +385,17 @@ pub enum Command {
     },
     /// Get eth connector paused flags
     GetPausedFlags,
+    /// Get transaction status
+    TransactionStatus {
+        /// Transaction hash
+        #[arg(long)]
+        hash: String,
+        /// Wait until the transaction is in the `wait_until` state
+        #[arg(long, default_value = "final", value_parser = clap::builder::PossibleValuesParser::new(
+            ["none", "included", "executed-optimistic", "included-final", "executed", "final"]
+        ))]
+        wait_until: String,
+    },
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -649,6 +660,9 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::GetPausedFlags => {
             command::get_paused_flags(context).await?;
+        }
+        Command::TransactionStatus { hash, wait_until } => {
+            command::transaction_status(context, &hash, &wait_until).await?;
         }
     }
 

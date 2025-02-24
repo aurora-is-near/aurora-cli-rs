@@ -17,7 +17,8 @@ use aurora_engine_types::parameters::xcc::FundXccArgs;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
-use near_primitives::views::{CallResult, FinalExecutionStatus};
+use near_primitives::hash::CryptoHash;
+use near_primitives::views::{CallResult, FinalExecutionStatus, TxExecutionStatus};
 use serde_json::{to_string_pretty, Value};
 
 use crate::cli::simple::OutputFormat;
@@ -854,6 +855,37 @@ pub async fn set_eth_connector_contract_data<P: AsRef<Path> + Send>(
     )
     .proceed(context, args)
     .await
+}
+
+pub async fn transaction_status(
+    context: Context,
+    tx_hash: &str,
+    wait_until: &str,
+) -> anyhow::Result<()> {
+    let tx_hash = CryptoHash::from_str(tx_hash).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let wait_until = match wait_until {
+        "none" => Ok(TxExecutionStatus::None),
+        "included" => Ok(TxExecutionStatus::Included),
+        "executed-optimistic" => Ok(TxExecutionStatus::ExecutedOptimistic),
+        "included-final" => Ok(TxExecutionStatus::IncludedFinal),
+        "executed" => Ok(TxExecutionStatus::Executed),
+        "final" => Ok(TxExecutionStatus::Final),
+
+        _ => {
+            let e = anyhow::anyhow!("Invalid value for wait_until");
+            Err(e)
+        }
+    };
+
+    let rsp = context
+        .client
+        .near()
+        .transaction_status(tx_hash, wait_until?)
+        .await?;
+
+    println!("{}", serde_json::to_string_pretty(&rsp)?);
+
+    Ok(())
 }
 
 async fn get_value<T: FromCallResult + Display>(

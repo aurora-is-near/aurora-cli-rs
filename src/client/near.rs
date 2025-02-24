@@ -7,6 +7,9 @@ use aurora_engine_types::{
     U256,
 };
 use near_crypto::InMemorySigner;
+use near_jsonrpc_client::methods::tx::{
+    RpcTransactionResponse, RpcTransactionStatusRequest, TransactionInfo,
+};
 use near_jsonrpc_client::{
     methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest, AsUrl, JsonRpcClient,
 };
@@ -14,6 +17,7 @@ use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_primitives::transaction::{Action, SignedTransaction};
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
+use near_primitives::views::TxExecutionStatus;
 use near_primitives::{
     hash::CryptoHash, types::AccountId, views, views::FinalExecutionOutcomeView,
 };
@@ -464,5 +468,24 @@ impl NearClient {
 
         let account_id = account.parse()?;
         Ok(account_id)
+    }
+
+    #[cfg(feature = "simple")]
+    pub async fn transaction_status(
+        &self,
+        hash: CryptoHash,
+        wait_until: TxExecutionStatus,
+    ) -> anyhow::Result<RpcTransactionResponse> {
+        let signer = self.signer()?;
+        let req = RpcTransactionStatusRequest {
+            transaction_info: TransactionInfo::TransactionId {
+                tx_hash: hash,
+                sender_account_id: signer.account_id,
+            },
+            wait_until,
+        };
+
+        let rsp = self.client.call(req).await?;
+        Ok(rsp)
     }
 }
