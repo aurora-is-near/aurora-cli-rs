@@ -932,25 +932,25 @@ pub enum WaitUntil {
 impl From<WaitUntil> for TxExecutionStatus {
     fn from(value: WaitUntil) -> Self {
         match value {
-            WaitUntil::None => TxExecutionStatus::None,
-            WaitUntil::Included => TxExecutionStatus::Included,
-            WaitUntil::ExecutedOptimistic => TxExecutionStatus::ExecutedOptimistic,
-            WaitUntil::IncludedFinal => TxExecutionStatus::IncludedFinal,
-            WaitUntil::Executed => TxExecutionStatus::Executed,
-            WaitUntil::Final => TxExecutionStatus::Final,
+            WaitUntil::None => Self::None,
+            WaitUntil::Included => Self::Included,
+            WaitUntil::ExecutedOptimistic => Self::ExecutedOptimistic,
+            WaitUntil::IncludedFinal => Self::IncludedFinal,
+            WaitUntil::Executed => Self::Executed,
+            WaitUntil::Final => Self::Final,
         }
     }
 }
 
-impl ToString for WaitUntil {
-    fn to_string(&self) -> String {
+impl Display for WaitUntil {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            WaitUntil::None => "none".to_string(),
-            WaitUntil::Included => "included".to_string(),
-            WaitUntil::ExecutedOptimistic => "executed-optimistic".to_string(),
-            WaitUntil::IncludedFinal => "included-final".to_string(),
-            WaitUntil::Executed => "executed".to_string(),
-            WaitUntil::Final => "final".to_string(),
+            Self::None => write!(f, "none"),
+            Self::Included => write!(f, "included"),
+            Self::ExecutedOptimistic => write!(f, "executed-optimistic"),
+            Self::IncludedFinal => write!(f, "included-final"),
+            Self::Executed => write!(f, "executed"),
+            Self::Final => write!(f, "final"),
         }
     }
 }
