@@ -863,9 +863,6 @@ pub async fn transaction_status(
     tx_hash: CryptoHash,
     wait_until: WaitUntil,
 ) -> anyhow::Result<()> {
-    // let tx_hash = CryptoHash::from_str(tx_hash).map_err(|e| anyhow::anyhow!("{e}"))?;
-    // let wait_until = TxExecutionStatus::from(wait_until);
-
     let rsp = context
         .client
         .near()
