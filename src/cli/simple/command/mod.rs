@@ -17,6 +17,7 @@ use aurora_engine_types::parameters::xcc::FundXccArgs;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
+use clap::ValueEnum;
 use near_primitives::hash::CryptoHash;
 use near_primitives::views::{CallResult, FinalExecutionStatus, TxExecutionStatus};
 use serde_json::{to_string_pretty, Value};
@@ -859,28 +860,16 @@ pub async fn set_eth_connector_contract_data<P: AsRef<Path> + Send>(
 
 pub async fn transaction_status(
     context: Context,
-    tx_hash: &str,
-    wait_until: &str,
+    tx_hash: CryptoHash,
+    wait_until: WaitUntil,
 ) -> anyhow::Result<()> {
-    let tx_hash = CryptoHash::from_str(tx_hash).map_err(|e| anyhow::anyhow!("{e}"))?;
-    let wait_until = match wait_until {
-        "none" => Ok(TxExecutionStatus::None),
-        "included" => Ok(TxExecutionStatus::Included),
-        "executed-optimistic" => Ok(TxExecutionStatus::ExecutedOptimistic),
-        "included-final" => Ok(TxExecutionStatus::IncludedFinal),
-        "executed" => Ok(TxExecutionStatus::Executed),
-        "final" => Ok(TxExecutionStatus::Final),
-
-        _ => {
-            let e = anyhow::anyhow!("Invalid value for wait_until");
-            Err(e)
-        }
-    };
+    // let tx_hash = CryptoHash::from_str(tx_hash).map_err(|e| anyhow::anyhow!("{e}"))?;
+    // let wait_until = TxExecutionStatus::from(wait_until);
 
     let rsp = context
         .client
         .near()
-        .transaction_status(tx_hash, wait_until?)
+        .transaction_status(tx_hash, wait_until.into())
         .await?;
 
     println!("{}", serde_json::to_string_pretty(&rsp)?);
@@ -928,6 +917,43 @@ fn str_to_identifier(id: &str) -> anyhow::Result<Erc20Identifier> {
 }
 
 struct HexString(String);
+
+#[derive(Debug, Clone, Default, ValueEnum)]
+pub enum WaitUntil {
+    None,
+    Included,
+    ExecutedOptimistic,
+    IncludedFinal,
+    Executed,
+    #[default]
+    Final,
+}
+
+impl From<WaitUntil> for TxExecutionStatus {
+    fn from(value: WaitUntil) -> Self {
+        match value {
+            WaitUntil::None => TxExecutionStatus::None,
+            WaitUntil::Included => TxExecutionStatus::Included,
+            WaitUntil::ExecutedOptimistic => TxExecutionStatus::ExecutedOptimistic,
+            WaitUntil::IncludedFinal => TxExecutionStatus::IncludedFinal,
+            WaitUntil::Executed => TxExecutionStatus::Executed,
+            WaitUntil::Final => TxExecutionStatus::Final,
+        }
+    }
+}
+
+impl ToString for WaitUntil {
+    fn to_string(&self) -> String {
+        match self {
+            WaitUntil::None => "none".to_string(),
+            WaitUntil::Included => "included".to_string(),
+            WaitUntil::ExecutedOptimistic => "executed-optimistic".to_string(),
+            WaitUntil::IncludedFinal => "included-final".to_string(),
+            WaitUntil::Executed => "executed".to_string(),
+            WaitUntil::Final => "final".to_string(),
+        }
+    }
+}
 
 trait FromCallResult {
     fn from_result(result: CallResult) -> anyhow::Result<Self>

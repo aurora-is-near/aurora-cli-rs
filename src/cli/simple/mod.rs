@@ -1,6 +1,7 @@
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use clap::{Parser, Subcommand, ValueEnum};
+use near_primitives::hash::CryptoHash;
 use shadow_rs::shadow;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -389,12 +390,10 @@ pub enum Command {
     TransactionStatus {
         /// Transaction hash
         #[arg(long)]
-        hash: String,
+        hash: CryptoHash,
         /// Wait until the transaction is in the `wait_until` state
-        #[arg(long, default_value = "final", value_parser = clap::builder::PossibleValuesParser::new(
-            ["none", "included", "executed-optimistic", "included-final", "executed", "final"]
-        ))]
-        wait_until: String,
+        #[arg(long, default_value_t = command::WaitUntil::Final)]
+        wait_until: command::WaitUntil,
     },
 }
 
@@ -662,7 +661,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             command::get_paused_flags(context).await?;
         }
         Command::TransactionStatus { hash, wait_until } => {
-            command::transaction_status(context, &hash, &wait_until).await?;
+            command::transaction_status(context, hash, wait_until).await?;
         }
     }
 
