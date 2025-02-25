@@ -17,7 +17,9 @@ use aurora_engine_types::parameters::xcc::FundXccArgs;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
-use near_primitives::views::{CallResult, FinalExecutionStatus};
+use clap::ValueEnum;
+use near_primitives::hash::CryptoHash;
+use near_primitives::views::{CallResult, FinalExecutionStatus, TxExecutionStatus};
 use serde_json::{to_string_pretty, Value};
 
 use crate::cli::simple::OutputFormat;
@@ -856,6 +858,22 @@ pub async fn set_eth_connector_contract_data<P: AsRef<Path> + Send>(
     .await
 }
 
+pub async fn transaction_status(
+    context: Context,
+    tx_hash: CryptoHash,
+    wait_until: WaitUntil,
+) -> anyhow::Result<()> {
+    let rsp = context
+        .client
+        .near()
+        .transaction_status(tx_hash, wait_until.into())
+        .await?;
+
+    println!("{}", serde_json::to_string_pretty(&rsp)?);
+
+    Ok(())
+}
+
 async fn get_value<T: FromCallResult + Display>(
     context: Context,
     method_name: &str,
@@ -896,6 +914,43 @@ fn str_to_identifier(id: &str) -> anyhow::Result<Erc20Identifier> {
 }
 
 struct HexString(String);
+
+#[derive(Debug, Clone, Default, ValueEnum)]
+pub enum WaitUntil {
+    None,
+    Included,
+    ExecutedOptimistic,
+    IncludedFinal,
+    Executed,
+    #[default]
+    Final,
+}
+
+impl From<WaitUntil> for TxExecutionStatus {
+    fn from(value: WaitUntil) -> Self {
+        match value {
+            WaitUntil::None => Self::None,
+            WaitUntil::Included => Self::Included,
+            WaitUntil::ExecutedOptimistic => Self::ExecutedOptimistic,
+            WaitUntil::IncludedFinal => Self::IncludedFinal,
+            WaitUntil::Executed => Self::Executed,
+            WaitUntil::Final => Self::Final,
+        }
+    }
+}
+
+impl Display for WaitUntil {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, "none"),
+            Self::Included => write!(f, "included"),
+            Self::ExecutedOptimistic => write!(f, "executed-optimistic"),
+            Self::IncludedFinal => write!(f, "included-final"),
+            Self::Executed => write!(f, "executed"),
+            Self::Final => write!(f, "final"),
+        }
+    }
+}
 
 trait FromCallResult {
     fn from_result(result: CallResult) -> anyhow::Result<Self>

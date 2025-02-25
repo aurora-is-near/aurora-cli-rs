@@ -1,6 +1,7 @@
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use clap::{Parser, Subcommand, ValueEnum};
+use near_primitives::hash::CryptoHash;
 use shadow_rs::shadow;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -385,6 +386,15 @@ pub enum Command {
     },
     /// Get eth connector paused flags
     GetPausedFlags,
+    /// Get transaction status
+    TransactionStatus {
+        /// Transaction hash
+        #[arg(long)]
+        hash: CryptoHash,
+        /// Wait until the transaction is in the `wait_until` state
+        #[arg(long, default_value_t = command::WaitUntil::Final)]
+        wait_until: command::WaitUntil,
+    },
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -649,6 +659,9 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::GetPausedFlags => {
             command::get_paused_flags(context).await?;
+        }
+        Command::TransactionStatus { hash, wait_until } => {
+            command::transaction_status(context, hash, wait_until).await?;
         }
     }
 

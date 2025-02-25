@@ -363,6 +363,7 @@ Example JSON batch file (`batch_list.json`):
 - [`aurora-cli set-eth-connector-contract-data`](#aurora-cli-set-eth-connector-contract-data)
 - [`aurora-cli get-paused_flags`](#aurora-cli-get-paused-flags)
 - [`aurora-cli set-paused_flags`](#aurora-cli-set-paused-flags)
+- [`aurora-cli transaction-status`](#aurora-cli-transaction-status)
 
 ### `aurora-cli help`
 
@@ -429,6 +430,7 @@ Commands:
   set-eth-connector-contract-data     Set eth connector data
   set-paused-flags                    Set eth connector paused flags
   get-paused-flags                    Get eth connector paused flags
+  transaction-status                  Get transaction status
   help                                Print this message or the help of the given subcommand(s)
 
 Options:
@@ -1256,4 +1258,18 @@ Usage: aurora-cli get-paused-flags
 
 Options:
   -h, --help  Print help
+```
+
+### `aurora-cli transaction-status`
+
+```console
+$ aurora-cli help 
+Get transaction status
+
+Usage: aurora-cli transaction-status [OPTIONS] --hash <HASH>
+
+Options:
+      --hash <HASH>              Transaction hash
+      --wait-until <WAIT_UNTIL>  Wait until the transaction is in the `wait_until` state [default: final] [possible values: none, included, executed-optimistic, included-final, executed, final]
+  -h, --help                     Print help
 ```
