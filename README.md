@@ -1282,10 +1282,9 @@ Options:
 $ aurora-cli help add-relayer
 Add relayer
 
-Usage: aurora-cli add-relayer --account-id <ACCOUNT_ID> --deposit <DEPOSIT> --full-access-pub-key <FULL_ACCESS_PUB_KEY> --function-call-pub-key <FUNCTION_CALL_PUB_KEY>
+Usage: aurora-cli add-relayer --deposit <DEPOSIT> --full-access-pub-key <FULL_ACCESS_PUB_KEY> --function-call-pub-key <FUNCTION_CALL_PUB_KEY>
 
-Options:
-      --account-id <ACCOUNT_ID>                        
+Options:                    
       --deposit <DEPOSIT>                              
       --full-access-pub-key <FULL_ACCESS_PUB_KEY>      
       --function-call-pub-key <FUNCTION_CALL_PUB_KEY>  

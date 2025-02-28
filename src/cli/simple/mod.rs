@@ -401,8 +401,6 @@ pub enum Command {
     /// Add relayer
     AddRelayer {
         #[arg(long)]
-        account_id: String,
-        #[arg(long)]
         deposit: f64,
         #[arg(long)]
         full_access_pub_key: near_crypto::PublicKey,
@@ -678,14 +676,12 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             command::transaction_status(context, hash, wait_until).await?;
         }
         Command::AddRelayer {
-            account_id,
             deposit,
             full_access_pub_key,
             function_call_pub_key,
         } => {
             command::add_relayer(
                 context,
-                account_id,
                 near_to_yocto(deposit),
                 full_access_pub_key,
                 function_call_pub_key,
