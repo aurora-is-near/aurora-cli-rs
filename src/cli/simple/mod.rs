@@ -6,6 +6,8 @@ use shadow_rs::shadow;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
+use crate::utils::near_to_yocto;
+
 pub mod command;
 
 static VERSION: LazyLock<String> = LazyLock::new(|| {
@@ -395,6 +397,16 @@ pub enum Command {
         #[arg(long, default_value_t = command::WaitUntil::Final)]
         wait_until: command::WaitUntil,
     },
+
+    /// Add relayer
+    AddRelayer {
+        #[arg(long)]
+        deposit: f64,
+        #[arg(long)]
+        full_access_pub_key: near_crypto::PublicKey,
+        #[arg(long)]
+        function_call_pub_key: near_crypto::PublicKey,
+    },
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -662,6 +674,19 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::TransactionStatus { hash, wait_until } => {
             command::transaction_status(context, hash, wait_until).await?;
+        }
+        Command::AddRelayer {
+            deposit,
+            full_access_pub_key,
+            function_call_pub_key,
+        } => {
+            command::add_relayer(
+                context,
+                near_to_yocto(deposit),
+                full_access_pub_key,
+                function_call_pub_key,
+            )
+            .await?;
         }
     }
 
