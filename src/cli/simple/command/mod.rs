@@ -1073,7 +1073,7 @@ impl ContractCall<'_> {
 pub async fn add_relayer(
     context: Context,
     account_id: String,
-    deposit: f64,
+    deposit: u128,
     full_access_pub_key: near_crypto::PublicKey,
     function_call_pub_key: near_crypto::PublicKey,
 ) -> anyhow::Result<()> {
@@ -1085,7 +1085,7 @@ pub async fn add_relayer(
     let rsp = client
         .add_relayer(
             account_id.parse()?,
-            near_to_yocto(deposit),
+            deposit,
             full_access_pub_key,
             function_call_pub_key,
         )

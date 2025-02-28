@@ -6,6 +6,8 @@ use shadow_rs::shadow;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
+use crate::utils::near_to_yocto;
+
 pub mod command;
 
 static VERSION: LazyLock<String> = LazyLock::new(|| {
@@ -684,7 +686,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             command::add_relayer(
                 context,
                 account_id,
-                deposit,
+                near_to_yocto(deposit),
                 full_access_pub_key,
                 function_call_pub_key,
             )
