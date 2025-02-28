@@ -395,6 +395,18 @@ pub enum Command {
         #[arg(long, default_value_t = command::WaitUntil::Final)]
         wait_until: command::WaitUntil,
     },
+
+    /// Add relayer
+    AddRelayer {
+        #[arg(long)]
+        account_id: String,
+        #[arg(long)]
+        deposit: f64,
+        #[arg(long)]
+        full_access_pub_key: near_crypto::PublicKey,
+        #[arg(long)]
+        function_call_pub_key: near_crypto::PublicKey,
+    },
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -662,6 +674,21 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::TransactionStatus { hash, wait_until } => {
             command::transaction_status(context, hash, wait_until).await?;
+        }
+        Command::AddRelayer {
+            account_id,
+            deposit,
+            full_access_pub_key,
+            function_call_pub_key,
+        } => {
+            command::add_relayer(
+                context,
+                account_id,
+                deposit,
+                full_access_pub_key,
+                function_call_pub_key,
+            )
+            .await?;
         }
     }
 
