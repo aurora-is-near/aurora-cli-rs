@@ -1,0 +1,20 @@
+[package]
+name = "aurora-sdk-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+borsh.workspace = true
+hex.workspace = true
+near-primitives.workspace = true
+near-jsonrpc-client.workspace = true
+near-jsonrpc-primitives.workspace = true
+primitive-types.workspace = true
+reqwest.workspace = true
+serde = "1"
+serde_json = "1"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

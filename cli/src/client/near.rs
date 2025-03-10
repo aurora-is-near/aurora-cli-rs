@@ -271,9 +271,10 @@ impl NearClient {
         .await
     }
 
-    async fn near_broadcast_tx(
+    async fn near_broadcast_tx_from(
         &self,
         actions: Vec<Action>,
+        from: AccountId,
         nonce_override: Option<u64>,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
         let signer = self.signer()?;
@@ -283,7 +284,7 @@ impl NearClient {
         let request = RpcBroadcastTxCommitRequest {
             signed_transaction: SignedTransaction::from_actions(
                 nonce,
-                signer.account_id.clone(),
+                from,
                 self.engine_account_id.as_str().parse()?,
                 &signer.into(),
                 actions,

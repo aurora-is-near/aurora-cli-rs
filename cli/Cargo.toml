@@ -1,0 +1,54 @@
+[package]
+name = "aurora-cli-rs"
+version = "0.1.0"
+authors = ["Aurora Labs <hello@aurora.dev>"]
+edition = "2021"
+rust-version = "1.80.0"
+homepage = "https://github.com/aurora-is-near/aurora-cli-rs"
+repository = "https://github.com/aurora-is-near/aurora-cli-rs"
+description = "Aurora CLI is a command line interface to bootstrap Aurora Engine"
+readme = "../README.md"
+
+[lib]
+name = "aurora_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "aurora-cli"
+path = "src/main.rs"
+
+[features]
+default = ["simple"]
+simple = ["toml"]
+advanced = ["near-chain-configs"]
+
+[dependencies]
+aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
+aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
+aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
+aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std", "impl-serde"] }
+
+anyhow.workspace = true
+borsh.workspace = true
+bs58 = "0.5"
+clap = { version = "4", features = ["derive"] }
+ethabi = "18"
+hex.workspace = true
+libsecp256k1 = { version = "0.7", features = ["std"] }
+near-chain-configs = { workspace = true, optional = true }
+near-crypto.workspace = true
+near-jsonrpc-client.workspace = true
+near-jsonrpc-primitives.workspace = true
+near-primitives.workspace = true
+reqwest.workspace = true
+rand = "0.8"
+rlp = "0.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = { version = "0.8", optional = true }
+shadow-rs = "0.38"
+thiserror = "2"
+tokio = { workspace = true, features = ["full"] }
+
+[build-dependencies]
+shadow-rs = "0.38"
