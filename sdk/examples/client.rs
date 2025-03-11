@@ -1,11 +1,18 @@
-use aurora_sdk_rs::read::ReadClient;
-use aurora_sdk_rs::ClientBuilder;
+use std::time::Duration;
+
+use aurora_sdk_rs::{
+    client::broadcast::{Async, Sync},
+    read::ReadClient,
+    ClientBuilder,
+};
+use near_crypto::InMemorySigner;
 
 #[tokio::main]
-async fn main() {
-    let client = ClientBuilder::new()
-        .with_engine_account_id("aurora")
-        .build();
+async fn main() -> anyhow::Result<()> {
+    let client = ClientBuilder::new("aurora".parse().unwrap(), signer().unwrap())
+        .with_connect_timeout(Duration::from_secs(30))
+        .with_read_timeout(Duration::from_secs(30))
+        .build::<Async>()?;
     let response = client.get_chain_id().await.unwrap();
     println!("chain id: {:?}", response);
 
@@ -15,11 +22,12 @@ async fn main() {
     let version = client.get_version().await.unwrap();
     println!("version: {:?}", version);
 
-    let nonce = client
-        .get_nonce("0xdC2a061b5c68F97F96a2064792DeAE0F79c78C40")
-        .await
-        .unwrap();
+    let nonce = client.get_nonce().await.unwrap();
     println!("nonce: {:?}", nonce);
+
+    let client = client.switch::<Sync>();
+
+    let client = client.with_engine("some.aurora".parse().unwrap());
 
     let response = client
         .get_transaction_status(
@@ -34,4 +42,17 @@ async fn main() {
         "response: {}",
         serde_json::to_string_pretty(&response).unwrap()
     );
+
+    Ok(())
+}
+
+fn signer() -> anyhow::Result<InMemorySigner> {
+    std::env::var("NEAR_KEY_PATH")
+        .ok()
+        .as_ref()
+        .map(std::path::Path::new)
+        .ok_or_else(|| {
+            anyhow::anyhow!("Path to the key file must be provided to use this functionality")
+        })
+        .and_then(|path| InMemorySigner::from_file(path).map_err(Into::into))
 }

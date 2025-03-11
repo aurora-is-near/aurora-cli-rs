@@ -251,6 +251,7 @@ dependencies = [
  "async-trait",
  "borsh 1.5.5",
  "hex",
+ "near-crypto",
  "near-jsonrpc-client",
  "near-jsonrpc-primitives",
  "near-primitives",

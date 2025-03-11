@@ -1,23 +1,31 @@
 use crate::client::response::{FromBytes, Response};
+use anyhow::Ok;
+use broadcast::Broadcast;
 pub use builder::ClientBuilder;
+use near_crypto::InMemorySigner;
 use near_jsonrpc_client::JsonRpcClient;
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_jsonrpc_primitives::types::transactions::RpcTransactionResponse;
+use near_primitives::action::Action;
 use near_primitives::hash::CryptoHash;
+use near_primitives::transaction::SignedTransaction;
 use near_primitives::types::AccountId;
-use std::path::PathBuf;
+use near_primitives::views;
 
-mod builder;
+pub mod broadcast;
+pub mod builder;
 pub mod response;
 
-#[derive(Debug)]
-pub struct Client {
+#[derive(Debug, Clone)]
+pub struct Client<B: Broadcast> {
     client: JsonRpcClient,
-    engine_account_id: Option<AccountId>,
-    signer_key_path: Option<PathBuf>,
+    engine: AccountId,
+    signer: InMemorySigner,
+
+    _broadcast: std::marker::PhantomData<B>,
 }
 
-impl Client {
+impl<B: Broadcast> Client<B> {
     /// Make a view call to the engine contract.
     pub async fn view<T: FromBytes>(
         &self,
@@ -27,10 +35,7 @@ impl Client {
         let request = near_jsonrpc_client::methods::query::RpcQueryRequest {
             block_reference: near_primitives::types::Finality::Final.into(),
             request: near_primitives::views::QueryRequest::CallFunction {
-                account_id: self
-                    .engine_account_id
-                    .clone()
-                    .ok_or_else(|| anyhow::anyhow!("Missing engine account id"))?,
+                account_id: self.engine.clone(),
                 method_name: method.to_string(),
                 args: args.unwrap_or_default().into(),
             },
@@ -48,7 +53,7 @@ impl Client {
             transaction_info:
                 near_jsonrpc_primitives::types::transactions::TransactionInfo::TransactionId {
                     tx_hash,
-                    sender_account_id: self.engine_account_id.clone().unwrap(),
+                    sender_account_id: self.engine.clone(),
                 },
             wait_until: near_primitives::views::TxExecutionStatus::Executed,
         };
@@ -57,5 +62,56 @@ impl Client {
             .call(tx_status_request)
             .await
             .map_err(Into::into)
+    }
+
+    pub async fn broadcast(&self, actions: Vec<Action>) -> anyhow::Result<B::Output> {
+        let (block_hash, nonce) = self.get_nonce().await?;
+
+        let signed_tx = SignedTransaction::from_actions(
+            nonce,
+            self.signer.account_id.clone(),
+            self.engine.as_str().parse()?,
+            &self.signer.clone().into(),
+            actions,
+            block_hash,
+            0,
+        );
+
+        B::broadcast_tx(&self.client, signed_tx).await
+    }
+
+    pub async fn get_nonce(&self) -> anyhow::Result<(CryptoHash, u64)> {
+        let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
+            block_reference: near_primitives::types::Finality::Final.into(),
+            request: views::QueryRequest::ViewAccessKey {
+                account_id: self.signer.account_id.clone(),
+                public_key: self.signer.public_key.clone(),
+            },
+        };
+        let response = self.client.call(request).await?;
+        let block_hash = response.block_hash;
+        let nonce = match response.kind {
+            QueryResponseKind::AccessKey(k) => k.nonce + 1,
+            _ => anyhow::bail!("Wrong response kind: {:?}", response.kind),
+        };
+
+        Ok((block_hash, nonce))
+    }
+
+    pub fn with_engine(self, engine: AccountId) -> Self {
+        Self { engine, ..self }
+    }
+
+    pub fn with_signer_key_path(self, signer: InMemorySigner) -> Self {
+        Self { signer, ..self }
+    }
+
+    pub fn switch<_B: Broadcast>(self) -> Client<_B> {
+        Client::<_B> {
+            client: self.client,
+            engine: self.engine,
+            signer: self.signer,
+            _broadcast: std::marker::PhantomData,
+        }
     }
 }

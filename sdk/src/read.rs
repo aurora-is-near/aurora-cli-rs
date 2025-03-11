@@ -2,11 +2,12 @@ use near_jsonrpc_primitives::types::transactions::RpcTransactionResponse;
 use near_primitives::hash::CryptoHash;
 use primitive_types::U256;
 
+use crate::client::broadcast::Broadcast;
 use crate::client::response::Response;
 use crate::client::Client;
 use crate::utils::hex_to_vec;
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 pub trait ReadClient {
     async fn get_transaction_status(
         &self,
@@ -18,8 +19,8 @@ pub trait ReadClient {
     async fn get_version(&self) -> anyhow::Result<Response<String>>;
 }
 
-#[async_trait::async_trait]
-impl ReadClient for Client {
+#[async_trait::async_trait(?Send)]
+impl<B: Broadcast> ReadClient for Client<B> {
     async fn get_transaction_status(
         &self,
         tx_hash: CryptoHash,
