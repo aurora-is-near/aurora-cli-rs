@@ -117,8 +117,17 @@ impl<B: Broadcast> Client<B> {
         }
     }
 
-    pub fn switch<_B: Broadcast>(self) -> Client<_B> {
-        Client::<_B> {
+    pub fn to_async(self) -> Client<broadcast::Async> {
+        Client::<broadcast::Async> {
+            client: self.client,
+            engine: self.engine,
+            signer: self.signer,
+            _broadcast: std::marker::PhantomData,
+        }
+    }
+
+    pub fn to_sync(self) -> Client<broadcast::Sync> {
+        Client::<broadcast::Sync> {
             client: self.client,
             engine: self.engine,
             signer: self.signer,

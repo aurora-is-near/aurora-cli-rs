@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
     let client = ClientBuilder::new("aurora".parse().unwrap(), signer().unwrap())
         .with_connect_timeout(Duration::from_secs(30))
         .with_read_timeout(Duration::from_secs(30))
-        .build::<Async>()?;
+        .build_async()?;
     let response = client.get_chain_id().await.unwrap();
     println!("chain id: {:?}", response);
 
@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
     let nonce = client.get_nonce().await.unwrap();
     println!("nonce: {:?}", nonce);
 
-    let client = client.switch::<Sync>();
+    let client = client.to_sync();
 
     let client = client.with_engine("some.aurora".parse().unwrap());
 

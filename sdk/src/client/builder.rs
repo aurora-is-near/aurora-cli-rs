@@ -4,7 +4,7 @@ use near_jsonrpc_client::{JsonRpcClient, NEAR_MAINNET_RPC_URL, NEAR_TESTNET_RPC_
 use near_primitives::types::AccountId;
 use std::time::Duration;
 
-use super::broadcast::Broadcast;
+use super::broadcast::{self, Broadcast};
 
 const DEFAULT_READ_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -53,7 +53,15 @@ impl ClientBuilder {
         self
     }
 
-    pub fn build<B: Broadcast>(self) -> anyhow::Result<Client<B>> {
+    pub fn build_sync(self) -> anyhow::Result<Client<broadcast::Sync>> {
+        self.build()
+    }
+
+    pub fn build_async(self) -> anyhow::Result<Client<broadcast::Async>> {
+        self.build()
+    }
+
+    fn build<B: Broadcast>(self) -> anyhow::Result<Client<B>> {
         let headers = reqwest::header::HeaderMap::from_iter([(
             reqwest::header::CONTENT_TYPE,
             reqwest::header::HeaderValue::from_static("application/json"),
