@@ -102,8 +102,19 @@ impl<B: Broadcast> Client<B> {
         Self { engine, ..self }
     }
 
-    pub fn with_signer_key_path(self, signer: InMemorySigner) -> Self {
+    pub fn with_signer(self, signer: InMemorySigner) -> Self {
         Self { signer, ..self }
+    }
+
+    pub fn with_account_id(self, account_id: AccountId) -> Self {
+        Self {
+            signer: InMemorySigner {
+                account_id,
+                public_key: self.signer.public_key,
+                secret_key: self.signer.secret_key,
+            },
+            ..self
+        }
     }
 
     pub fn switch<_B: Broadcast>(self) -> Client<_B> {

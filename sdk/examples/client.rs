@@ -5,7 +5,7 @@ use aurora_sdk_rs::{
     read::ReadClient,
     ClientBuilder,
 };
-use near_crypto::InMemorySigner;
+use near_crypto::{InMemorySigner, KeyType};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -28,6 +28,11 @@ async fn main() -> anyhow::Result<()> {
     let client = client.switch::<Sync>();
 
     let client = client.with_engine("some.aurora".parse().unwrap());
+
+    let client = client.with_signer(InMemorySigner::from_random(
+        "some.random".parse().unwrap(),
+        KeyType::ED25519,
+    ));
 
     let response = client
         .get_transaction_status(
