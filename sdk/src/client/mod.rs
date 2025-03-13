@@ -117,7 +117,7 @@ impl<B: Broadcast> Client<B> {
         }
     }
 
-    pub fn to_async(self) -> Client<broadcast::Async> {
+    pub fn into_async(self) -> Client<broadcast::Async> {
         Client::<broadcast::Async> {
             client: self.client,
             engine: self.engine,
@@ -126,7 +126,7 @@ impl<B: Broadcast> Client<B> {
         }
     }
 
-    pub fn to_sync(self) -> Client<broadcast::Sync> {
+    pub fn into_sync(self) -> Client<broadcast::Sync> {
         Client::<broadcast::Sync> {
             client: self.client,
             engine: self.engine,
