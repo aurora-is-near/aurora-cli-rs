@@ -42,6 +42,7 @@ use crate::utils;
 const NEAR_GAS: u64 = 300_000_000_000_000;
 const TIMEOUT: Duration = Duration::from_secs(20);
 
+#[derive(Clone)]
 pub struct NearClient {
     client: JsonRpcClient,
     pub engine_account_id: AccountId,
