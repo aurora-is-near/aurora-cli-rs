@@ -1,4 +1,4 @@
-use crate::client::Client;
+use crate::near::Client;
 use near_crypto::InMemorySigner;
 use near_jsonrpc_client::{JsonRpcClient, NEAR_MAINNET_RPC_URL, NEAR_TESTNET_RPC_URL};
 use near_primitives::types::AccountId;
@@ -13,18 +13,14 @@ pub struct ClientBuilder {
     url: String,
     read_timeout: Duration,
     connect_timeout: Duration,
-    engine: AccountId,
-    signer: InMemorySigner,
 }
 
 impl ClientBuilder {
-    pub fn new(engine: AccountId, signer: InMemorySigner) -> Self {
+    pub fn new() -> Self {
         Self {
             url: NEAR_MAINNET_RPC_URL.to_string(),
             read_timeout: DEFAULT_READ_TIMEOUT,
             connect_timeout: DEFAULT_CONNECT_TIMEOUT,
-            engine,
-            signer,
         }
     }
 
@@ -77,8 +73,6 @@ impl ClientBuilder {
 
         Ok(Client::<B> {
             client,
-            engine: self.engine,
-            signer: self.signer,
             _broadcast: std::marker::PhantomData,
         })
     }

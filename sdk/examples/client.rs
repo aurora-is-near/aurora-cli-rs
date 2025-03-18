@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use aurora_sdk_rs::{
-    client::broadcast::{Async, Sync},
+    near::broadcast::{Async, Sync},
     read::ReadClient,
     ClientBuilder,
 };
