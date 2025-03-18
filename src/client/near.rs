@@ -279,6 +279,7 @@ impl NearClient {
         .await
     }
 
+    #[cfg(feature = "advanced")]
     pub async fn contract_call_from(
         &self,
         method_name: &str,
