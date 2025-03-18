@@ -279,6 +279,28 @@ impl NearClient {
         .await
     }
 
+    #[cfg(feature = "simple")]
+    pub async fn contract_call_from(
+        &self,
+        method_name: &str,
+        args: Vec<u8>,
+        from: AccountId,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        self.near_broadcast_tx_from(
+            vec![Action::FunctionCall(Box::new(
+                near_primitives::transaction::FunctionCallAction {
+                    method_name: method_name.to_string(),
+                    args,
+                    gas: NEAR_GAS,
+                    deposit: 0,
+                },
+            ))],
+            from,
+            None,
+        )
+        .await
+    }
+
     async fn near_broadcast_tx(
         &self,
         actions: Vec<Action>,
