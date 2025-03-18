@@ -266,6 +266,7 @@ pub async fn call(
     address: String,
     input: Option<String>,
     value: Option<u128>,
+    from: Option<AccountId>,
 ) -> anyhow::Result<()> {
     let contract = hex_to_address(&address)?;
     let input = input.map_or(Ok(vec![]), hex::decode)?;
@@ -276,7 +277,15 @@ pub async fn call(
     }))
     .unwrap_or_default();
 
-    let result = context.client.near().contract_call("call", args).await?;
+    let result = if let Some(account_id) = from {
+        context
+            .client
+            .near()
+            .contract_call_from("call", args, account_id.to_string().parse()?)
+            .await?
+    } else {
+        context.client.near().contract_call("call", args).await?
+    };
 
     match result.status {
         FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {}

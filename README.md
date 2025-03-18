@@ -865,6 +865,7 @@ Options:
       --address <ADDRESS>  Address of the smart contract
       --input <INPUT>      Input data of the EVM transaction encoded in hex
       --value <VALUE>      Attached value in EVM transaction
+      --from <FROM>        From account_id
   -h, --help               Print help
  ```
 

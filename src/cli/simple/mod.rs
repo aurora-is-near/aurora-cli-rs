@@ -177,6 +177,9 @@ pub enum Command {
         /// Attached value in EVM transaction
         #[arg(long)]
         value: Option<u128>,
+        /// From `account_id`
+        #[arg(long, value_parser = parse_account_id)]
+        from: Option<AccountId>,
     },
     /// Call a view method of the smart contract
     ViewCall {
@@ -504,7 +507,8 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             address,
             input,
             value,
-        } => command::call(context, address, input, value).await?,
+            from,
+        } => command::call(context, address, input, value, from).await?,
         Command::ViewCall {
             address,
             function,
