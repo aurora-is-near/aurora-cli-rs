@@ -1,6 +1,6 @@
-use crate::utils;
-use aurora_engine_types::U256;
 use clap::Subcommand;
+use ethabi::{Address, Token, Uint};
+use std::str::FromStr;
 
 const APPROVE_SELECTOR: &[u8] = &[0x09, 0x5e, 0xa7, 0xb3];
 const BALANCE_OF_SELECTOR: &[u8] = &[0x70, 0xa0, 0x82, 0x31];
@@ -51,14 +51,11 @@ impl Erc20 {
                 to_address_hex,
                 amount,
             } => {
-                let to = utils::hex_to_address(&to_address_hex)?;
-                let amount = U256::from_str_radix(&amount, 10)?;
+                let to = Address::from_str(&to_address_hex)?;
+                let amount = Uint::from_str_radix(&amount, 10)?;
                 let input = [
                     TRANSFER_SELECTOR,
-                    &ethabi::encode(&[
-                        ethabi::Token::Address(to.raw()),
-                        ethabi::Token::Uint(amount),
-                    ]),
+                    &ethabi::encode(&[Token::Address(to), Token::Uint(amount)]),
                 ]
                 .concat();
                 Ok(input)
@@ -67,14 +64,11 @@ impl Erc20 {
                 owner_address_hex,
                 spender_address_hex,
             } => {
-                let spender = utils::hex_to_address(&spender_address_hex)?;
-                let owner = utils::hex_to_address(&owner_address_hex)?;
+                let spender = Address::from_str(&spender_address_hex)?;
+                let owner = Address::from_str(&owner_address_hex)?;
                 let input = [
                     ALLOWANCE_SELECTOR,
-                    &ethabi::encode(&[
-                        ethabi::Token::Address(owner.raw()),
-                        ethabi::Token::Address(spender.raw()),
-                    ]),
+                    &ethabi::encode(&[Token::Address(owner), Token::Address(spender)]),
                 ]
                 .concat();
                 Ok(input)
@@ -83,23 +77,20 @@ impl Erc20 {
                 spender_address_hex,
                 amount,
             } => {
-                let spender = utils::hex_to_address(&spender_address_hex)?;
-                let amount = U256::from_str_radix(&amount, 10)?;
+                let spender = Address::from_str(&spender_address_hex)?;
+                let amount = Uint::from_str_radix(&amount, 10)?;
                 let input = [
                     APPROVE_SELECTOR,
-                    &ethabi::encode(&[
-                        ethabi::Token::Address(spender.raw()),
-                        ethabi::Token::Uint(amount),
-                    ]),
+                    &ethabi::encode(&[Token::Address(spender), Token::Uint(amount)]),
                 ]
                 .concat();
                 Ok(input)
             }
             Self::BalanceOf { address_hex } => {
-                let address = utils::hex_to_address(&address_hex)?;
+                let address = Address::from_str(&address_hex)?;
                 let input = [
                     BALANCE_OF_SELECTOR,
-                    &ethabi::encode(&[ethabi::Token::Address(address.raw())]),
+                    &ethabi::encode(&[Token::Address(address)]),
                 ]
                 .concat();
                 Ok(input)
@@ -109,15 +100,15 @@ impl Erc20 {
                 amount,
                 from_address_hex,
             } => {
-                let from = utils::hex_to_address(&from_address_hex)?;
-                let to = utils::hex_to_address(&to_address_hex)?;
-                let amount = U256::from_str_radix(&amount, 10)?;
+                let from = Address::from_str(&from_address_hex)?;
+                let to = Address::from_str(&to_address_hex)?;
+                let amount = Uint::from_str_radix(&amount, 10)?;
                 let input = [
                     TRANSFER_FROM_SELECTOR,
                     &ethabi::encode(&[
-                        ethabi::Token::Address(from.raw()),
-                        ethabi::Token::Address(to.raw()),
-                        ethabi::Token::Uint(amount),
+                        Token::Address(from),
+                        Token::Address(to),
+                        Token::Uint(amount),
                     ]),
                 ]
                 .concat();
@@ -129,18 +120,18 @@ impl Erc20 {
 
 #[cfg(test)]
 mod tests {
-    use aurora_engine_types::{H160, U256};
+    use ethabi::{Address, Function, ParamType, Token, Uint};
     use rand::Rng;
 
     #[test]
     fn test_total_supply_encoding() {
         #[allow(deprecated)]
-        let total_supply_function = ethabi::Function {
+        let total_supply_function = Function {
             name: "totalSupply".into(),
             inputs: vec![],
             outputs: vec![ethabi::Param {
                 name: String::new(),
-                kind: ethabi::ParamType::Uint(256),
+                kind: ParamType::Uint(256),
                 internal_type: None,
             }],
             constant: None,
@@ -159,26 +150,26 @@ mod tests {
         let mut rng = rand::thread_rng();
         let address: [u8; 20] = rng.gen();
 
-        let address = H160(address);
+        let address = Address::from(address);
 
         #[allow(deprecated)]
-        let balance_of_function = ethabi::Function {
+        let balance_of_function = Function {
             name: "balanceOf".into(),
             inputs: vec![ethabi::Param {
                 name: "account".into(),
-                kind: ethabi::ParamType::Address,
+                kind: ParamType::Address,
                 internal_type: None,
             }],
             outputs: vec![ethabi::Param {
                 name: String::new(),
-                kind: ethabi::ParamType::Uint(256),
+                kind: ParamType::Uint(256),
                 internal_type: None,
             }],
             constant: None,
             state_mutability: ethabi::StateMutability::View,
         };
         let expected_tx_data = balance_of_function
-            .encode_input(&[ethabi::Token::Address(address)])
+            .encode_input(&[Token::Address(address)])
             .unwrap();
 
         assert_eq!(
@@ -197,34 +188,34 @@ mod tests {
         let address: [u8; 20] = rng.gen();
         let amount: [u8; 32] = rng.gen();
 
-        let address = H160(address);
-        let amount = U256::from_big_endian(&amount);
+        let address = Address::from(address);
+        let amount = Uint::from_big_endian(&amount);
 
         #[allow(deprecated)]
-        let transfer_function = ethabi::Function {
+        let transfer_function = Function {
             name: "transfer".into(),
             inputs: vec![
                 ethabi::Param {
                     name: "to".into(),
-                    kind: ethabi::ParamType::Address,
+                    kind: ParamType::Address,
                     internal_type: None,
                 },
                 ethabi::Param {
                     name: "amount".into(),
-                    kind: ethabi::ParamType::Uint(256),
+                    kind: ParamType::Uint(256),
                     internal_type: None,
                 },
             ],
             outputs: vec![ethabi::Param {
                 name: String::new(),
-                kind: ethabi::ParamType::Bool,
+                kind: ParamType::Bool,
                 internal_type: None,
             }],
             constant: None,
             state_mutability: ethabi::StateMutability::NonPayable,
         };
         let expected_tx_data = transfer_function
-            .encode_input(&[ethabi::Token::Address(address), ethabi::Token::Uint(amount)])
+            .encode_input(&[Token::Address(address), Token::Uint(amount)])
             .unwrap();
 
         assert_eq!(
@@ -244,37 +235,34 @@ mod tests {
         let owner: [u8; 20] = rng.gen();
         let spender: [u8; 20] = rng.gen();
 
-        let owner = H160(owner);
-        let spender = H160(spender);
+        let owner = Address::from(owner);
+        let spender = Address::from(spender);
 
         #[allow(deprecated)]
-        let allowance_function = ethabi::Function {
+        let allowance_function = Function {
             name: "allowance".into(),
             inputs: vec![
                 ethabi::Param {
                     name: "owner".into(),
-                    kind: ethabi::ParamType::Address,
+                    kind: ParamType::Address,
                     internal_type: None,
                 },
                 ethabi::Param {
                     name: "spender".into(),
-                    kind: ethabi::ParamType::Address,
+                    kind: ParamType::Address,
                     internal_type: None,
                 },
             ],
             outputs: vec![ethabi::Param {
                 name: String::new(),
-                kind: ethabi::ParamType::Uint(256),
+                kind: ParamType::Uint(256),
                 internal_type: None,
             }],
             constant: None,
             state_mutability: ethabi::StateMutability::View,
         };
         let expected_tx_data = allowance_function
-            .encode_input(&[
-                ethabi::Token::Address(owner),
-                ethabi::Token::Address(spender),
-            ])
+            .encode_input(&[Token::Address(owner), Token::Address(spender)])
             .unwrap();
 
         assert_eq!(
@@ -294,34 +282,34 @@ mod tests {
         let address: [u8; 20] = rng.gen();
         let amount: [u8; 32] = rng.gen();
 
-        let address = H160(address);
-        let amount = U256::from_big_endian(&amount);
+        let address = Address::from(address);
+        let amount = Uint::from_big_endian(&amount);
 
         #[allow(deprecated)]
-        let approve_function = ethabi::Function {
+        let approve_function = Function {
             name: "approve".into(),
             inputs: vec![
                 ethabi::Param {
                     name: "spender".into(),
-                    kind: ethabi::ParamType::Address,
+                    kind: ParamType::Address,
                     internal_type: None,
                 },
                 ethabi::Param {
                     name: "amount".into(),
-                    kind: ethabi::ParamType::Uint(256),
+                    kind: ParamType::Uint(256),
                     internal_type: None,
                 },
             ],
             outputs: vec![ethabi::Param {
                 name: String::new(),
-                kind: ethabi::ParamType::Bool,
+                kind: ParamType::Bool,
                 internal_type: None,
             }],
             constant: None,
             state_mutability: ethabi::StateMutability::NonPayable,
         };
         let expected_tx_data = approve_function
-            .encode_input(&[ethabi::Token::Address(address), ethabi::Token::Uint(amount)])
+            .encode_input(&[Token::Address(address), Token::Uint(amount)])
             .unwrap();
 
         assert_eq!(
@@ -342,33 +330,33 @@ mod tests {
         let to: [u8; 20] = rng.gen();
         let amount: [u8; 32] = rng.gen();
 
-        let from = H160(from);
-        let to = H160(to);
-        let amount = U256::from_big_endian(&amount);
+        let from = Address::from(from);
+        let to = Address::from(to);
+        let amount = Uint::from_big_endian(&amount);
 
         #[allow(deprecated)]
-        let transfer_from_function = ethabi::Function {
+        let transfer_from_function = Function {
             name: "transferFrom".into(),
             inputs: vec![
                 ethabi::Param {
                     name: "from".into(),
-                    kind: ethabi::ParamType::Address,
+                    kind: ParamType::Address,
                     internal_type: None,
                 },
                 ethabi::Param {
                     name: "to".into(),
-                    kind: ethabi::ParamType::Address,
+                    kind: ParamType::Address,
                     internal_type: None,
                 },
                 ethabi::Param {
                     name: "amount".into(),
-                    kind: ethabi::ParamType::Uint(256),
+                    kind: ParamType::Uint(256),
                     internal_type: None,
                 },
             ],
             outputs: vec![ethabi::Param {
                 name: String::new(),
-                kind: ethabi::ParamType::Bool,
+                kind: ParamType::Bool,
                 internal_type: None,
             }],
             constant: None,
@@ -376,9 +364,9 @@ mod tests {
         };
         let expected_tx_data = transfer_from_function
             .encode_input(&[
-                ethabi::Token::Address(from),
-                ethabi::Token::Address(to),
-                ethabi::Token::Uint(amount),
+                Token::Address(from),
+                Token::Address(to),
+                Token::Uint(amount),
             ])
             .unwrap();
 

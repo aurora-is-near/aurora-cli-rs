@@ -23,32 +23,31 @@ simple = ["toml"]
 advanced = ["near-chain-configs"]
 
 [dependencies]
-aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
-aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
-aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
-aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std", "impl-serde"] }
-
 anyhow = "1"
+aurora-engine-precompiles = { version = "1", features = ["std"] }
+aurora-engine-sdk = { version = "1", features = ["std"] }
+aurora-engine-transactions = { version = "1", features = ["std"] }
+aurora-engine-types = { version = "1", features = ["std", "impl-serde"] }
 borsh = "1"
 bs58 = "0.5"
 clap = { version = "4", features = ["derive"] }
 ethabi = "18"
 hex = "0.4"
 libsecp256k1 = { version = "0.7", features = ["std"] }
-near-chain-configs = { version = "0.28", optional = true }
-near-crypto = "0.28"
-near-jsonrpc-client = "0.15"
-near-jsonrpc-primitives = "0.28"
-near-primitives = "0.28"
+near-chain-configs = { version = "0.29", optional = true }
+near-crypto = "0.29"
+near-jsonrpc-client = "0.16"
+near-jsonrpc-primitives = "0.29"
+near-primitives = "0.29"
 reqwest = { version = "0.12", features = ["json"] }
 rand = "0.8"
-rlp = "0.5"
+rlp = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = { version = "0.8", optional = true }
-shadow-rs = "0.38"
+shadow-rs = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 
 [build-dependencies]
-shadow-rs = "0.38"
+shadow-rs = "1"

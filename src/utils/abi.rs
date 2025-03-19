@@ -1,8 +1,8 @@
-use aurora_engine_types::U256;
 use ethabi::Token;
 use serde::Deserialize;
 use serde_json::Value;
 use std::path::Path;
+use std::str::FromStr;
 
 pub fn read_contract<P: AsRef<Path>>(abi_path: P) -> anyhow::Result<ethabi::Contract> {
     let abi: Value = std::fs::File::open(abi_path.as_ref())
@@ -42,22 +42,13 @@ pub fn parse_args(inputs: &[ethabi::Param], args: &Value) -> anyhow::Result<Vec<
 
 pub fn parse_arg(arg: &str, kind: &ethabi::ParamType) -> anyhow::Result<Token> {
     match kind {
-        ethabi::ParamType::Address => {
-            let addr = super::hex_to_address(arg)?;
-            Ok(Token::Address(addr.raw()))
-        }
+        ethabi::ParamType::Address => Ok(Token::Address(ethabi::Address::from_str(arg)?)),
         ethabi::ParamType::Bytes => {
             let bytes = super::hex_to_vec(arg)?;
             Ok(Token::Bytes(bytes))
         }
-        ethabi::ParamType::Int(_) => {
-            let value = U256::from_dec_str(arg)?;
-            Ok(Token::Int(value))
-        }
-        ethabi::ParamType::Uint(_) => {
-            let value = U256::from_dec_str(arg)?;
-            Ok(Token::Uint(value))
-        }
+        ethabi::ParamType::Int(_) => Ok(Token::Int(ethabi::Int::from_dec_str(arg)?)),
+        ethabi::ParamType::Uint(_) => Ok(Token::Uint(ethabi::Uint::from_dec_str(arg)?)),
         ethabi::ParamType::Bool => match arg.to_lowercase().as_str() {
             "true" => Ok(Token::Bool(true)),
             "false" => Ok(Token::Bool(false)),
