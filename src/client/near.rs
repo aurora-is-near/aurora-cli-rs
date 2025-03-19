@@ -8,6 +8,8 @@ use aurora_engine_types::{
 };
 use near_crypto::InMemorySigner;
 #[cfg(feature = "simple")]
+use near_crypto::PublicKey;
+#[cfg(feature = "simple")]
 use near_jsonrpc_client::methods::tx::{
     RpcTransactionResponse, RpcTransactionStatusRequest, TransactionInfo,
 };
@@ -20,6 +22,11 @@ use near_primitives::transaction::{Action, SignedTransaction};
 use near_primitives::views::FinalExecutionStatus;
 #[cfg(feature = "simple")]
 use near_primitives::views::TxExecutionStatus;
+#[cfg(feature = "simple")]
+use near_primitives::{
+    account::{AccessKey, AccessKeyPermission, FunctionCallPermission},
+    action::{AddKeyAction, CreateAccountAction, TransferAction},
+};
 use near_primitives::{
     hash::CryptoHash, types::AccountId, views, views::FinalExecutionOutcomeView,
 };
@@ -35,6 +42,7 @@ use crate::utils;
 const NEAR_GAS: u64 = 300_000_000_000_000;
 const TIMEOUT: Duration = Duration::from_secs(20);
 
+#[derive(Clone)]
 pub struct NearClient {
     client: JsonRpcClient,
     pub engine_account_id: AccountId,
@@ -271,19 +279,54 @@ impl NearClient {
         .await
     }
 
+    #[cfg(feature = "simple")]
+    pub async fn contract_call_from(
+        &self,
+        method_name: &str,
+        args: Vec<u8>,
+        from: AccountId,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        self.near_broadcast_tx_from(
+            vec![Action::FunctionCall(Box::new(
+                near_primitives::transaction::FunctionCallAction {
+                    method_name: method_name.to_string(),
+                    args,
+                    gas: NEAR_GAS,
+                    deposit: 0,
+                },
+            ))],
+            from,
+            None,
+        )
+        .await
+    }
+
     async fn near_broadcast_tx(
         &self,
         actions: Vec<Action>,
         nonce_override: Option<u64>,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
         let signer = self.signer()?;
+        self.near_broadcast_tx_from(actions, signer.account_id.clone(), nonce_override)
+            .await
+    }
+
+    async fn near_broadcast_tx_from(
+        &self,
+        actions: Vec<Action>,
+        from: AccountId,
+        nonce_override: Option<u64>,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        let mut signer = self.signer()?;
+        signer.account_id = from.clone();
+
         let (block_hash, nonce) = self.get_nonce(&signer).await?;
         let nonce = nonce_override.unwrap_or(nonce);
 
         let request = RpcBroadcastTxCommitRequest {
             signed_transaction: SignedTransaction::from_actions(
                 nonce,
-                signer.account_id.clone(),
+                from,
                 self.engine_account_id.as_str().parse()?,
                 &signer.into(),
                 actions,
@@ -488,6 +531,47 @@ impl NearClient {
         };
 
         let rsp = self.client.call(req).await?;
+        Ok(rsp)
+    }
+
+    #[cfg(feature = "simple")]
+    pub async fn add_relayer(
+        &self,
+        contract_id: AccountId,
+        deposit: u128,
+        full_access_key: PublicKey,
+        function_call_key: PublicKey,
+    ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        let actions = vec![
+            Action::CreateAccount(CreateAccountAction {}),
+            Action::Transfer(TransferAction { deposit }),
+            Action::AddKey(Box::new(AddKeyAction {
+                public_key: full_access_key,
+                access_key: AccessKey {
+                    nonce: 0,
+                    permission: AccessKeyPermission::FullAccess,
+                },
+            })),
+            Action::AddKey(Box::new(AddKeyAction {
+                public_key: function_call_key,
+                access_key: AccessKey {
+                    nonce: 0,
+                    permission: AccessKeyPermission::FunctionCall(FunctionCallPermission {
+                        allowance: None,
+                        receiver_id: contract_id.clone().into(),
+                        method_names: vec![
+                            "submit".to_string(),
+                            "submit_with_args".to_string(),
+                            "call".to_string(),
+                        ],
+                    }),
+                },
+            })),
+        ];
+
+        let rsp = self
+            .near_broadcast_tx_from(actions, contract_id, None)
+            .await?;
         Ok(rsp)
     }
 }

@@ -364,6 +364,7 @@ Example JSON batch file (`batch_list.json`):
 - [`aurora-cli get-paused_flags`](#aurora-cli-get-paused-flags)
 - [`aurora-cli set-paused_flags`](#aurora-cli-set-paused-flags)
 - [`aurora-cli transaction-status`](#aurora-cli-transaction-status)
+- [`aurora-cli add-relayer`](#aurora-cli-add-relayer)
 
 ### `aurora-cli help`
 
@@ -431,6 +432,7 @@ Commands:
   set-paused-flags                    Set eth connector paused flags
   get-paused-flags                    Get eth connector paused flags
   transaction-status                  Get transaction status
+  add-relayer                         Add relayer
   help                                Print this message or the help of the given subcommand(s)
 
 Options:
@@ -863,6 +865,7 @@ Options:
       --address <ADDRESS>  Address of the smart contract
       --input <INPUT>      Input data of the EVM transaction encoded in hex
       --value <VALUE>      Attached value in EVM transaction
+      --from <FROM>        From account_id
   -h, --help               Print help
  ```
 
@@ -1263,7 +1266,7 @@ Options:
 ### `aurora-cli transaction-status`
 
 ```console
-$ aurora-cli help 
+$ aurora-cli help transaction-status
 Get transaction status
 
 Usage: aurora-cli transaction-status [OPTIONS] --hash <HASH>
@@ -1272,4 +1275,19 @@ Options:
       --hash <HASH>              Transaction hash
       --wait-until <WAIT_UNTIL>  Wait until the transaction is in the `wait_until` state [default: final] [possible values: none, included, executed-optimistic, included-final, executed, final]
   -h, --help                     Print help
+```
+
+### `aurora-cli add-relayer`
+
+```console
+$ aurora-cli help add-relayer
+Add relayer
+
+Usage: aurora-cli add-relayer --deposit <DEPOSIT> --full-access-pub-key <FULL_ACCESS_PUB_KEY> --function-call-pub-key <FUNCTION_CALL_PUB_KEY>
+
+Options:                    
+      --deposit <DEPOSIT>                              
+      --full-access-pub-key <FULL_ACCESS_PUB_KEY>      
+      --function-call-pub-key <FUNCTION_CALL_PUB_KEY>  
+  -h, --help                                           Print help
 ```
