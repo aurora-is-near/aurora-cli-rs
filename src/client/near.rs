@@ -492,10 +492,7 @@ impl NearClient {
 
     pub async fn get_nonce(&self, signer: &InMemorySigner) -> anyhow::Result<(CryptoHash, u64)> {
         let nonces = self.access_key_nonces.read().await;
-        let cache_key = (
-            signer.account_id.clone(),
-            signer.secret_key.public_key().into(),
-        );
+        let cache_key = (signer.account_id.clone(), signer.secret_key.public_key());
 
         if let Some(nonce) = nonces.get(&cache_key) {
             let nonce = nonce.fetch_add(1, Ordering::SeqCst);
@@ -520,9 +517,9 @@ impl NearClient {
             let response = self.client.call(request).await?;
 
             let block_hash = response.block_hash;
-            let access_key = match response.kind {
-                QueryResponseKind::AccessKey(k) => k,
-                _ => anyhow::bail!("Wrong response kind: {:?}", response.kind),
+
+            let QueryResponseKind::AccessKey(access_key) = response.kind else {
+                anyhow::bail!("Wrong response kind: {:?}", response.kind)
             };
 
             // case where multiple writers end up at the same lock acquisition point and tries
