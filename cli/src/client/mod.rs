@@ -4,7 +4,6 @@ use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::parameters::engine::SubmitResult;
 #[cfg(feature = "advanced")]
 use aurora_engine_types::H256;
-use aurora_sdk_rs::near::broadcast::Sync;
 #[cfg(feature = "advanced")]
 use thiserror::Error;
 
@@ -27,7 +26,6 @@ type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
 
 #[cfg(feature = "simple")]
 pub struct Context {
-    pub aurora_client: aurora_sdk_rs::aurora::Aurora<Sync>,
     pub client: Client,
     pub output_format: OutputFormat,
 }

@@ -4,25 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aurora-engine-precompiles.workspace = true
-aurora-engine-sdk.workspace = true
-aurora-engine-transactions.workspace = true
 aurora-engine-types.workspace = true
-
 anyhow.workspace = true
-async-trait.workspace = true
-borsh.workspace = true
-hex.workspace = true
-near-primitives.workspace = true
-near-jsonrpc-client.workspace = true
-near-jsonrpc-primitives.workspace = true
-primitive-types.workspace = true
-reqwest.workspace = true
 near-crypto.workspace = true
+borsh.workspace = true
 near-token.workspace = true
+near-primitives.workspace = true
+hex.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 serde = "1"
 serde_json = "1"
-near-gas = "0.3.0"
+near-jsonrpc-client.workspace = true
+near-jsonrpc-primitives.workspace = true
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

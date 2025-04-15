@@ -17,7 +17,6 @@ use aurora_engine_types::parameters::xcc::FundXccArgs;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use aurora_engine_types::types::Address;
 use aurora_engine_types::{types::Wei, H256, U256};
-use aurora_sdk_rs::aurora::operations::{GetLatestReleaseHash, Operation};
 use clap::ValueEnum;
 use near_primitives::hash::CryptoHash;
 use near_primitives::views::{CallResult, FinalExecutionStatus, TxExecutionStatus};

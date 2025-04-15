@@ -1,263 +1,78 @@
-use near_crypto::{InMemorySigner, PublicKey};
-use near_gas::NearGas;
-use near_primitives::{
-    account::AccessKey,
-    action::{
-        Action, AddKeyAction, CreateAccountAction, DeleteAccountAction, DeleteKeyAction,
-        DeployContractAction, FunctionCallAction,
-    },
-    types::AccountId,
-};
+use aurora_engine_types::types::NearGas;
+use near_jsonrpc_client::JsonRpcClient;
 use near_token::NearToken;
 
-const DEFAULT_CALL_DEPOSIT: NearToken = NearToken::from_near(0);
-const DEFAULT_CALL_FN_GAS: NearGas = NearGas::from_tgas(300);
+const ONE_TERA_GAS: u64 = 10u64.pow(12);
+const MAX_GAS: NearGas = NearGas::new(300 * ONE_TERA_GAS);
+
+pub(crate) const DEFAULT_CALL_FN_GAS: NearGas = NearGas::new(10 * ONE_TERA_GAS);
+pub(crate) const DEFAULT_CALL_DEPOSIT: NearToken = NearToken::from_near(0);
+pub(crate) const DEFAULT_PRIORITY_FEE: u64 = 0;
 
 pub struct Function {
-    pub(crate) method: String,
+    pub(crate) name: String,
     pub(crate) args: anyhow::Result<Vec<u8>>,
     pub(crate) deposit: NearToken,
     pub(crate) gas: NearGas,
-    pub(crate) nonce: Option<u64>,
 }
 
 impl Function {
-    pub fn new(method: &str) -> Self {
+    /// Initialize a new instance of [`Function`], tied to a specific function on a
+    /// contract that lives directly on a contract we've specified in [`Transaction`].
+    pub fn new(name: &str) -> Self {
         Self {
-            method: method.to_string(),
+            name: name.into(),
             args: Ok(vec![]),
             deposit: DEFAULT_CALL_DEPOSIT,
             gas: DEFAULT_CALL_FN_GAS,
-            nonce: None,
         }
     }
 
+    /// Provide the arguments for the call. These args are serialized bytes from either
+    /// a JSON or Borsh serializable set of arguments. To use the more specific versions
+    /// with better quality of life, use `args_json` or `args_borsh`.
     pub fn args(mut self, args: Vec<u8>) -> Self {
+        if self.args.is_err() {
+            return self;
+        }
         self.args = Ok(args);
         self
     }
 
-    pub fn args_json(mut self, args: &impl serde::Serialize) -> Self {
-        self.args = serde_json::to_vec(args).map_err(anyhow::Error::from);
+    /// Similar to `args`, specify an argument that is JSON serializable and can be
+    /// accepted by the equivalent contract. Recommend to use something like
+    /// `serde_json::json!` macro to easily serialize the arguments.
+    pub fn args_json<U: serde::Serialize>(mut self, args: U) -> Self {
+        self.args = serde_json::to_vec(&args).map_err(Into::into);
         self
     }
 
-    pub fn args_borsh(mut self, args: &impl borsh::ser::BorshSerialize) -> Self {
-        self.args = borsh::to_vec(&args).map_err(anyhow::Error::from);
+    /// Similar to `args`, specify an argument that is borsh serializable and can be
+    /// accepted by the equivalent contract.
+    pub fn args_borsh<U: borsh::BorshSerialize>(mut self, args: U) -> Self {
+        self.args = borsh::to_vec(&args).map_err(Into::into);
         self
     }
 
+    /// Specify the amount of tokens to be deposited where `deposit` is the amount of
+    /// tokens in yocto near.
     pub fn deposit(mut self, deposit: NearToken) -> Self {
         self.deposit = deposit;
         self
     }
 
+    /// Specify the amount of gas to be used.
     pub fn gas(mut self, gas: NearGas) -> Self {
         self.gas = gas;
         self
     }
 
-    pub fn nonce(mut self, nonce: u64) -> Self {
-        self.nonce = Some(nonce);
-        self
-    }
-
-    pub fn into_call_transaction(
-        self,
-        signer: &InMemorySigner,
-        contract_id: &AccountId,
-    ) -> CallTransaction {
-        CallTransaction {
-            signer: signer.clone(),
-            contract_id: contract_id.clone(),
-            function: self,
-        }
-    }
-
-    pub fn into_view_transaction(self, contract_id: &AccountId) -> ViewTransaction {
-        ViewTransaction {
-            contract_id: contract_id.clone(),
-            function: self,
-        }
+    /// Use the maximum amount of gas possible to perform this function call into the contract.
+    pub fn max_gas(self) -> Self {
+        self.gas(MAX_GAS)
     }
 }
 
 pub struct Transaction {
-    pub(crate) signer: InMemorySigner,
-    pub(crate) receiver_id: AccountId,
-    pub(crate) actions: anyhow::Result<Vec<Action>>,
-    pub(crate) nonce: Option<u64>,
-}
-
-impl Transaction {
-    pub(crate) fn new(signer: InMemorySigner, receiver_id: AccountId) -> Self {
-        Self {
-            signer,
-            receiver_id,
-            actions: Ok(vec![]),
-            nonce: None,
-        }
-    }
-
-    pub fn action(mut self, action: Action) -> Self {
-        self.actions = self.actions.and_then(|mut actions| {
-            actions.push(action);
-            Ok(actions)
-        });
-        self
-    }
-
-    pub fn call(mut self, method: String, args: Function) -> Self {
-        self.actions = self.actions.and_then(|mut actions| {
-            actions.push(
-                FunctionCallAction {
-                    method_name: method,
-                    args: args.args?,
-                    gas: args.gas.as_gas(),
-                    deposit: args.deposit.as_yoctonear(),
-                }
-                .into(),
-            );
-            Ok(actions)
-        });
-        self
-    }
-
-    pub fn add_key(mut self, pk: PublicKey, ak: AccessKey) -> Self {
-        self.actions = self.actions.and_then(|mut actions| {
-            actions.push(
-                AddKeyAction {
-                    public_key: pk,
-                    access_key: ak,
-                }
-                .into(),
-            );
-            Ok(actions)
-        });
-        self
-    }
-
-    pub fn create_account(mut self) -> Self {
-        self.actions = self.actions.and_then(|mut actions| {
-            actions.push(CreateAccountAction {}.into());
-            Ok(actions)
-        });
-        self
-    }
-
-    pub fn delete_account(mut self, beneficiary_id: &AccountId) -> Self {
-        self.actions = self.actions.and_then(|mut actions| {
-            actions.push(
-                DeleteAccountAction {
-                    beneficiary_id: beneficiary_id.clone(),
-                }
-                .into(),
-            );
-            Ok(actions)
-        });
-        self
-    }
-
-    pub fn delete_key(mut self, public_key: PublicKey) -> Self {
-        self.actions = self.actions.and_then(|mut actions| {
-            actions.push(DeleteKeyAction { public_key }.into());
-            Ok(actions)
-        });
-        self
-    }
-
-    pub fn deploy(mut self, code: Vec<u8>) -> Self {
-        self.actions = self.actions.and_then(|mut actions| {
-            actions.push(DeployContractAction { code }.into());
-            Ok(actions)
-        });
-        self
-    }
-
-    pub fn nonce(mut self, nonce: u64) -> Self {
-        self.nonce = Some(nonce);
-        self
-    }
-}
-
-impl From<CallTransaction> for Transaction {
-    fn from(call_tx: CallTransaction) -> Self {
-        Self::new(call_tx.signer, call_tx.contract_id)
-            .call(call_tx.function.method.clone(), call_tx.function)
-    }
-}
-
-pub struct ViewTransaction {
-    pub(crate) contract_id: AccountId,
-    pub(crate) function: Function,
-}
-
-impl ViewTransaction {
-    pub fn new(contract_id: &AccountId, method: &str) -> Self {
-        Self {
-            contract_id: contract_id.clone(),
-            function: Function::new(method),
-        }
-    }
-
-    pub fn args(mut self, args: Vec<u8>) -> Self {
-        self.function = self.function.args(args);
-        self
-    }
-
-    pub fn args_json(mut self, args: &impl serde::Serialize) -> Self {
-        self.function = self.function.args_json(args);
-        self
-    }
-
-    pub fn args_borsh(mut self, args: &impl borsh::ser::BorshSerialize) -> Self {
-        self.function = self.function.args_borsh(args);
-        self
-    }
-}
-
-pub struct CallTransaction {
-    pub(crate) signer: InMemorySigner,
-    pub(crate) contract_id: AccountId,
-    pub(crate) function: Function,
-}
-
-impl CallTransaction {
-    pub fn new(signer: &InMemorySigner, contract_id: &AccountId, method: &str) -> Self {
-        Self {
-            signer: signer.clone(),
-            contract_id: contract_id.clone(),
-            function: Function::new(method),
-        }
-    }
-
-    pub fn args(mut self, args: Vec<u8>) -> Self {
-        self.function = self.function.args(args);
-        self
-    }
-
-    pub fn args_json(mut self, args: &impl serde::Serialize) -> Self {
-        self.function = self.function.args_json(args);
-        self
-    }
-
-    pub fn args_borsh(mut self, args: &impl borsh::ser::BorshSerialize) -> Self {
-        self.function = self.function.args_borsh(args);
-        self
-    }
-
-    pub fn deposit(mut self, deposit: NearToken) -> Self {
-        self.function = self.function.deposit(deposit);
-        self
-    }
-
-    pub fn gas(mut self, gas: NearGas) -> Self {
-        self.function = self.function.gas(gas);
-        self
-    }
-
-    pub fn nonce(mut self, nonce: u64) -> Self {
-        self.function = self.function.nonce(nonce);
-        self
-    }
+    client: JsonRpcClient,
 }

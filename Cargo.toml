@@ -18,7 +18,7 @@ hex = "0.4"
 near-chain-configs = "0.28"
 near-crypto = "0.28"
 near-jsonrpc-client = "0.15"
-near-jsonrpc-primitives = "0.28"
+near-jsonrpc-primitives = "0.28"    
 near-token = { version = "0.3", features = ["borsh", "serde"] }
 near-primitives = "0.28"
 primitive-types = "0.13"
