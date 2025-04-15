@@ -9,6 +9,7 @@ use aurora_engine_types::{
 use near_crypto::InMemorySigner;
 #[cfg(feature = "simple")]
 use near_crypto::PublicKey;
+use near_jsonrpc_client::methods;
 #[cfg(feature = "simple")]
 use near_jsonrpc_client::methods::tx::{
     RpcTransactionResponse, RpcTransactionStatusRequest, TransactionInfo,
@@ -18,6 +19,8 @@ use near_jsonrpc_client::{
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_primitives::transaction::{Action, SignedTransaction};
+use near_primitives::types::{BlockReference, Finality};
+use near_primitives::views::BlockView;
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
 #[cfg(feature = "simple")]
@@ -30,9 +33,13 @@ use near_primitives::{
 use near_primitives::{
     hash::CryptoHash, types::AccountId, views, views::FinalExecutionOutcomeView,
 };
+use std::collections::HashMap;
 #[cfg(feature = "simple")]
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::RwLock;
 
 #[cfg(feature = "advanced")]
 use super::TransactionOutcome;
@@ -41,12 +48,13 @@ use crate::utils;
 // The maximum amount of prepaid NEAR gas required for paying for a transaction.
 const NEAR_GAS: u64 = 300_000_000_000_000;
 const TIMEOUT: Duration = Duration::from_secs(20);
-
 #[derive(Clone)]
 pub struct NearClient {
     client: JsonRpcClient,
     pub engine_account_id: AccountId,
     signer_key_path: Option<String>,
+
+    access_key_nonces: Arc<RwLock<HashMap<(AccountId, near_crypto::PublicKey), AtomicU64>>>,
 }
 
 impl NearClient {
@@ -64,11 +72,11 @@ impl NearClient {
             .map(JsonRpcClient::with)
             .expect("couldn't create json rpc client");
         let client = client.connect(url);
-
         Self {
             client,
             engine_account_id: engine_account_id.parse().unwrap(),
             signer_key_path,
+            access_key_nonces: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -469,22 +477,67 @@ impl NearClient {
         Ok(result)
     }
 
-    pub async fn get_nonce(&self, signer: &InMemorySigner) -> anyhow::Result<(CryptoHash, u64)> {
-        let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
-            block_reference: near_primitives::types::Finality::Final.into(),
-            request: views::QueryRequest::ViewAccessKey {
-                account_id: signer.account_id.clone(),
-                public_key: signer.public_key.clone(),
-            },
-        };
-        let response = self.client.call(request).await?;
-        let block_hash = response.block_hash;
-        let nonce = match response.kind {
-            QueryResponseKind::AccessKey(k) => k.nonce + 1,
-            _ => anyhow::bail!("Wrong response kind: {:?}", response.kind),
-        };
+    pub(crate) async fn view_block(
+        &self,
+        block_ref: Option<BlockReference>,
+    ) -> anyhow::Result<BlockView> {
+        let block_reference = block_ref.unwrap_or_else(|| Finality::None.into());
+        let block_view = self
+            .client
+            .call(&methods::block::RpcBlockRequest { block_reference })
+            .await?;
 
-        Ok((block_hash, nonce))
+        Ok(block_view)
+    }
+
+    pub async fn get_nonce(&self, signer: &InMemorySigner) -> anyhow::Result<(CryptoHash, u64)> {
+        let nonces = self.access_key_nonces.read().await;
+        let cache_key = (
+            signer.account_id.clone(),
+            signer.secret_key.public_key().into(),
+        );
+
+        if let Some(nonce) = nonces.get(&cache_key) {
+            let nonce = nonce.fetch_add(1, Ordering::SeqCst);
+            drop(nonces);
+
+            // Fetch latest block_hash since the previous one is now invalid for new transactions:
+            let block = self.view_block(Some(Finality::Final.into())).await?;
+
+            Ok((block.header.hash, nonce + 1))
+        } else {
+            drop(nonces);
+
+            let (account_id, public_key) = cache_key.clone();
+
+            let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
+                block_reference: near_primitives::types::Finality::Final.into(),
+                request: views::QueryRequest::ViewAccessKey {
+                    account_id,
+                    public_key,
+                },
+            };
+            let response = self.client.call(request).await?;
+
+            let block_hash = response.block_hash;
+            let access_key = match response.kind {
+                QueryResponseKind::AccessKey(k) => k,
+                _ => anyhow::bail!("Wrong response kind: {:?}", response.kind),
+            };
+
+            // case where multiple writers end up at the same lock acquisition point and tries
+            // to overwrite the cached value that a previous writer already wrote.
+            let nonce = self
+                .access_key_nonces
+                .write()
+                .await
+                .entry(cache_key)
+                .or_insert_with(|| AtomicU64::new(access_key.nonce + 1))
+                .fetch_max(access_key.nonce + 1, Ordering::SeqCst)
+                .max(access_key.nonce + 1);
+
+            Ok((block_hash, nonce))
+        }
     }
 
     fn signer(&self) -> anyhow::Result<InMemorySigner> {
