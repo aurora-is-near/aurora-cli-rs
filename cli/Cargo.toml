@@ -23,10 +23,11 @@ simple = ["toml"]
 advanced = ["near-chain-configs"]
 
 [dependencies]
-aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
-aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
-aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
-aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std", "impl-serde"] }
+aurora-engine-precompiles.workspace = true
+aurora-engine-sdk.workspace = true
+aurora-engine-transactions.workspace = true
+aurora-engine-types.workspace = true
+aurora-sdk-rs = { path = "../sdk" }
 
 anyhow.workspace = true
 borsh.workspace = true

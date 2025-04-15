@@ -1,8 +1,8 @@
-use crate::client::Client;
+use crate::near::Client;
 use near_jsonrpc_client::{JsonRpcClient, NEAR_MAINNET_RPC_URL, NEAR_TESTNET_RPC_URL};
-use near_primitives::types::AccountId;
-use std::path::PathBuf;
 use std::time::Duration;
+
+use super::broadcast::{self, Broadcast};
 
 const DEFAULT_READ_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -11,8 +11,6 @@ pub struct ClientBuilder {
     url: String,
     read_timeout: Duration,
     connect_timeout: Duration,
-    engine_account_id: Option<AccountId>,
-    secret_key_path: Option<PathBuf>,
 }
 
 impl ClientBuilder {
@@ -21,8 +19,6 @@ impl ClientBuilder {
             url: NEAR_MAINNET_RPC_URL.to_string(),
             read_timeout: DEFAULT_READ_TIMEOUT,
             connect_timeout: DEFAULT_CONNECT_TIMEOUT,
-            engine_account_id: None,
-            secret_key_path: None,
         }
     }
 
@@ -41,22 +37,25 @@ impl ClientBuilder {
         self
     }
 
-    pub fn with_read_timeout(mut self, timeout: u64) -> Self {
-        self.read_timeout = Duration::from_secs(timeout);
+    pub fn with_read_timeout(mut self, timeout: Duration) -> Self {
+        self.read_timeout = timeout;
         self
     }
 
-    pub fn with_connect_timeout(mut self, timeout: u64) -> Self {
-        self.connect_timeout = Duration::from_secs(timeout);
+    pub fn with_connect_timeout(mut self, timeout: Duration) -> Self {
+        self.connect_timeout = timeout;
         self
     }
 
-    pub fn with_engine_account_id(mut self, engine_account_id: impl AsRef<str>) -> Self {
-        self.engine_account_id = Some(engine_account_id.as_ref().parse().unwrap());
-        self
+    pub fn build_sync(self) -> anyhow::Result<Client<broadcast::Sync>> {
+        self.build()
     }
 
-    pub fn build(self) -> Client {
+    pub fn build_async(self) -> anyhow::Result<Client<broadcast::Async>> {
+        self.build()
+    }
+
+    fn build<B: Broadcast>(self) -> anyhow::Result<Client<B>> {
         let headers = reqwest::header::HeaderMap::from_iter([(
             reqwest::header::CONTENT_TYPE,
             reqwest::header::HeaderValue::from_static("application/json"),
@@ -70,10 +69,9 @@ impl ClientBuilder {
             .expect("couldn't create json rpc client");
         let client = client.connect(self.url);
 
-        Client {
+        Ok(Client::<B> {
             client,
-            engine_account_id: self.engine_account_id,
-            signer_key_path: self.secret_key_path,
-        }
+            _broadcast: std::marker::PhantomData,
+        })
     }
 }

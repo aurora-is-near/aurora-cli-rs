@@ -491,4 +491,12 @@ impl NearClient {
         let rsp = self.client.call(req).await?;
         Ok(rsp)
     }
+
+    async fn near_broadcast_tx(
+        &self,
+        vec: Vec<Action>,
+        none: Option<u64>,
+    ) -> Result<FinalExecutionOutcomeView, anyhow::Error> {
+        todo!()
+    }
 }
