@@ -7,8 +7,8 @@ use aurora_engine_types::{
     U256,
 };
 use near_crypto::InMemorySigner;
-#[cfg(feature = "simple")]
 use near_crypto::PublicKey;
+use near_jsonrpc_client::methods;
 #[cfg(feature = "simple")]
 use near_jsonrpc_client::methods::tx::{
     RpcTransactionResponse, RpcTransactionStatusRequest, TransactionInfo,
@@ -18,6 +18,8 @@ use near_jsonrpc_client::{
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_primitives::transaction::{Action, SignedTransaction};
+use near_primitives::types::{BlockReference, Finality, Nonce};
+use near_primitives::views::BlockView;
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
 #[cfg(feature = "simple")]
@@ -30,9 +32,13 @@ use near_primitives::{
 use near_primitives::{
     hash::CryptoHash, types::AccountId, views, views::FinalExecutionOutcomeView,
 };
+use std::collections::HashMap;
 #[cfg(feature = "simple")]
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::RwLock;
 
 #[cfg(feature = "advanced")]
 use super::TransactionOutcome;
@@ -41,12 +47,12 @@ use crate::utils;
 // The maximum amount of prepaid NEAR gas required for paying for a transaction.
 const NEAR_GAS: u64 = 300_000_000_000_000;
 const TIMEOUT: Duration = Duration::from_secs(20);
-
 #[derive(Clone)]
 pub struct NearClient {
     client: JsonRpcClient,
     pub engine_account_id: AccountId,
     signer_key_path: Option<String>,
+    access_key_nonces: Arc<RwLock<HashMap<(AccountId, PublicKey), AtomicU64>>>,
 }
 
 impl NearClient {
@@ -64,11 +70,11 @@ impl NearClient {
             .map(JsonRpcClient::with)
             .expect("couldn't create json rpc client");
         let client = client.connect(url);
-
         Self {
             client,
             engine_account_id: engine_account_id.parse().unwrap(),
             signer_key_path,
+            access_key_nonces: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -81,14 +87,17 @@ impl NearClient {
         let receiver_id = &self.engine_account_id;
         loop {
             let block_hash = {
-                let request = near_jsonrpc_client::methods::block::RpcBlockRequest {
-                    block_reference: near_primitives::types::Finality::Final.into(),
+                let request = methods::block::RpcBlockRequest {
+                    block_reference: Finality::Final.into(),
                 };
                 let response = self.client.call(request).await?;
                 response.header.hash
             };
-            let request = near_jsonrpc_client::methods::light_client_proof::RpcLightClientExecutionProofRequest {
-                id: near_primitives::types::TransactionOrReceiptId::Receipt { receipt_id, receiver_id: receiver_id.clone() },
+            let request = methods::light_client_proof::RpcLightClientExecutionProofRequest {
+                id: near_primitives::types::TransactionOrReceiptId::Receipt {
+                    receipt_id,
+                    receiver_id: receiver_id.clone(),
+                },
                 light_client_head: block_hash,
             };
             let response = self.client.call(request).await?;
@@ -161,8 +170,8 @@ impl NearClient {
         method_name: &str,
         args: Vec<u8>,
     ) -> anyhow::Result<views::CallResult> {
-        let request = near_jsonrpc_client::methods::query::RpcQueryRequest {
-            block_reference: near_primitives::types::Finality::Final.into(),
+        let request = methods::query::RpcQueryRequest {
+            block_reference: Finality::Final.into(),
             request: views::QueryRequest::CallFunction {
                 account_id: self.engine_account_id.clone(),
                 method_name: method_name.to_string(),
@@ -180,10 +189,8 @@ impl NearClient {
     #[cfg(feature = "simple")]
     pub async fn view_account(&self, account: &str) -> anyhow::Result<String> {
         let account_id: AccountId = account.parse()?;
-        let request = near_jsonrpc_client::methods::query::RpcQueryRequest {
-            block_reference: near_primitives::types::BlockReference::Finality(
-                near_primitives::types::Finality::Final,
-            ),
+        let request = methods::query::RpcQueryRequest {
+            block_reference: BlockReference::Finality(Finality::Final),
             request: views::QueryRequest::ViewAccount { account_id },
         };
 
@@ -470,21 +477,63 @@ impl NearClient {
     }
 
     pub async fn get_nonce(&self, signer: &InMemorySigner) -> anyhow::Result<(CryptoHash, u64)> {
+        let nonces = self.access_key_nonces.read().await;
+        let cache_key = (signer.account_id.clone(), signer.secret_key.public_key());
+
+        if let Some(nonce) = nonces.get(&cache_key) {
+            let nonce = nonce.fetch_add(1, Ordering::SeqCst);
+            drop(nonces);
+            // Fetch latest block_hash since the previous one is now invalid for new transactions:
+            let block = self.view_block(Some(Finality::Final.into())).await?;
+
+            Ok((block.header.hash, nonce + 1))
+        } else {
+            drop(nonces);
+            let (block_hash, nonce) = self.get_nonce_block_hash(&cache_key).await?;
+            // case where multiple writers end up at the same lock acquisition point and tries
+            // to overwrite the cached value that a previous writer already wrote.
+            let nonce = self
+                .access_key_nonces
+                .write()
+                .await
+                .entry(cache_key)
+                .or_insert_with(|| AtomicU64::new(nonce + 1))
+                .fetch_max(nonce + 1, Ordering::SeqCst)
+                .max(nonce + 1);
+
+            Ok((block_hash, nonce))
+        }
+    }
+
+    async fn view_block(&self, block_ref: Option<BlockReference>) -> anyhow::Result<BlockView> {
+        let block_reference = block_ref.unwrap_or_else(|| Finality::None.into());
+        let block_view = self
+            .client
+            .call(&methods::block::RpcBlockRequest { block_reference })
+            .await?;
+
+        Ok(block_view)
+    }
+
+    async fn get_nonce_block_hash(
+        &self,
+        cache_key: &(AccountId, PublicKey),
+    ) -> anyhow::Result<(CryptoHash, Nonce)> {
+        let (account_id, public_key) = cache_key.clone();
         let request = near_jsonrpc_primitives::types::query::RpcQueryRequest {
-            block_reference: near_primitives::types::Finality::Final.into(),
+            block_reference: Finality::Final.into(),
             request: views::QueryRequest::ViewAccessKey {
-                account_id: signer.account_id.clone(),
-                public_key: signer.public_key.clone(),
+                account_id,
+                public_key,
             },
         };
         let response = self.client.call(request).await?;
         let block_hash = response.block_hash;
-        let nonce = match response.kind {
-            QueryResponseKind::AccessKey(k) => k.nonce + 1,
-            _ => anyhow::bail!("Wrong response kind: {:?}", response.kind),
+        let QueryResponseKind::AccessKey(access_key) = response.kind else {
+            anyhow::bail!("Wrong response kind: {:?}", response.kind)
         };
 
-        Ok((block_hash, nonce))
+        Ok((block_hash, access_key.nonce))
     }
 
     fn signer(&self) -> anyhow::Result<InMemorySigner> {
