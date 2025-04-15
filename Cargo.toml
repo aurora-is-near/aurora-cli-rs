@@ -6,6 +6,11 @@ members = [
 ]
 
 [workspace.dependencies]
+aurora-engine-precompiles = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
+aurora-engine-sdk = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
+aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std"] }
+aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std", "impl-serde"] }
+
 anyhow = "1"
 async-trait = "0.1"
 borsh = "1"

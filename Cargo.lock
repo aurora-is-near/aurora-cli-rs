@@ -155,6 +155,7 @@ dependencies = [
  "aurora-engine-sdk",
  "aurora-engine-transactions",
  "aurora-engine-types",
+ "aurora-sdk-rs",
  "borsh 1.5.5",
  "bs58 0.5.1",
  "clap",
@@ -249,6 +250,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "aurora-engine-precompiles",
+ "aurora-engine-sdk",
+ "aurora-engine-transactions",
+ "aurora-engine-types",
  "borsh 1.5.5",
  "hex",
  "near-crypto",

@@ -1,7 +1,5 @@
 use crate::near::Client;
-use near_crypto::InMemorySigner;
 use near_jsonrpc_client::{JsonRpcClient, NEAR_MAINNET_RPC_URL, NEAR_TESTNET_RPC_URL};
-use near_primitives::types::AccountId;
 use std::time::Duration;
 
 use super::broadcast::{self, Broadcast};

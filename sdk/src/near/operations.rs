@@ -18,6 +18,7 @@ pub struct Function {
     pub(crate) args: anyhow::Result<Vec<u8>>,
     pub(crate) deposit: NearToken,
     pub(crate) gas: NearGas,
+    pub(crate) nonce: Option<u64>,
 }
 
 impl Function {
@@ -27,6 +28,7 @@ impl Function {
             args: Ok(vec![]),
             deposit: DEFAULT_CALL_DEPOSIT,
             gas: DEFAULT_CALL_FN_GAS,
+            nonce: None,
         }
     }
 
@@ -54,12 +56,37 @@ impl Function {
         self.gas = gas;
         self
     }
+
+    pub fn nonce(mut self, nonce: u64) -> Self {
+        self.nonce = Some(nonce);
+        self
+    }
+
+    pub fn into_call_transaction(
+        self,
+        signer: &InMemorySigner,
+        contract_id: &AccountId,
+    ) -> CallTransaction {
+        CallTransaction {
+            signer: signer.clone(),
+            contract_id: contract_id.clone(),
+            function: self,
+        }
+    }
+
+    pub fn into_view_transaction(self, contract_id: &AccountId) -> ViewTransaction {
+        ViewTransaction {
+            contract_id: contract_id.clone(),
+            function: self,
+        }
+    }
 }
 
 pub struct Transaction {
     pub(crate) signer: InMemorySigner,
     pub(crate) receiver_id: AccountId,
     pub(crate) actions: anyhow::Result<Vec<Action>>,
+    pub(crate) nonce: Option<u64>,
 }
 
 impl Transaction {
@@ -68,6 +95,7 @@ impl Transaction {
             signer,
             receiver_id,
             actions: Ok(vec![]),
+            nonce: None,
         }
     }
 
@@ -145,6 +173,11 @@ impl Transaction {
         });
         self
     }
+
+    pub fn nonce(mut self, nonce: u64) -> Self {
+        self.nonce = Some(nonce);
+        self
+    }
 }
 
 impl From<CallTransaction> for Transaction {
@@ -220,6 +253,11 @@ impl CallTransaction {
 
     pub fn gas(mut self, gas: NearGas) -> Self {
         self.function = self.function.gas(gas);
+        self
+    }
+
+    pub fn nonce(mut self, nonce: u64) -> Self {
+        self.function = self.function.nonce(nonce);
         self
     }
 }

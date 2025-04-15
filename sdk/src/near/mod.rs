@@ -1,4 +1,3 @@
-use crate::near::response::{FromBytes, Response};
 use anyhow::Ok;
 use broadcast::Broadcast;
 pub use builder::ClientBuilder;
@@ -6,10 +5,10 @@ use near_crypto::PublicKey;
 use near_jsonrpc_client::JsonRpcClient;
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_jsonrpc_primitives::types::transactions::RpcTransactionResponse;
-use near_primitives::hash::CryptoHash;
 use near_primitives::transaction::SignedTransaction;
 use near_primitives::types::AccountId;
 use near_primitives::views;
+use near_primitives::{hash::CryptoHash, views::CallResult};
 use operations::{CallTransaction, Transaction, ViewTransaction};
 
 pub mod broadcast;
@@ -26,7 +25,7 @@ pub struct Client<B: Broadcast> {
 
 impl<B: Broadcast> Client<B> {
     /// Make a view call to the engine contract.
-    pub async fn view<T: FromBytes>(&self, args: ViewTransaction) -> anyhow::Result<Response<T>> {
+    pub async fn view(&self, args: ViewTransaction) -> anyhow::Result<CallResult> {
         let request = near_jsonrpc_client::methods::query::RpcQueryRequest {
             block_reference: near_primitives::types::Finality::Final.into(),
             request: near_primitives::views::QueryRequest::CallFunction {
@@ -38,7 +37,7 @@ impl<B: Broadcast> Client<B> {
         let response = self.client.call(request).await?;
 
         match response.kind {
-            QueryResponseKind::CallResult(result) => result.try_into(),
+            QueryResponseKind::CallResult(result) => Ok(result),
             _ => anyhow::bail!("Wrong response type"),
         }
     }
@@ -84,6 +83,7 @@ impl<B: Broadcast> Client<B> {
                 tx.signer.secret_key.public_key(),
             )
             .await?;
+        let nonce = tx.nonce.unwrap_or(nonce);
 
         let signed_tx = SignedTransaction::from_actions(
             nonce,

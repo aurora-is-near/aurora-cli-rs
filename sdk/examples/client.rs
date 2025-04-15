@@ -1,52 +1,47 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
+use aurora_engine_types::account_id::AccountId;
 use aurora_sdk_rs::{
-    near::broadcast::{Async, Sync},
-    read::ReadClient,
+    aurora::{
+        self,
+        operations::{CallOperation, ViewOperation},
+    },
     ClientBuilder,
 };
-use near_crypto::{InMemorySigner, KeyType};
+use near_crypto::InMemorySigner;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let client = ClientBuilder::new("aurora".parse().unwrap(), signer().unwrap())
-        .with_connect_timeout(Duration::from_secs(30))
+    let client = ClientBuilder::new()
+        .testnet()
         .with_read_timeout(Duration::from_secs(30))
+        .with_connect_timeout(Duration::from_secs(30))
         .build_async()?;
-    let response = client.get_chain_id().await.unwrap();
-    println!("chain id: {:?}", response);
 
-    let owner = client.get_owner().await.unwrap();
-    println!("owner: {:?}", owner);
+    let aurora_cli = aurora::Aurora::new(client, signer()?, AccountId::from_str("aurora")?);
+    let call_result = aurora_cli
+        .view(aurora::operations::GetLatestReleaseHash {})
+        .await?;
+    let release_hash = aurora::operations::GetLatestReleaseHash::parse(call_result)?;
 
-    let version = client.get_version().await.unwrap();
-    println!("version: {:?}", version);
+    println!("Latest release hash: {}", release_hash);
 
-    let nonce = client.get_nonce().await.unwrap();
-    println!("nonce: {:?}", nonce);
+    let call_result = aurora_cli
+        .call(aurora::operations::SetEthConnectorContractAccount {
+            deposit: Default::default(),
+            contract_account: AccountId::from_str("some_eth_conn")?,
+        })
+        .await?; // in async mode it's CrpytoHash
 
-    let client = client.to_sync();
+    let call_result = aurora_cli
+        .into_sync()
+        .call(aurora::operations::SetEthConnectorContractAccount {
+            deposit: Default::default(),
+            contract_account: AccountId::from_str("some_eth_conn")?,
+        })
+        .await?;
 
-    let client = client.with_engine("some.aurora".parse().unwrap());
-
-    let client = client.with_signer(InMemorySigner::from_random(
-        "some.random".parse().unwrap(),
-        KeyType::ED25519,
-    ));
-
-    let response = client
-        .get_transaction_status(
-            "3dbhsJA7eDGFPsQRqWk77DaCCS48j29kdjXpk8h2nvuy"
-                .parse()
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    println!(
-        "response: {}",
-        serde_json::to_string_pretty(&response).unwrap()
-    );
+    let some_result = aurora::operations::SetEthConnectorContractAccount::parse(call_result)?;
 
     Ok(())
 }

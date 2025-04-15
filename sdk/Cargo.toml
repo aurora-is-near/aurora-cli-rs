@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+aurora-engine-precompiles.workspace = true
+aurora-engine-sdk.workspace = true
+aurora-engine-transactions.workspace = true
+aurora-engine-types.workspace = true
+
 anyhow.workspace = true
 async-trait.workspace = true
 borsh.workspace = true
