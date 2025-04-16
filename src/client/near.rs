@@ -38,7 +38,7 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
+use tokio::sync::Mutex;
 
 #[cfg(feature = "advanced")]
 use super::TransactionOutcome;
@@ -52,7 +52,7 @@ pub struct NearClient {
     client: JsonRpcClient,
     pub engine_account_id: AccountId,
     signer_key_path: Option<String>,
-    access_key_nonces: Arc<RwLock<HashMap<(AccountId, PublicKey), AtomicU64>>>,
+    access_key_nonces: Arc<Mutex<HashMap<(AccountId, PublicKey), AtomicU64>>>,
 }
 
 impl NearClient {
@@ -74,7 +74,7 @@ impl NearClient {
             client,
             engine_account_id: engine_account_id.parse().unwrap(),
             signer_key_path,
-            access_key_nonces: Arc::new(RwLock::new(HashMap::new())),
+            access_key_nonces: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -477,31 +477,26 @@ impl NearClient {
     }
 
     pub async fn get_nonce(&self, signer: &InMemorySigner) -> anyhow::Result<(CryptoHash, u64)> {
-        let nonces = self.access_key_nonces.read().await;
+        let mut nonces = self.access_key_nonces.lock().await;
         let cache_key = (signer.account_id.clone(), signer.secret_key.public_key());
 
         if let Some(nonce) = nonces.get(&cache_key) {
             let nonce = nonce.fetch_add(1, Ordering::SeqCst);
-            drop(nonces);
             // Fetch latest block_hash since the previous one is now invalid for new transactions:
             let block = self.view_block(Some(Finality::Final.into())).await?;
 
             Ok((block.header.hash, nonce + 1))
         } else {
-            drop(nonces);
             let (block_hash, nonce) = self.get_nonce_block_hash(&cache_key).await?;
             // case where multiple writers end up at the same lock acquisition point and tries
             // to overwrite the cached value that a previous writer already wrote.
-            let nonce = self
-                .access_key_nonces
-                .write()
-                .await
+            let nonce = nonces
                 .entry(cache_key)
-                .or_insert_with(|| AtomicU64::new(nonce + 1))
-                .fetch_max(nonce + 1, Ordering::SeqCst)
-                .max(nonce + 1);
+                .or_insert_with(|| AtomicU64::new(nonce))
+                .fetch_add(1, Ordering::SeqCst);
+            drop(nonces);
 
-            Ok((block_hash, nonce))
+            Ok((block_hash, nonce + 1))
         }
     }
 
