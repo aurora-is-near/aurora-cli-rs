@@ -1085,11 +1085,11 @@ pub async fn add_relayer(
     full_access_pub_key: near_crypto::PublicKey,
     function_call_pub_key: near_crypto::PublicKey,
 ) -> anyhow::Result<()> {
-    let mut client = context.client.near();
+    let client = context.client.near();
     let account_id = client.engine_account_id.clone();
     let relayer_id = format!("relay.{}", client.engine_account_id);
 
-    client.engine_account_id = relayer_id.parse()?;
+    let client = client.with_engine_account_id(&relayer_id.parse()?);
 
     let rsp = client
         .add_relayer(
