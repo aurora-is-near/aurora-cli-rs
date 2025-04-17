@@ -618,4 +618,21 @@ impl NearClient {
             .await?;
         Ok(rsp)
     }
+
+    #[cfg(feature = "simple")]
+    pub fn with_engine_account_id(self, account_id: &AccountId) -> Self {
+        Self {
+            engine_account_id: account_id.to_owned(),
+            ..self
+        }
+    }
+
+    #[cfg(feature = "simple")]
+    #[allow(dead_code)]
+    pub fn with_signer(self, signer_key_path: Option<String>) -> Self {
+        Self {
+            signer_key_path,
+            ..self
+        }
+    }
 }
