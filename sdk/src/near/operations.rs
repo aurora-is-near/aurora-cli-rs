@@ -1,5 +1,16 @@
+use crate::near::client::{send_batch_tx, send_tx, Client};
 use aurora_engine_types::types::NearGas;
+use near_crypto::PublicKey;
 use near_jsonrpc_client::JsonRpcClient;
+use near_primitives::account::AccessKey;
+use near_primitives::action::{
+    AddKeyAction, CreateAccountAction, DeleteAccountAction, DeleteKeyAction, DeployContractAction,
+    FunctionCallAction, StakeAction, TransferAction,
+};
+use near_primitives::hash::CryptoHash;
+use near_primitives::transaction::Action;
+use near_primitives::types::AccountId;
+use near_primitives::views::FinalExecutionOutcomeView;
 use near_token::NearToken;
 
 const ONE_TERA_GAS: u64 = 10u64.pow(12);
@@ -9,9 +20,11 @@ pub(crate) const DEFAULT_CALL_FN_GAS: NearGas = NearGas::new(10 * ONE_TERA_GAS);
 pub(crate) const DEFAULT_CALL_DEPOSIT: NearToken = NearToken::from_near(0);
 pub(crate) const DEFAULT_PRIORITY_FEE: u64 = 0;
 
+use super::Result;
+
 pub struct Function {
     pub(crate) name: String,
-    pub(crate) args: anyhow::Result<Vec<u8>>,
+    pub(crate) args: Result<Vec<u8>>,
     pub(crate) deposit: NearToken,
     pub(crate) gas: NearGas,
 }
@@ -74,5 +87,137 @@ impl Function {
 }
 
 pub struct Transaction {
-    client: JsonRpcClient,
+    client: Client,
+    signer: near_crypto::InMemorySigner,
+    receiver_id: AccountId,
+    actions: Result<Vec<Action>>,
+}
+
+impl Transaction {
+    pub(crate) fn new(
+        client: Client,
+        signer: near_crypto::InMemorySigner,
+        receiver_id: AccountId,
+    ) -> Self {
+        Self {
+            client,
+            signer,
+            receiver_id,
+            actions: Ok(vec![]),
+        }
+    }
+
+    /// Adds a key to the `receiver_id`'s account, where the public key can be used
+    /// later to delete the same key.
+    pub fn add_key(mut self, pk: PublicKey, ak: AccessKey) -> Self {
+        if let Ok(actions) = &mut self.actions {
+            actions.push(
+                AddKeyAction {
+                    public_key: pk.into(),
+                    access_key: ak.into(),
+                }
+                .into(),
+            );
+        }
+
+        self
+    }
+
+    /// Call into the `receiver_id`'s contract with the specific function arguments.
+    pub fn call(mut self, function: Function) -> Self {
+        let args = match function.args {
+            Ok(args) => args,
+            Err(err) => {
+                self.actions = Err(err);
+                return self;
+            }
+        };
+
+        if let Ok(actions) = &mut self.actions {
+            actions.push(Action::FunctionCall(Box::new(FunctionCallAction {
+                method_name: function.name.to_string(),
+                args,
+                deposit: function.deposit.as_yoctonear(),
+                gas: function.gas.as_u64(),
+            })));
+        }
+
+        self
+    }
+
+    /// Create a new account with the account id being `receiver_id`.
+    pub fn create_account(mut self) -> Self {
+        if let Ok(actions) = &mut self.actions {
+            actions.push(CreateAccountAction {}.into());
+        }
+        self
+    }
+
+    /// Deletes the `receiver_id`'s account. The beneficiary specified by
+    /// `beneficiary_id` will receive the funds of the account deleted.
+    pub fn delete_account(mut self, beneficiary_id: &AccountId) -> Self {
+        if let Ok(actions) = &mut self.actions {
+            actions.push(
+                DeleteAccountAction {
+                    beneficiary_id: beneficiary_id.clone(),
+                }
+                .into(),
+            );
+        }
+        self
+    }
+
+    /// Deletes a key from the `receiver_id`'s account, where the public key is
+    /// associated with the access key to be deleted.
+    pub fn delete_key(mut self, pk: PublicKey) -> Self {
+        if let Ok(actions) = &mut self.actions {
+            actions.push(DeleteKeyAction { public_key: pk }.into());
+        }
+        self
+    }
+
+    /// Deploy contract code or WASM bytes to the `receiver_id`'s account.
+    pub fn deploy(mut self, code: &[u8]) -> Self {
+        if let Ok(actions) = &mut self.actions {
+            actions.push(DeployContractAction { code: code.into() }.into());
+        }
+        self
+    }
+
+    /// An action which stakes the signer's tokens and setups a validator public key.
+    pub fn stake(mut self, stake: NearToken, pk: PublicKey) -> Self {
+        if let Ok(actions) = &mut self.actions {
+            actions.push(
+                StakeAction {
+                    stake: stake.as_yoctonear(),
+                    public_key: pk,
+                }
+                .into(),
+            );
+        }
+        self
+    }
+
+    /// Transfer `deposit` amount from `signer`'s account into `receiver_id`'s account.
+    pub fn transfer(mut self, deposit: NearToken) -> Self {
+        if let Ok(actions) = &mut self.actions {
+            actions.push(
+                TransferAction {
+                    deposit: deposit.as_yoctonear(),
+                }
+                .into(),
+            );
+        }
+        self
+    }
+
+    async fn transact(self) -> Result<FinalExecutionOutcomeView> {
+        send_batch_tx(&self.client, &self.signer, &self.receiver_id, self.actions?).await
+    }
+
+    pub async fn transact_async(self) -> Result<CryptoHash> {
+        self.client
+            .send_batch_tx_async(&self.signer, &self.receiver_id, self.actions?)
+            .await
+    }
 }

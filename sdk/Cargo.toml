@@ -16,5 +16,6 @@ serde = "1"
 serde_json = "1"
 near-jsonrpc-client.workspace = true
 near-jsonrpc-primitives.workspace = true
+thiserror = "2.0.12"
 
 [dev-dependencies]

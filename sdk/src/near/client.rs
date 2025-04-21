@@ -8,7 +8,10 @@ use std::{
 use near_crypto::{InMemorySigner, Signer};
 use near_jsonrpc_client::{
     errors::{JsonRpcError, JsonRpcServerError},
-    methods::{self, broadcast_tx_commit::RpcBroadcastTxCommitRequest, tx::RpcTransactionError},
+    methods::{
+        self, broadcast_tx_async::RpcBroadcastTxAsyncRequest,
+        broadcast_tx_commit::RpcBroadcastTxCommitRequest, tx::RpcTransactionError,
+    },
     JsonRpcClient, MethodCallResult,
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
@@ -22,7 +25,9 @@ use near_primitives::{
 };
 use tokio::sync::RwLock;
 
+use super::error::Error;
 use super::operations::DEFAULT_PRIORITY_FEE;
+use super::Result;
 
 pub struct Client {
     address: String,
@@ -32,7 +37,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub(crate) fn new(addr: &str, api_key: Option<String>) -> anyhow::Result<Self> {
+    pub(crate) fn new(addr: &str, api_key: Option<String>) -> Result<Self> {
         let connector = JsonRpcClient::new_client();
         let mut client = connector.connect(addr);
         if let Some(api_key) = api_key {
@@ -68,14 +73,11 @@ impl Client {
         signer: &InMemorySigner,
         receiver_id: &AccountId,
         action: Action,
-    ) -> anyhow::Result<FinalExecutionOutcomeView> {
-        send_batch_tx(self, signer, receiver_id, vec![action]).await
+    ) -> Result<FinalExecutionOutcomeView> {
+        self.send_batch_tx(signer, receiver_id, vec![action]).await
     }
 
-    pub(crate) async fn view_block(
-        &self,
-        block_ref: Option<BlockReference>,
-    ) -> anyhow::Result<BlockView> {
+    pub(crate) async fn view_block(&self, block_ref: Option<BlockReference>) -> Result<BlockView> {
         let block_reference = block_ref.unwrap_or_else(|| Finality::None.into());
         let block_view = self
             .query(&methods::block::RpcBlockRequest { block_reference })
@@ -87,7 +89,7 @@ impl Client {
     async fn fetch_tx_nonce(
         &self,
         cache_key: &(AccountId, near_crypto::PublicKey),
-    ) -> anyhow::Result<(CryptoHash, Nonce)> {
+    ) -> Result<(CryptoHash, Nonce)> {
         let nonces = self.access_key_nonces.read().await;
         if let Some(nonce) = nonces.get(cache_key) {
             let nonce = nonce.fetch_add(1, Ordering::SeqCst);
@@ -101,8 +103,9 @@ impl Client {
             drop(nonces);
 
             let (account_id, public_key) = cache_key;
-            let (access_key, block_hash) =
-                access_key(self, account_id.clone(), public_key.clone()).await?;
+            let (access_key, block_hash) = self
+                .access_key(account_id.clone(), public_key.clone())
+                .await?;
 
             // case where multiple writers end up at the same lock acquisition point and tries
             // to overwrite the cached value that a previous writer already wrote.
@@ -123,7 +126,7 @@ impl Client {
         &self,
         account_id: AccountId,
         public_key: near_crypto::PublicKey,
-    ) -> anyhow::Result<(AccessKeyView, CryptoHash)> {
+    ) -> Result<(AccessKeyView, CryptoHash)> {
         let query_resp = self
             .query(&methods::query::RpcQueryRequest {
                 block_reference: Finality::None.into(),
@@ -136,16 +139,71 @@ impl Client {
 
         match query_resp.kind {
             QueryResponseKind::AccessKey(access_key) => Ok((access_key, query_resp.block_hash)),
-            _ => anyhow::bail!("Unexpected response kind: {:?}", query_resp.kind),
+            kind => Err(Error::UnexpectedQueryResponseKind(kind)),
         }
+    }
+
+    pub(crate) async fn send_batch_tx(
+        &self,
+        signer: &InMemorySigner,
+        receiver_id: &AccountId,
+        actions: Vec<Action>,
+    ) -> Result<FinalExecutionOutcomeView> {
+        let cache_key = (
+            signer.account_id.clone(),
+            signer.secret_key.public_key().into(),
+        );
+
+        let (block_hash, nonce) = self.fetch_tx_nonce(&cache_key).await?;
+        send_tx(
+            self,
+            &cache_key,
+            SignedTransaction::from_actions(
+                nonce,
+                signer.account_id.clone(),
+                receiver_id.clone(),
+                &Signer::InMemory(signer.clone()),
+                actions.clone(),
+                block_hash,
+                DEFAULT_PRIORITY_FEE,
+            ),
+        )
+        .await
+    }
+
+    pub(crate) async fn send_batch_tx_async(
+        &self,
+        signer: &InMemorySigner,
+        receiver_id: &AccountId,
+        actions: Vec<Action>,
+    ) -> Result<CryptoHash> {
+        let cache_key = (
+            signer.account_id.clone(),
+            signer.secret_key.public_key().into(),
+        );
+        let (block_hash, nonce) = self.fetch_tx_nonce(&cache_key).await?;
+
+        self.query(RpcBroadcastTxAsyncRequest {
+            signed_transaction: SignedTransaction::from_actions(
+                nonce,
+                signer.account_id.clone(),
+                receiver_id.clone(),
+                &Signer::InMemory(signer.clone()),
+                actions,
+                block_hash,
+                DEFAULT_PRIORITY_FEE,
+            ),
+        })
+        .await
+        .map_err(Into::into)
     }
 }
 
-pub(crate) async fn send_tx(
+async fn send_tx(
     client: &Client,
     cache_key: &(AccountId, near_crypto::PublicKey),
     tx: SignedTransaction,
-) -> anyhow::Result<FinalExecutionOutcomeView> {
+) -> Result<FinalExecutionOutcomeView> {
     let result = client
         .query_broadcast_tx(&RpcBroadcastTxCommitRequest {
             signed_transaction: tx,
@@ -164,33 +222,5 @@ pub(crate) async fn send_tx(
         nonces.remove(cache_key);
     }
 
-    result.map_err(|e| anyhow::anyhow!("Failed to send transaction: {:?}", e))
-}
-
-pub(crate) async fn send_batch_tx(
-    client: &Client,
-    signer: &InMemorySigner,
-    receiver_id: &AccountId,
-    actions: Vec<Action>,
-) -> anyhow::Result<FinalExecutionOutcomeView> {
-    let cache_key = (
-        signer.account_id.clone(),
-        signer.secret_key.public_key().into(),
-    );
-
-    let (block_hash, nonce) = client.fetch_tx_nonce(&cache_key).await?;
-    send_tx(
-        client,
-        &cache_key,
-        SignedTransaction::from_actions(
-            nonce,
-            signer.account_id.clone(),
-            receiver_id.clone(),
-            &Signer::InMemory(signer.clone()),
-            actions.clone(),
-            block_hash,
-            DEFAULT_PRIORITY_FEE,
-        ),
-    )
-    .await
+    result.map_err(Into::into)
 }
