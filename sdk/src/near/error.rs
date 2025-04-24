@@ -1,5 +1,7 @@
+use std::fmt::Debug;
+
 use near_jsonrpc_client::errors::JsonRpcError;
-use near_jsonrpc_client::methods;
+use near_jsonrpc_client::methods::{self, RpcHandlerError, RpcMethod};
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use thiserror::Error;
 

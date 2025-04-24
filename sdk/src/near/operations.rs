@@ -1,7 +1,5 @@
-use crate::near::client::{send_batch_tx, send_tx, Client};
 use aurora_engine_types::types::NearGas;
 use near_crypto::PublicKey;
-use near_jsonrpc_client::JsonRpcClient;
 use near_primitives::account::AccessKey;
 use near_primitives::action::{
     AddKeyAction, CreateAccountAction, DeleteAccountAction, DeleteKeyAction, DeployContractAction,
@@ -20,6 +18,7 @@ pub(crate) const DEFAULT_CALL_FN_GAS: NearGas = NearGas::new(10 * ONE_TERA_GAS);
 pub(crate) const DEFAULT_CALL_DEPOSIT: NearToken = NearToken::from_near(0);
 pub(crate) const DEFAULT_PRIORITY_FEE: u64 = 0;
 
+use super::client::Client;
 use super::Result;
 
 pub struct Function {
@@ -86,16 +85,16 @@ impl Function {
     }
 }
 
-pub struct Transaction {
-    client: Client,
+pub struct Transaction<'a> {
+    client: &'a Client,
     signer: near_crypto::InMemorySigner,
     receiver_id: AccountId,
     actions: Result<Vec<Action>>,
 }
 
-impl Transaction {
+impl<'a> Transaction<'a> {
     pub(crate) fn new(
-        client: Client,
+        client: &'a Client,
         signer: near_crypto::InMemorySigner,
         receiver_id: AccountId,
     ) -> Self {
@@ -211,13 +210,115 @@ impl Transaction {
         self
     }
 
-    async fn transact(self) -> Result<FinalExecutionOutcomeView> {
-        send_batch_tx(&self.client, &self.signer, &self.receiver_id, self.actions?).await
+    pub async fn transact(self) -> Result<FinalExecutionOutcomeView> {
+        self.client
+            .send_batch_tx(&self.signer, &self.receiver_id, self.actions?)
+            .await
     }
 
     pub async fn transact_async(self) -> Result<CryptoHash> {
         self.client
             .send_batch_tx_async(&self.signer, &self.receiver_id, self.actions?)
+            .await
+    }
+}
+
+/// Similar to a [`Transaction`], but more specific to making a call into a contract.
+/// Note, only one call can be made per `CallTransaction`.
+pub struct CallTransaction<'a> {
+    client: &'a Client,
+    signer: near_crypto::InMemorySigner,
+    contract_id: AccountId,
+    function: Function,
+}
+
+impl<'a> CallTransaction<'a> {
+    pub(crate) fn new(
+        client: &'a Client,
+        contract_id: AccountId,
+        signer: near_crypto::InMemorySigner,
+        function: &str,
+    ) -> Self {
+        Self {
+            client,
+            signer,
+            contract_id,
+            function: Function::new(function),
+        }
+    }
+
+    /// Provide the arguments for the call. These args are serialized bytes from either
+    /// a JSON or Borsh serializable set of arguments. To use the more specific versions
+    /// with better quality of life, use `args_json` or `args_borsh`.
+    pub fn args(mut self, args: Vec<u8>) -> Self {
+        self.function = self.function.args(args);
+        self
+    }
+
+    /// Similar to `args`, specify an argument that is JSON serializable and can be
+    /// accepted by the equivalent contract. Recommend to use something like
+    /// `serde_json::json!` macro to easily serialize the arguments.
+    pub fn args_json<U: serde::Serialize>(mut self, args: U) -> Self {
+        self.function = self.function.args_json(args);
+        self
+    }
+
+    /// Similar to `args`, specify an argument that is borsh serializable and can be
+    /// accepted by the equivalent contract.
+    pub fn args_borsh<U: borsh::BorshSerialize>(mut self, args: U) -> Self {
+        self.function = self.function.args_borsh(args);
+        self
+    }
+
+    /// Specify the amount of tokens to be deposited where `deposit` is the amount of
+    /// tokens in yocto near.
+    pub fn deposit(mut self, deposit: NearToken) -> Self {
+        self.function = self.function.deposit(deposit);
+        self
+    }
+
+    /// Specify the amount of gas to be used where `gas` is the amount of gas in yocto near.
+    pub fn gas(mut self, gas: NearGas) -> Self {
+        self.function = self.function.gas(gas);
+        self
+    }
+
+    /// Use the maximum amount of gas possible to perform this transaction.
+    pub fn max_gas(self) -> Self {
+        self.gas(MAX_GAS)
+    }
+
+    pub fn signer(mut self, signer: near_crypto::InMemorySigner) -> Self {
+        self.signer = signer;
+        self
+    }
+
+    pub async fn transact(self) -> Result<FinalExecutionOutcomeView> {
+        self.client
+            .call(
+                &self.signer,
+                &self.contract_id,
+                self.function.name.to_string(),
+                self.function.args?,
+                self.function.gas,
+                self.function.deposit,
+            )
+            .await
+    }
+
+    pub async fn transact_async(self) -> Result<CryptoHash> {
+        self.client
+            .send_batch_tx_async(
+                &self.signer,
+                &self.contract_id,
+                vec![FunctionCallAction {
+                    args: self.function.args?,
+                    method_name: self.function.name,
+                    gas: self.function.gas.as_u64(),
+                    deposit: self.function.deposit.as_yoctonear(),
+                }
+                .into()],
+            )
             .await
     }
 }

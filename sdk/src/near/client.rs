@@ -5,6 +5,7 @@ use std::{
     vec,
 };
 
+use aurora_engine_types::types::NearGas;
 use near_crypto::{InMemorySigner, Signer};
 use near_jsonrpc_client::{
     errors::{JsonRpcError, JsonRpcServerError},
@@ -16,20 +17,21 @@ use near_jsonrpc_client::{
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_primitives::{
-    action::Action,
+    action::{Action, FunctionCallAction},
     errors::InvalidTxError,
     hash::CryptoHash,
     transaction::SignedTransaction,
     types::{AccountId, BlockReference, Finality, Nonce},
     views::{AccessKeyView, BlockView, FinalExecutionOutcomeView, QueryRequest},
 };
+use near_token::NearToken;
 use tokio::sync::RwLock;
 
 use super::error::Error;
 use super::operations::DEFAULT_PRIORITY_FEE;
 use super::Result;
 
-pub struct Client {
+pub(crate) struct Client {
     address: String,
     client: JsonRpcClient,
 
@@ -196,6 +198,29 @@ impl Client {
         })
         .await
         .map_err(Into::into)
+    }
+
+    pub(crate) async fn call(
+        &self,
+        signer: &InMemorySigner,
+        contract_id: &AccountId,
+        method_name: String,
+        args: Vec<u8>,
+        gas: NearGas,
+        deposit: NearToken,
+    ) -> Result<FinalExecutionOutcomeView> {
+        self.send_tx(
+            signer,
+            contract_id,
+            FunctionCallAction {
+                args,
+                method_name,
+                gas: gas.as_u64(),
+                deposit: deposit.as_yoctonear(),
+            }
+            .into(),
+        )
+        .await
     }
 }
 
