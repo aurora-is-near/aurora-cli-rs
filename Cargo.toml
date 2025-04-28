@@ -12,7 +12,6 @@ aurora-engine-transactions = { git = "https://github.com/aurora-is-near/aurora-e
 aurora-engine-types = { git = "https://github.com/aurora-is-near/aurora-engine.git", tag = "3.7.0", features = ["std", "impl-serde"] }
 
 anyhow = "1"
-async-trait = "0.1"
 borsh = "1"
 hex = "0.4"
 near-chain-configs = "0.28"
@@ -23,6 +22,5 @@ near-token = { version = "0.3", features = ["borsh", "serde"] }
 near-primitives = "0.28"
 near-workspaces = "0.18"
 thiserror = "2"
-primitive-types = "0.13"
 reqwest = { version = "0.12", features = ["json"] }
 tokio = "1"

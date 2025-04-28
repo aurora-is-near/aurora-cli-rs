@@ -27,7 +27,6 @@ aurora-engine-precompiles.workspace = true
 aurora-engine-sdk.workspace = true
 aurora-engine-transactions.workspace = true
 aurora-engine-types.workspace = true
-aurora-sdk-rs = { path = "../sdk" }
 
 anyhow.workspace = true
 borsh.workspace = true

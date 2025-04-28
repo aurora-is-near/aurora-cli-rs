@@ -176,7 +176,6 @@ dependencies = [
  "aurora-engine-sdk",
  "aurora-engine-transactions",
  "aurora-engine-types",
- "aurora-sdk-rs",
  "borsh 1.5.7",
  "bs58 0.5.1",
  "clap",

@@ -7,6 +7,8 @@ use aurora_engine_types::H256;
 #[cfg(feature = "advanced")]
 use thiserror::Error;
 
+#[cfg(feature = "advanced")]
+pub use aurora::AuroraClient;
 pub use near::NearClient;
 
 #[cfg(feature = "simple")]
