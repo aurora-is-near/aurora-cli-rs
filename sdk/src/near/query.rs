@@ -255,3 +255,28 @@ impl ProcessQuery for ViewAccessKey {
         err.into()
     }
 }
+
+impl ProcessQuery for ViewAccessKeyList {
+    type Method = methods::query::RpcQueryRequest;
+    type Output = near_primitives::views::AccessKeyList;
+
+    fn into_request(self, block_reference: BlockReference) -> Result<Self::Method> {
+        Ok(Self::Method {
+            block_reference,
+            request: QueryRequest::ViewAccessKeyList {
+                account_id: self.account_id,
+            },
+        })
+    }
+
+    fn from_response(resp: <Self::Method as RpcMethod>::Response) -> Result<Self::Output> {
+        match resp.kind {
+            QueryResponseKind::AccessKeyList(list) => Ok(list),
+            _ => Err(Error::UnexpectedQueryResponseKind(resp.kind)),
+        }
+    }
+
+    fn from_error(err: JsonRpcError<<Self::Method as RpcMethod>::Error>) -> Error {
+        err.into()
+    }
+}
