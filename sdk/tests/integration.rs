@@ -11,9 +11,6 @@ use near_primitives::views::{AccessKeyList, AccessKeyPermissionView};
 async fn setup_sandbox() -> anyhow::Result<(Worker<Sandbox>, Contract, Account)> {
     let worker = near_workspaces::sandbox().await?;
 
-    // TODO: Replace with the actual path to your NEP-141 WASM file.
-    // You might need to compile it or place a pre-compiled version in the project.
-    // For example, place it in `sdk/tests/res/nep141.wasm`.
     let wasm_path = "tests/res/nep141.wasm"; 
     let wasm = std::fs::read(wasm_path).map_err(|e| 
         anyhow::anyhow!("Failed to read WASM file at {}: {}. Please ensure the file exists and the path is correct.", wasm_path, e)
