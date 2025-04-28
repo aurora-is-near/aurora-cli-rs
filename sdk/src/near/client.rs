@@ -32,7 +32,6 @@ use super::operations::DEFAULT_PRIORITY_FEE;
 use super::Result;
 
 pub(crate) struct Client {
-    address: String,
     client: JsonRpcClient,
 
     pub(crate) access_key_nonces: RwLock<HashMap<(AccountId, near_crypto::PublicKey), AtomicU64>>,
@@ -49,7 +48,6 @@ impl Client {
 
         Ok(Self {
             client,
-            address: addr.into(),
             access_key_nonces: RwLock::new(HashMap::new()),
         })
     }
@@ -151,10 +149,7 @@ impl Client {
         receiver_id: &AccountId,
         actions: Vec<Action>,
     ) -> Result<FinalExecutionOutcomeView> {
-        let cache_key = (
-            signer.account_id.clone(),
-            signer.secret_key.public_key().into(),
-        );
+        let cache_key = (signer.account_id.clone(), signer.secret_key.public_key());
 
         let (block_hash, nonce) = self.fetch_tx_nonce(&cache_key).await?;
         send_tx(
@@ -179,10 +174,7 @@ impl Client {
         receiver_id: &AccountId,
         actions: Vec<Action>,
     ) -> Result<CryptoHash> {
-        let cache_key = (
-            signer.account_id.clone(),
-            signer.secret_key.public_key().into(),
-        );
+        let cache_key = (signer.account_id.clone(), signer.secret_key.public_key());
         let (block_hash, nonce) = self.fetch_tx_nonce(&cache_key).await?;
 
         self.query(RpcBroadcastTxAsyncRequest {

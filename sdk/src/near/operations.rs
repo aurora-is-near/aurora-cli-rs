@@ -112,8 +112,8 @@ impl<'a> Transaction<'a> {
         if let Ok(actions) = &mut self.actions {
             actions.push(
                 AddKeyAction {
-                    public_key: pk.into(),
-                    access_key: ak.into(),
+                    public_key: pk,
+                    access_key: ak,
                 }
                 .into(),
             );

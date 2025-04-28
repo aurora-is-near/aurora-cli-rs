@@ -100,11 +100,6 @@ pub struct ViewAccount {
 
 pub struct ViewBlock;
 
-pub struct ViewState {
-    account_id: AccountId,
-    prefix: Option<Vec<u8>>,
-}
-
 pub struct ViewAccessKey {
     pub(crate) account_id: AccountId,
     pub(crate) public_key: PublicKey,
@@ -239,7 +234,7 @@ impl ProcessQuery for ViewAccessKey {
             block_reference,
             request: QueryRequest::ViewAccessKey {
                 account_id: self.account_id,
-                public_key: self.public_key.into(),
+                public_key: self.public_key,
             },
         })
     }
