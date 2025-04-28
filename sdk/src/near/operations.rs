@@ -210,12 +210,19 @@ impl<'a> Transaction<'a> {
         self
     }
 
+    /// Executes the transaction, sending all queued actions to the network.
+    ///
+    /// Waits for the transaction to be finalized and returns the final outcome.
     pub async fn transact(self) -> Result<FinalExecutionOutcomeView> {
         self.client
             .send_batch_tx(&self.signer, &self.receiver_id, self.actions?)
             .await
     }
 
+    /// Executes the transaction asynchronously.
+    ///
+    /// Sends all queued actions to the network and returns immediately with the transaction hash.
+    /// It does not wait for the transaction to be finalized.
     pub async fn transact_async(self) -> Result<CryptoHash> {
         self.client
             .send_batch_tx_async(&self.signer, &self.receiver_id, self.actions?)
@@ -293,6 +300,9 @@ impl<'a> CallTransaction<'a> {
         self
     }
 
+    /// Executes the function call transaction.
+    ///
+    /// Waits for the transaction to be finalized and returns the final outcome.
     pub async fn transact(self) -> Result<FinalExecutionOutcomeView> {
         self.client
             .call(
@@ -306,6 +316,10 @@ impl<'a> CallTransaction<'a> {
             .await
     }
 
+    /// Executes the function call transaction asynchronously.
+    ///
+    /// Sends the transaction to the network and returns immediately with the transaction hash.
+    /// It does not wait for the transaction to be finalized.
     pub async fn transact_async(self) -> Result<CryptoHash> {
         self.client
             .send_batch_tx_async(
