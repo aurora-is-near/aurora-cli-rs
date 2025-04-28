@@ -25,7 +25,7 @@ use near_primitives::{
     views::{AccessKeyView, BlockView, FinalExecutionOutcomeView, QueryRequest},
 };
 use near_token::NearToken;
-use tokio::sync::RwLock;
+use tokio::sync::Mutex;
 
 use super::error::Error;
 use super::operations::DEFAULT_PRIORITY_FEE;
@@ -34,7 +34,7 @@ use super::Result;
 pub(crate) struct Client {
     client: JsonRpcClient,
 
-    pub(crate) access_key_nonces: RwLock<HashMap<(AccountId, near_crypto::PublicKey), AtomicU64>>,
+    pub(crate) access_key_nonces: Mutex<HashMap<(AccountId, near_crypto::PublicKey), AtomicU64>>,
 }
 
 impl Client {
@@ -48,7 +48,7 @@ impl Client {
 
         Ok(Self {
             client,
-            access_key_nonces: RwLock::new(HashMap::new()),
+            access_key_nonces: Mutex::new(HashMap::new()),
         })
     }
 
@@ -90,18 +90,16 @@ impl Client {
         &self,
         cache_key: &(AccountId, near_crypto::PublicKey),
     ) -> Result<(CryptoHash, Nonce)> {
-        let nonces = self.access_key_nonces.read().await;
+        let mut nonces = self.access_key_nonces.lock().await;
+
         if let Some(nonce) = nonces.get(cache_key) {
             let nonce = nonce.fetch_add(1, Ordering::SeqCst);
-            drop(nonces);
 
             // Fetch latest block_hash since the previous one is now invalid for new transactions:
             let block = self.view_block(Some(Finality::Final.into())).await?;
             let block_hash = block.header.hash;
             Ok((block_hash, nonce + 1))
         } else {
-            drop(nonces);
-
             let (account_id, public_key) = cache_key;
             let (access_key, block_hash) = self
                 .access_key(account_id.clone(), public_key.clone())
@@ -109,16 +107,13 @@ impl Client {
 
             // case where multiple writers end up at the same lock acquisition point and tries
             // to overwrite the cached value that a previous writer already wrote.
-            let nonce = self
-                .access_key_nonces
-                .write()
-                .await
+            let nonce = nonces
                 .entry(cache_key.clone())
-                .or_insert_with(|| AtomicU64::new(access_key.nonce + 1))
-                .fetch_max(access_key.nonce + 1, Ordering::SeqCst)
-                .max(access_key.nonce + 1);
+                .or_insert_with(|| AtomicU64::new(access_key.nonce))
+                .fetch_add(1, Ordering::SeqCst);
+            drop(nonces);
 
-            Ok((block_hash, nonce))
+            Ok((block_hash, nonce + 1))
         }
     }
 
@@ -235,7 +230,7 @@ async fn send_tx(
         },
     ))) = &result
     {
-        let mut nonces = client.access_key_nonces.write().await;
+        let mut nonces = client.access_key_nonces.lock().await;
         nonces.remove(cache_key);
     }
 
