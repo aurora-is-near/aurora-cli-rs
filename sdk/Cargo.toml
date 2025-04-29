@@ -5,19 +5,18 @@ edition = "2021"
 
 [dependencies]
 aurora-engine-types.workspace = true
-anyhow.workspace = true
 near-crypto.workspace = true
 borsh.workspace = true
 near-token.workspace = true
 near-primitives.workspace = true
-hex.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-serde = "1"
-serde_json = "1"
+serde.workspace = true
+serde_json.workspace = true
 near-jsonrpc-client.workspace = true
 near-jsonrpc-primitives.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-near-workspaces = { workspace = true }
+near-workspaces.workspace = true
+anyhow.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

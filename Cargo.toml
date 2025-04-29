@@ -1,28 +1,11 @@
-[package]
-name = "aurora-cli-rs"
-version = "0.1.0"
-authors = ["Aurora Labs <hello@aurora.dev>"]
-edition = "2021"
-rust-version = "1.80.0"
-homepage = "https://github.com/aurora-is-near/aurora-cli-rs"
-repository = "https://github.com/aurora-is-near/aurora-cli-rs"
-description = "Aurora CLI is a command line interface to bootstrap Aurora engine"
-readme = "README.md"
+[workspace]
+resolver = "2"
+members = [
+    "cli",
+    "sdk"
+]
 
-[lib]
-name = "aurora_cli"
-path = "src/lib.rs"
-
-[[bin]]
-name = "aurora-cli"
-path = "src/main.rs"
-
-[features]
-default = ["simple"]
-simple = ["toml"]
-advanced = ["near-chain-configs"]
-
-[dependencies]
+[workspace.dependencies]
 anyhow = "1"
 aurora-engine-precompiles = { version = "1", features = ["std"] }
 aurora-engine-sdk = { version = "1", features = ["std"] }
@@ -30,24 +13,16 @@ aurora-engine-transactions = { version = "1", features = ["std"] }
 aurora-engine-types = { version = "1", features = ["std", "impl-serde"] }
 borsh = "1"
 bs58 = "0.5"
-clap = { version = "4", features = ["derive"] }
-ethabi = "18"
-hex = "0.4"
 libsecp256k1 = { version = "0.7", features = ["std"] }
-near-chain-configs = { version = "0.29", optional = true }
+near-chain-configs = "0.29"
 near-crypto = "0.29"
+near-token = { version = "0.3", features = ["borsh", "serde"] }
 near-jsonrpc-client = "0.16"
 near-jsonrpc-primitives = "0.29"
 near-primitives = "0.29"
+near-workspaces = "0.18"
 reqwest = { version = "0.12", features = ["json"] }
-rand = "0.8"
-rlp = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = { version = "0.8", optional = true }
-shadow-rs = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
-
-[build-dependencies]
-shadow-rs = "1"
