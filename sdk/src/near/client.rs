@@ -1,9 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::Debug,
-    sync::atomic::{AtomicU64, Ordering},
-    vec,
-};
+use std::{collections::HashMap, fmt::Debug, vec};
 
 use aurora_engine_types::types::NearGas;
 use near_crypto::{InMemorySigner, Signer};
@@ -34,7 +29,7 @@ use super::Result;
 pub(crate) struct Client {
     client: JsonRpcClient,
 
-    pub(crate) access_key_nonces: Mutex<HashMap<(AccountId, near_crypto::PublicKey), AtomicU64>>,
+    pub(crate) access_key_nonces: Mutex<HashMap<(AccountId, near_crypto::PublicKey), u64>>,
 }
 
 impl Client {
@@ -92,28 +87,29 @@ impl Client {
     ) -> Result<(CryptoHash, Nonce)> {
         let mut nonces = self.access_key_nonces.lock().await;
 
-        if let Some(nonce) = nonces.get(cache_key) {
-            let nonce = nonce.fetch_add(1, Ordering::SeqCst);
+        if let Some(next_nonce_ref) = nonces.get_mut(cache_key) {
+            let current_nonce = *next_nonce_ref;
+            *next_nonce_ref += 1;
 
-            // Fetch latest block_hash since the previous one is now invalid for new transactions:
+            // Fetch latest block_hash since the previous one is probably invalid for a new transaction
             let block = self.view_block(Some(Finality::Final.into())).await?;
             let block_hash = block.header.hash;
-            Ok((block_hash, nonce + 1))
+            Ok((block_hash, current_nonce))
         } else {
             let (account_id, public_key) = cache_key;
             let (access_key, block_hash) = self
                 .access_key(account_id.clone(), public_key.clone())
                 .await?;
 
-            // case where multiple writers end up at the same lock acquisition point and tries
-            // to overwrite the cached value that a previous writer already wrote.
-            let nonce = nonces
-                .entry(cache_key.clone())
-                .or_insert_with(|| AtomicU64::new(access_key.nonce))
-                .fetch_add(1, Ordering::SeqCst);
+            // The nonce from the access key is the last used nonce.
+            // The nonce for the current transaction should be last_used_nonce + 1.
+            let current_nonce = access_key.nonce + 1;
+
+            // Store the nonce for the *next* transaction in the cache.
+            nonces.insert(cache_key.clone(), current_nonce + 1);
             drop(nonces);
 
-            Ok((block_hash, nonce + 1))
+            Ok((block_hash, current_nonce))
         }
     }
 
