@@ -6,6 +6,8 @@ use shadow_rs::shadow;
 use std::str::FromStr;
 use std::sync::LazyLock;
 
+use crate::utils::near_to_yocto;
+
 pub mod command;
 
 static VERSION: LazyLock<String> = LazyLock::new(|| {
@@ -175,6 +177,9 @@ pub enum Command {
         /// Attached value in EVM transaction
         #[arg(long)]
         value: Option<u128>,
+        /// From `account_id`
+        #[arg(long, value_parser = parse_account_id)]
+        from: Option<AccountId>,
     },
     /// Call a view method of the smart contract
     ViewCall {
@@ -395,6 +400,16 @@ pub enum Command {
         #[arg(long, default_value_t = command::WaitUntil::Final)]
         wait_until: command::WaitUntil,
     },
+
+    /// Add relayer
+    AddRelayer {
+        #[arg(long)]
+        deposit: f64,
+        #[arg(long)]
+        full_access_pub_key: near_crypto::PublicKey,
+        #[arg(long)]
+        function_call_pub_key: near_crypto::PublicKey,
+    },
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -492,7 +507,8 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             address,
             input,
             value,
-        } => command::call(context, address, input, value).await?,
+            from,
+        } => command::call(context, address, input, value, from).await?,
         Command::ViewCall {
             address,
             function,
@@ -662,6 +678,19 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         }
         Command::TransactionStatus { hash, wait_until } => {
             command::transaction_status(context, hash, wait_until).await?;
+        }
+        Command::AddRelayer {
+            deposit,
+            full_access_pub_key,
+            function_call_pub_key,
+        } => {
+            command::add_relayer(
+                context,
+                near_to_yocto(deposit),
+                full_access_pub_key,
+                function_call_pub_key,
+            )
+            .await?;
         }
     }
 

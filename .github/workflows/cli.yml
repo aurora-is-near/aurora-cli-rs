@@ -10,7 +10,9 @@ on:
 jobs:
   shell_tests:
     name: Tests ${{ matrix.interface }} CLI
-    runs-on: [ self-hosted, heavy ]
+    runs-on: selfhosted-heavy
+    container:
+      image: rust:latest
     strategy:
       matrix:
         interface: [ Advanced, Simple, Silo ]
@@ -27,10 +29,10 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
-      - name: Install python-venv
+      - name: Install dependencies
         run: |
           apt update
-          apt -y install python3-venv
+          apt install -y jq python3-venv
       - name: Install aurora-cli
         uses: actions-rs/cargo@v1
         with:
