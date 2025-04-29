@@ -1,37 +1,29 @@
-use aurora_sdk_rs::read::ReadClient;
-use aurora_sdk_rs::ClientBuilder;
+use aurora_sdk_rs::near;
+use near_crypto::InMemorySigner;
 
 #[tokio::main]
-async fn main() {
-    let client = ClientBuilder::new()
-        .with_engine_account_id("aurora")
-        .build();
-    let response = client.get_chain_id().await.unwrap();
-    println!("chain id: {:?}", response);
+async fn main() -> anyhow::Result<()> {
+    let signer = signer()?;
+    let workspace = near::workspace::Workspace::new("some-addr", None, signer.clone())?;
 
-    let owner = client.get_owner().await.unwrap();
-    println!("owner: {:?}", owner);
+    let hash = workspace
+        .call(&"c.aurora".parse()?, "")
+        .signer(signer.clone())
+        .transact_async()
+        .await?;
 
-    let version = client.get_version().await.unwrap();
-    println!("version: {:?}", version);
+    println!("Transaction hash: {hash:?}");
 
-    let nonce = client
-        .get_nonce("0xdC2a061b5c68F97F96a2064792DeAE0F79c78C40")
-        .await
-        .unwrap();
-    println!("nonce: {:?}", nonce);
+    Ok(())
+}
 
-    let response = client
-        .get_transaction_status(
-            "3dbhsJA7eDGFPsQRqWk77DaCCS48j29kdjXpk8h2nvuy"
-                .parse()
-                .unwrap(),
-        )
-        .await
-        .unwrap();
-
-    println!(
-        "response: {}",
-        serde_json::to_string_pretty(&response).unwrap()
-    );
+fn signer() -> anyhow::Result<InMemorySigner> {
+    std::env::var("NEAR_KEY_PATH")
+        .ok()
+        .as_ref()
+        .map(std::path::Path::new)
+        .ok_or_else(|| {
+            anyhow::anyhow!("Path to the key file must be provided to use this functionality")
+        })
+        .and_then(|path| InMemorySigner::from_file(path).map_err(Into::into))
 }

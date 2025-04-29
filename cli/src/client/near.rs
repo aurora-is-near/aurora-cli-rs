@@ -491,4 +491,14 @@ impl NearClient {
         let rsp = self.client.call(req).await?;
         Ok(rsp)
     }
+
+    async fn near_broadcast_tx(
+        &self,
+        actions: Vec<Action>,
+        nonce_override: Option<u64>,
+    ) -> Result<FinalExecutionOutcomeView, anyhow::Error> {
+        let signer = self.signer()?;
+        self.near_broadcast_tx_from(actions, signer.account_id.clone(), nonce_override)
+            .await
+    }
 }

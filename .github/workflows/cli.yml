@@ -16,13 +16,13 @@ jobs:
         interface: [ Advanced, Simple, Silo ]
         include:
           - interface: Advanced
-            args: --path . --no-default-features -F advanced
+            args: --path ./cli --no-default-features -F advanced
             script: scripts/advanced.sh
           - interface: Simple
-            args: --path .
+            args: --path ./cli
             script: scripts/simple.sh
           - interface: Silo
-            args: --path .
+            args: --path ./cli
             script: scripts/simple-silo.sh
     steps:
       - name: Checkout sources

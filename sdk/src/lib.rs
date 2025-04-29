@@ -1,6 +1,3 @@
-pub use client::ClientBuilder;
-
-pub mod client;
-pub mod read;
+pub mod aurora;
+pub mod near;
 pub mod utils;
-pub mod write;

@@ -1,0 +1,52 @@
+use std::fmt::Debug;
+
+use near_jsonrpc_client::errors::JsonRpcError;
+use near_jsonrpc_client::methods;
+use near_jsonrpc_primitives::types::query::QueryResponseKind;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("RPC error querying block: {0}")]
+    RpcBlockError(#[from] JsonRpcError<methods::block::RpcBlockError>),
+
+    #[error("RPC error querying access key: {0}")]
+    RpcQueryError(#[from] JsonRpcError<methods::query::RpcQueryError>),
+
+    #[error("RPC error broadcasting transaction: {0}")]
+    RpcBroadcastTxError(#[from] JsonRpcError<methods::tx::RpcTransactionError>),
+
+    #[error("RPC error broadcasting transaction async: {0}")]
+    RpcBroadcastTxAsyncError(
+        #[from] JsonRpcError<methods::broadcast_tx_async::RpcBroadcastTxAsyncError>,
+    ),
+
+    #[error("API Key error: {0}")]
+    ApiKeyError(#[from] near_jsonrpc_client::header::InvalidHeaderValue),
+
+    #[error("Data conversion error: {0}")]
+    DataConversionError(#[from] DataConversionError),
+
+    #[error("Unexpected query response kind: {0:?}")]
+    UnexpectedQueryResponseKind(QueryResponseKind),
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        Error::DataConversionError(DataConversionError::Json(err))
+    }
+}
+
+impl From<borsh::io::Error> for Error {
+    fn from(err: borsh::io::Error) -> Self {
+        Error::DataConversionError(DataConversionError::Borsh(err))
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum DataConversionError {
+    #[error(transparent)]
+    Borsh(#[from] borsh::io::Error),
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+}
