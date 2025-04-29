@@ -19,4 +19,3 @@ thiserror.workspace = true
 [dev-dependencies]
 near-workspaces.workspace = true
 anyhow.workspace = true
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
