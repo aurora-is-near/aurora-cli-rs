@@ -26,9 +26,9 @@ fn signer() -> anyhow::Result<InMemorySigner> {
             anyhow::anyhow!("Path to the key file must be provided to use this functionality")
         })
         .and_then(|path| InMemorySigner::from_file(path).map_err(Into::into))?;
-    
+
     match signer {
         Signer::Empty(_) => panic!("Signer must not be empty"),
-        Signer::InMemory(signer) => Ok(signer) 
+        Signer::InMemory(signer) => Ok(signer),
     }
 }

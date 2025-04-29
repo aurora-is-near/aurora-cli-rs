@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
 use aurora_engine_types::types::NearGas;
-use near_crypto::Signer;
 use aurora_sdk_rs::near::operations::Function;
 use aurora_sdk_rs::near::workspace::Workspace;
+use near_crypto::Signer;
 use near_primitives::views::{AccessKeyList, AccessKeyPermissionView};
 use near_workspaces::network::Sandbox;
 use near_workspaces::types::NearToken;
@@ -379,9 +379,9 @@ fn signer_from_secret(
         account_id.to_owned(),
         near_crypto::SecretKey::from_str(&sk.to_string()).unwrap(),
     );
-    
+
     match signer {
         Signer::Empty(_) => panic!("Signer should not be empty"),
-        Signer::InMemory(signer) => signer 
+        Signer::InMemory(signer) => signer,
     }
 }
