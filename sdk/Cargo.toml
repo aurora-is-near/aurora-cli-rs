@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aurora-engine-types.workspace = true
+anyhow.workspace = true
 near-crypto.workspace = true
 borsh.workspace = true
 near-token.workspace = true
@@ -18,4 +18,3 @@ thiserror.workspace = true
 
 [dev-dependencies]
 near-workspaces.workspace = true
-anyhow.workspace = true

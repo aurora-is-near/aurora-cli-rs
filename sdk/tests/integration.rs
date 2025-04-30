@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use aurora_engine_types::types::NearGas;
 use aurora_sdk_rs::near::operations::Function;
 use aurora_sdk_rs::near::workspace::Workspace;
 use near_crypto::Signer;
@@ -320,7 +319,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
     // --- Define Transfer Details ---
     let transfer_amount = NearToken::from_yoctonear(50_000_000_000_000_000_000_000u128); // 50 tokens
     let one_yocto = NearToken::from_yoctonear(1);
-    const TGAS: u64 = 1_000_000_000_000; // 1 TGas
+    const TGAS: u64 = 10u64.pow(12); // 1 TGas
 
     // --- Build and Send Batch Transaction ---
     // The batch targets the contract where the actions (calls) will happen.
@@ -335,7 +334,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                     "registration_only": true
                 }))
                 .deposit(minimum_deposit) // Attach NEAR deposit for storage cost
-                .gas(NearGas::new(10 * TGAS)), // Use new()
+                .gas(10 * TGAS), // Use new()
         )
         // Action 2: Call ft_transfer from owner to receiver
         .call(
@@ -345,7 +344,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                     "amount": transfer_amount.as_yoctonear().to_string()
                 }))
                 .deposit(one_yocto) // Attach 1 yoctoNEAR for the transfer standard
-                .gas(NearGas::new(10 * TGAS)), // Use new()
+                .gas(10 * TGAS),
         )
         .transact()
         .await?;

@@ -4,5 +4,5 @@ pub mod operations;
 pub mod query;
 pub mod workspace;
 
-/// A type alias for `Result<T, Error>`.
-pub type Result<T> = std::result::Result<T, error::Error>;
+/// A type alias for `anyhow::Result<T, Error>`.
+pub type Result<T> = anyhow::Result<T, error::Error>;

@@ -1,4 +1,3 @@
-use aurora_engine_types::types::NearGas;
 use near_crypto::PublicKey;
 use near_primitives::account::AccessKey;
 use near_primitives::action::{
@@ -7,14 +6,14 @@ use near_primitives::action::{
 };
 use near_primitives::hash::CryptoHash;
 use near_primitives::transaction::Action;
-use near_primitives::types::AccountId;
+use near_primitives::types::{AccountId, Gas};
 use near_primitives::views::FinalExecutionOutcomeView;
 use near_token::NearToken;
 
 const ONE_TERA_GAS: u64 = 10u64.pow(12);
-const MAX_GAS: NearGas = NearGas::new(300 * ONE_TERA_GAS);
+const MAX_GAS: Gas = 300 * ONE_TERA_GAS;
 
-pub(crate) const DEFAULT_CALL_FN_GAS: NearGas = NearGas::new(10 * ONE_TERA_GAS);
+pub(crate) const DEFAULT_CALL_FN_GAS: Gas = 10 * ONE_TERA_GAS;
 pub(crate) const DEFAULT_CALL_DEPOSIT: NearToken = NearToken::from_near(0);
 pub(crate) const DEFAULT_PRIORITY_FEE: u64 = 0;
 
@@ -25,7 +24,7 @@ pub struct Function {
     pub(crate) name: String,
     pub(crate) args: Result<Vec<u8>>,
     pub(crate) deposit: NearToken,
-    pub(crate) gas: NearGas,
+    pub(crate) gas: Gas,
 }
 
 impl Function {
@@ -74,7 +73,7 @@ impl Function {
     }
 
     /// Specify the amount of gas to be used.
-    pub fn gas(mut self, gas: NearGas) -> Self {
+    pub fn gas(mut self, gas: Gas) -> Self {
         self.gas = gas;
         self
     }
@@ -137,7 +136,7 @@ impl<'a> Transaction<'a> {
                 method_name: function.name.to_string(),
                 args,
                 deposit: function.deposit.as_yoctonear(),
-                gas: function.gas.as_u64(),
+                gas: function.gas,
             })));
         }
 
@@ -285,7 +284,7 @@ impl<'a> CallTransaction<'a> {
     }
 
     /// Specify the amount of gas to be used where `gas` is the amount of gas in yocto near.
-    pub fn gas(mut self, gas: NearGas) -> Self {
+    pub fn gas(mut self, gas: Gas) -> Self {
         self.function = self.function.gas(gas);
         self
     }
@@ -328,7 +327,7 @@ impl<'a> CallTransaction<'a> {
                 vec![FunctionCallAction {
                     args: self.function.args?,
                     method_name: self.function.name,
-                    gas: self.function.gas.as_u64(),
+                    gas: self.function.gas,
                     deposit: self.function.deposit.as_yoctonear(),
                 }
                 .into()],

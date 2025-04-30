@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt::Debug, vec};
 
-use aurora_engine_types::types::NearGas;
 use near_crypto::{InMemorySigner, Signer};
 use near_jsonrpc_client::{
     errors::{JsonRpcError, JsonRpcServerError},
@@ -16,7 +15,7 @@ use near_primitives::{
     errors::InvalidTxError,
     hash::CryptoHash,
     transaction::SignedTransaction,
-    types::{AccountId, BlockReference, Finality, Nonce},
+    types::{AccountId, BlockReference, Finality, Gas, Nonce},
     views::{AccessKeyView, BlockView, FinalExecutionOutcomeView, QueryRequest},
 };
 use near_token::NearToken;
@@ -189,7 +188,7 @@ impl Client {
         contract_id: &AccountId,
         method_name: String,
         args: Vec<u8>,
-        gas: NearGas,
+        gas: Gas,
         deposit: NearToken,
     ) -> Result<FinalExecutionOutcomeView> {
         self.send_tx(
@@ -198,7 +197,7 @@ impl Client {
             FunctionCallAction {
                 args,
                 method_name,
-                gas: gas.as_u64(),
+                gas,
                 deposit: deposit.as_yoctonear(),
             }
             .into(),

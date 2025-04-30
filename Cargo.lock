@@ -291,7 +291,6 @@ name = "aurora-sdk-rs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "aurora-engine-types",
  "borsh 1.5.7",
  "near-crypto",
  "near-jsonrpc-client",
