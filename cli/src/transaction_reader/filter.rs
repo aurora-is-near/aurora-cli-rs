@@ -36,7 +36,7 @@ impl Filter for MinNearGasUsed {
     fn pass(&self, data: &TxData) -> bool {
         data.gas_profile
             .get("TOTAL")
-            .map_or(false, |total| total >= &self.0)
+            .is_some_and(|total| total >= &self.0)
     }
 }
 
@@ -46,7 +46,7 @@ impl Filter for MaxNearGasUsed {
     fn pass(&self, data: &TxData) -> bool {
         data.gas_profile
             .get("TOTAL")
-            .map_or(false, |total| total <= &self.0)
+            .is_some_and(|total| total <= &self.0)
     }
 }
 
@@ -89,10 +89,10 @@ impl Filter for GeneralGasFilter {
             _ => return false,
         };
 
-        self.min_near.as_ref().map_or(true, |g| near_gas_used >= g)
-            && self.min_evm.as_ref().map_or(true, |g| evm_gas_used >= g)
-            && self.max_near.as_ref().map_or(true, |g| near_gas_used <= g)
-            && self.max_evm.as_ref().map_or(true, |g| evm_gas_used <= g)
+        self.min_near.as_ref().is_none_or(|g| near_gas_used >= g)
+            && self.min_evm.as_ref().is_none_or(|g| evm_gas_used >= g)
+            && self.max_near.as_ref().is_none_or(|g| near_gas_used <= g)
+            && self.max_evm.as_ref().is_none_or(|g| evm_gas_used <= g)
     }
 }
 
@@ -100,14 +100,11 @@ pub struct EthTxTo(pub Address);
 
 impl Filter for EthTxTo {
     fn pass(&self, data: &TxData) -> bool {
-        data.eth_tx
-            .as_ref()
-            .and_then(|eth_tx| match eth_tx {
-                EthTransactionKind::Legacy(tx) => tx.transaction.to.as_ref(),
-                EthTransactionKind::Eip2930(t) => t.transaction.to.as_ref(),
-                EthTransactionKind::Eip1559(t) => t.transaction.to.as_ref(),
-            })
-            .map_or(false, |a| a == &self.0)
+        data.eth_tx.as_ref().and_then(|eth_tx| match eth_tx {
+            EthTransactionKind::Legacy(tx) => tx.transaction.to.as_ref(),
+            EthTransactionKind::Eip2930(t) => t.transaction.to.as_ref(),
+            EthTransactionKind::Eip1559(t) => t.transaction.to.as_ref(),
+        }) == Some(&self.0)
     }
 }
 

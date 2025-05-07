@@ -1,6 +1,6 @@
 #[cfg(feature = "simple")]
 use aurora_engine_types::types::Address;
-use aurora_engine_types::{types::Wei, U256};
+use aurora_engine_types::{U256, types::Wei};
 use clap::Subcommand;
 
 use crate::{client::AuroraClient, config::Config, utils};

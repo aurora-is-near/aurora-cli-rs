@@ -1,5 +1,5 @@
 use aurora_engine_transactions::EthTransactionKind;
-use aurora_engine_types::{types::Address, H256};
+use aurora_engine_types::{H256, types::Address};
 
 pub enum EthMethod {
     GetChainId,

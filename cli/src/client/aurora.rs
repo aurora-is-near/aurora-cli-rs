@@ -1,8 +1,8 @@
-use aurora_engine_transactions::{legacy::TransactionLegacy, EthTransactionKind};
+use aurora_engine_transactions::{EthTransactionKind, legacy::TransactionLegacy};
 use aurora_engine_types::{
+    H256, U256,
     account_id::AccountId,
     types::{Address, Wei},
-    H256, U256,
 };
 use libsecp256k1::SecretKey;
 use serde::{Deserialize, Serialize};
@@ -35,9 +35,9 @@ impl AuroraClient {
         }
     }
 
-    pub async fn request<'a, S: Serialize + Send + Sync>(
+    pub async fn request<S: Serialize + Send + Sync>(
         &self,
-        request: &Web3JsonRequest<'a, S>,
+        request: &Web3JsonRequest<'_, S>,
     ) -> anyhow::Result<Web3JsonResponse<Value>> {
         let resp = self.inner.post(&self.url).json(request).send().await?;
         // TODO: parse information from headers too (eg x-request-id)
@@ -134,7 +134,7 @@ impl AuroraClient {
                     break;
                 }
                 Err(e) => match e.downcast_ref::<ClientError>() {
-                    Some(ClientError::AuroraTransactionNotFound(_)) => continue,
+                    Some(ClientError::AuroraTransactionNotFound(_)) => {}
                     _ => anyhow::bail!(e),
                 },
             }

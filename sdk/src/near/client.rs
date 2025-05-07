@@ -186,6 +186,7 @@ impl Client {
         .map_err(Into::into)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn call(
         &self,
         signer: &InMemorySigner,
