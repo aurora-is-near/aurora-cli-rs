@@ -1,5 +1,14 @@
+[workspace.package]
+version = "0.1.0"
+authors = ["Aurora Labs <hello@aurora.dev>"]
+edition = "2024"
+rust-version = "1.86.0"
+homepage = "https://github.com/aurora-is-near/aurora-cli-rs"
+repository = "https://github.com/aurora-is-near/aurora-cli-rs"
+readme = "README.md"
+
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "cli",
     "sdk"
@@ -13,16 +22,24 @@ aurora-engine-transactions = { version = "1", features = ["std"] }
 aurora-engine-types = { version = "1", features = ["std", "impl-serde"] }
 borsh = "1"
 bs58 = "0.5"
-libsecp256k1 = { version = "0.7", features = ["std"] }
+clap = "4"
+ethabi = "18"
+hex = "0.4"
+libsecp256k1 = "0.7"
 near-chain-configs = "0.29"
 near-crypto = "0.29"
+near-gas = "0.3"
 near-token = { version = "0.3", features = ["borsh", "serde"] }
 near-jsonrpc-client = "0.16"
 near-jsonrpc-primitives = "0.29"
 near-primitives = "0.29"
-near-workspaces = "0.18"
+near-workspaces = "0.19"
+rand = "0.8"
 reqwest = { version = "0.12", features = ["json"] }
+rlp = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+shadow-rs = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
+toml = "0.8"

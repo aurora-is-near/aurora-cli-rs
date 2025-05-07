@@ -13,7 +13,7 @@ async fn setup_sandbox() -> anyhow::Result<(Worker<Sandbox>, Contract, Account)>
 
     let wasm_path = "tests/res/nep141.wasm";
     let wasm = std::fs::read(wasm_path).map_err(|e|
-        anyhow::anyhow!("Failed to read WASM file at {}: {}. Please ensure the file exists and the path is correct.", wasm_path, e)
+        anyhow::anyhow!("Failed to read the WASM file at {wasm_path}: {e}. Please ensure the file exists and the path is correct.")
     )?;
 
     let contract = worker.dev_deploy(&wasm).await?;
@@ -23,7 +23,7 @@ async fn setup_sandbox() -> anyhow::Result<(Worker<Sandbox>, Contract, Account)>
     // Adjust the method name ("new") and arguments based on your specific contract.
     let owner_account = worker.root_account()?;
     // Define total_supply using NearToken, then convert to string for JSON args
-    let total_supply = NearToken::from_yoctonear(1_000_000_000_000_000_000_000_000u128);
+    let total_supply = NearToken::from_near(1);
     let outcome = contract
         .call("new_default_meta") // Common init function, adjust if needed
         .args_json(serde_json::json!({
@@ -118,8 +118,8 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
     let minimum_deposit = NearToken::from_yoctonear(min_bound_u128);
 
     // Define amounts using NearToken
-    let initial_total_supply = NearToken::from_yoctonear(1_000_000_000_000_000_000_000_000u128);
-    let transfer_amount = NearToken::from_yoctonear(100_000_000_000_000_000_000_000u128);
+    let initial_total_supply = NearToken::from_near(1);
+    let transfer_amount = NearToken::from_millinear(10); // 0.1 NEAR
     let one_yocto = NearToken::from_yoctonear(1);
 
     // Register the receiver account by calling storage_deposit
@@ -128,9 +128,10 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
         .args_json(serde_json::json!({
             "account_id": receiver_account.id(),
             "registration_only": true
-        }))
+        }))?
         .deposit(minimum_deposit)
         .max_gas()
+        .priority_fee(100)
         .transact()
         .await?;
     storage_outcome.assert_success();
@@ -141,7 +142,7 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
         .args_json(serde_json::json!({
             "receiver_id": receiver_account.id(),
             "amount": transfer_amount.as_yoctonear().to_string()
-        }))
+        }))?
         .deposit(one_yocto)
         .max_gas()
         .transact()
@@ -154,7 +155,7 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": owner_account.id()
-        }))
+        }))?
         .await?;
     let owner_balance_str: String = serde_json::from_slice(&owner_balance_result.result)?;
     let owner_balance_u128 = owner_balance_str.parse::<u128>().map_err(|e| {
@@ -174,7 +175,7 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": receiver_account.id()
-        }))
+        }))?
         .await?;
     let receiver_balance_str: String = serde_json::from_slice(&receiver_balance_result.result)?;
     let receiver_balance_u128 = receiver_balance_str.parse::<u128>().map_err(|e| {
@@ -201,13 +202,13 @@ async fn test_ft_balance_of_sandbox() -> anyhow::Result<()> {
         signer_from_secret(root.id(), root.secret_key()),
     )?;
 
-    let expected_balance = NearToken::from_yoctonear(1_000_000_000_000_000_000_000_000u128);
+    let expected_balance = NearToken::from_near(1);
 
     let result = workspace
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": owner_account.id()
-        }))
+        }))?
         .await?;
 
     // Deserialize the balance string, parse to u128, then create NearToken
@@ -223,13 +224,13 @@ async fn test_ft_balance_of_sandbox() -> anyhow::Result<()> {
 
     assert_eq!(balance, expected_balance);
 
-    // Check balance of a different, empty account
+    // Check the balance of a different, empty account
     let other_account = worker.dev_create_account().await?;
     let result_other = workspace
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": other_account.id()
-        }))
+        }))?
         .await?;
     let balance_other_str: String = serde_json::from_slice(&result_other.result)?;
     let balance_other_u128 = balance_other_str.parse::<u128>().map_err(|e| {
@@ -317,7 +318,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
     let minimum_deposit = NearToken::from_yoctonear(min_bound_u128);
 
     // --- Define Transfer Details ---
-    let transfer_amount = NearToken::from_yoctonear(50_000_000_000_000_000_000_000u128); // 50 tokens
+    let transfer_amount = NearToken::from_millinear(5); // 0.05 NEAR
     let one_yocto = NearToken::from_yoctonear(1);
     const TGAS: u64 = 10u64.pow(12); // 1 TGas
 
@@ -332,7 +333,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                 .args_json(serde_json::json!({
                     "account_id": receiver_account.id(),
                     "registration_only": true
-                }))
+                }))?
                 .deposit(minimum_deposit) // Attach NEAR deposit for storage cost
                 .gas(10 * TGAS), // Use new()
         )
@@ -342,10 +343,11 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                 .args_json(serde_json::json!({
                     "receiver_id": receiver_account.id(),
                     "amount": transfer_amount.as_yoctonear().to_string()
-                }))
+                }))?
                 .deposit(one_yocto) // Attach 1 yoctoNEAR for the transfer standard
                 .gas(10 * TGAS),
         )
+        .priority_fee(1000)
         .transact()
         .await?;
 
@@ -356,7 +358,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": receiver_account.id()
-        }))
+        }))?
         .await?;
     let receiver_balance_str: String = serde_json::from_slice(&receiver_balance_result.result)?;
     let receiver_balance_u128 = receiver_balance_str.parse::<u128>()?;
@@ -364,7 +366,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
 
     assert_eq!(
         receiver_balance, transfer_amount,
-        "Receiver balance should match transferred amount after batch"
+        "Receiver balance should match the transferred amount after batch"
     );
 
     Ok(())

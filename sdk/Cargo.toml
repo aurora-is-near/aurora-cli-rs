@@ -1,12 +1,19 @@
 [package]
 name = "aurora-sdk-rs"
-version = "0.1.0"
-edition = "2021"
+description = "Aurora SDK that used in Aurora CLI"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
 
 [dependencies]
 anyhow.workspace = true
 near-crypto.workspace = true
 borsh.workspace = true
+near-gas.workspace = true
 near-token.workspace = true
 near-primitives.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

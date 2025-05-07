@@ -1,53 +1,50 @@
-use std::fmt::Debug;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
-use near_crypto::PublicKey;
-use near_jsonrpc_client::errors::JsonRpcError;
-use near_jsonrpc_client::methods;
-use near_jsonrpc_client::methods::query::RpcQueryRequest;
-use near_jsonrpc_client::methods::RpcMethod;
-use near_jsonrpc_primitives::types::query::QueryResponseKind;
-use near_primitives::account::AccessKey;
-use near_primitives::hash::CryptoHash;
-use near_primitives::types::AccountId;
-use near_primitives::types::BlockHeight;
-use near_primitives::types::BlockId;
-use near_primitives::types::BlockReference;
-use near_primitives::views::BlockView;
-use near_primitives::views::QueryRequest;
-
+use super::Result;
 use super::client::Client;
 use super::error::Error;
 use super::operations::Function;
-use super::Result;
+use near_crypto::PublicKey;
+use near_jsonrpc_client::{
+    errors::JsonRpcError, methods, methods::RpcMethod, methods::query::RpcQueryRequest,
+};
+use near_jsonrpc_primitives::types::query::QueryResponseKind;
+use near_primitives::{
+    account::AccessKey,
+    hash::CryptoHash,
+    types::{AccountId, BlockHeight, BlockId, BlockReference},
+    views::{BlockView, QueryRequest},
+};
 
-pub struct Query<'a, T> {
-    pub(crate) method: T,
+pub struct Query<'a, M> {
+    pub(crate) method: M,
     pub(crate) client: &'a Client,
-    pub(crate) block_ref: Option<BlockReference>,
+    pub(crate) block_ref: BlockReference,
 }
 
-impl<'a, T> Query<'a, T> {
-    pub(crate) fn new(client: &'a Client, method: T) -> Self {
+impl<'a, M> Query<'a, M> {
+    pub(crate) fn new(client: &'a Client, method: M) -> Self {
         Self {
             method,
             client,
-            block_ref: None,
+            block_ref: BlockReference::latest(),
         }
     }
 
+    #[must_use]
     pub fn block_height(mut self, height: BlockHeight) -> Self {
-        self.block_ref = Some(BlockId::Height(height).into());
+        self.block_ref = BlockId::Height(height).into();
         self
     }
 
+    #[must_use]
     pub fn block_hash(mut self, hash: CryptoHash) -> Self {
-        self.block_ref = Some(BlockId::Hash(near_primitives::hash::CryptoHash(hash.0)).into());
+        self.block_ref = BlockId::Hash(CryptoHash(hash.0)).into();
         self
     }
 }
 
-impl<'a, T, R> std::future::IntoFuture for Query<'a, T>
+impl<'a, T, R> IntoFuture for Query<'a, T>
 where
     T: ProcessQuery<Output = R> + Send + Sync + 'static,
     <T as ProcessQuery>::Method: RpcMethod + Debug + Send + Sync,
@@ -56,15 +53,13 @@ where
 {
     type Output = Result<R>;
 
-    type IntoFuture =
-        std::pin::Pin<Box<dyn std::future::Future<Output = Self::Output> + Send + 'a>>;
+    type IntoFuture = std::pin::Pin<Box<dyn Future<Output = Self::Output> + Send + 'a>>;
 
     fn into_future(self) -> Self::IntoFuture {
         Box::pin(async move {
-            let block_ref = self.block_ref.unwrap_or_else(BlockReference::latest);
             let response = self
                 .client
-                .query(&self.method.into_request(block_ref)?)
+                .query(&self.method.into_request(self.block_ref)?)
                 .await
                 .map_err(|e| T::from_error(e))?;
 
@@ -121,7 +116,7 @@ impl ProcessQuery for ViewFunction {
             request: QueryRequest::CallFunction {
                 account_id: self.account_id,
                 method_name: self.function.name,
-                args: self.function.args?.into(),
+                args: self.function.args.into(),
             },
         };
 
@@ -142,19 +137,33 @@ impl ProcessQuery for ViewFunction {
 
 // Specific builder methods attached to a ViewFunction.
 impl Query<'_, ViewFunction> {
+    #[must_use]
     pub fn args(mut self, args: Vec<u8>) -> Self {
         self.method.function = self.method.function.args(args);
         self
     }
 
-    pub fn args_json<U: serde::Serialize>(mut self, args: U) -> Self {
-        self.method.function = self.method.function.args_json(args);
-        self
+    /// Sets the arguments for the view function call using JSON serialization.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if the serialization of the arguments fails.
+    pub fn args_json<U: serde::Serialize>(mut self, args: U) -> Result<Self> {
+        self.method.function = self.method.function.args_json(args)?;
+        Ok(self)
     }
 
-    pub fn args_borsh<U: near_primitives::borsh::BorshSerialize>(mut self, args: U) -> Self {
-        self.method.function = self.method.function.args_borsh(args);
-        self
+    /// Sets the arguments for the view function call using Borsh serialization.
+    ///
+    /// # Errors
+    ///
+    /// This method will return an error if the serialization of the arguments fails.
+    pub fn args_borsh<U: near_primitives::borsh::BorshSerialize>(
+        mut self,
+        args: U,
+    ) -> Result<Self> {
+        self.method.function = self.method.function.args_borsh(args)?;
+        Ok(self)
     }
 }
 
@@ -226,7 +235,7 @@ impl ProcessQuery for ViewBlock {
 }
 
 impl ProcessQuery for ViewAccessKey {
-    type Method = methods::query::RpcQueryRequest;
+    type Method = RpcQueryRequest;
     type Output = AccessKey;
 
     fn into_request(self, block_reference: BlockReference) -> Result<Self::Method> {
@@ -252,7 +261,7 @@ impl ProcessQuery for ViewAccessKey {
 }
 
 impl ProcessQuery for ViewAccessKeyList {
-    type Method = methods::query::RpcQueryRequest;
+    type Method = RpcQueryRequest;
     type Output = near_primitives::views::AccessKeyList;
 
     fn into_request(self, block_reference: BlockReference) -> Result<Self::Method> {

@@ -1,10 +1,11 @@
 use near_crypto::{InMemorySigner, PublicKey};
+use near_jsonrpc_client::AsUrl;
 use near_primitives::types::AccountId;
 
+use super::Result;
 use super::client::Client;
 use super::operations::{CallTransaction, Function, Transaction};
 use super::query::{Query, ViewAccessKey, ViewAccessKeyList, ViewAccount, ViewFunction};
-use super::Result;
 
 /// Represents a connection to a NEAR network, allowing interaction with contracts
 /// and accounts. Provides methods for sending transactions and querying state.
@@ -25,8 +26,12 @@ impl Workspace {
     /// # Returns
     ///
     /// A `Result` containing the new `Workspace` instance or an `error::ApiKeyError` if the client creation fails.
-    pub fn new(addr: &str, api_key: Option<String>, signer: InMemorySigner) -> Result<Self> {
-        let client = Client::new(addr, api_key)?;
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if the URL is invalid or if the API key is invalid.
+    pub fn new<U: AsUrl>(url: U, api_key: Option<String>, signer: InMemorySigner) -> Result<Self> {
+        let client = Client::new(url, api_key)?;
         Ok(Self { client, signer })
     }
 
@@ -43,7 +48,7 @@ impl Workspace {
     /// # Returns
     ///
     /// A `CallTransaction` builder instance to configure and execute the call.
-    pub fn call(&self, contract_id: &AccountId, method: &str) -> CallTransaction {
+    pub fn call<M: Into<String>>(&self, contract_id: &AccountId, method: M) -> CallTransaction {
         CallTransaction::new(
             &self.client,
             contract_id.to_owned(),
@@ -108,25 +113,29 @@ impl Workspace {
     ///
     /// # Arguments
     ///
-    /// * `id` - The account ID that owns the access key.
-    /// * `pk` - The public key of the access key to view.
+    /// * `account_id` - The account ID that owns the access key.
+    /// * `public_key` - The public key of the access key to view.
     ///
     /// # Returns
     ///
     /// A `Query<'_, ViewAccessKey>` instance to execute the query.
-    pub fn view_access_key(&self, id: &AccountId, pk: &PublicKey) -> Query<'_, ViewAccessKey> {
+    pub fn view_access_key(
+        &self,
+        account_id: &AccountId,
+        public_key: &PublicKey,
+    ) -> Query<'_, ViewAccessKey> {
         Query::new(
             &self.client,
             ViewAccessKey {
-                account_id: id.clone(),
-                public_key: pk.clone(),
+                account_id: account_id.clone(),
+                public_key: public_key.clone(),
             },
         )
     }
 
     /// Creates a query builder to call a view-only function on a contract.
     ///
-    /// View functions do not modify state and do not require gas fees or signing.
+    /// View functions do not modify the state and do not require gas fees or signing.
     ///
     /// # Arguments
     ///
@@ -136,12 +145,16 @@ impl Workspace {
     /// # Returns
     ///
     /// A `Query<'_, ViewFunction>` instance to configure arguments and execute the view call.
-    pub fn view(&self, contract_id: &AccountId, method: &str) -> Query<'_, ViewFunction> {
+    pub fn view<M: Into<String>>(
+        &self,
+        contract_id: &AccountId,
+        method: M,
+    ) -> Query<'_, ViewFunction> {
         Query::new(
             &self.client,
             ViewFunction {
                 account_id: contract_id.to_owned(),
-                function: Function::new(method),
+                function: Function::new(method.into()),
             },
         )
     }

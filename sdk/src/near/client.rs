@@ -2,12 +2,12 @@ use std::{collections::HashMap, fmt::Debug, vec};
 
 use near_crypto::{InMemorySigner, Signer};
 use near_jsonrpc_client::{
+    AsUrl, JsonRpcClient, MethodCallResult,
     errors::{JsonRpcError, JsonRpcServerError},
     methods::{
         self, broadcast_tx_async::RpcBroadcastTxAsyncRequest,
         broadcast_tx_commit::RpcBroadcastTxCommitRequest, tx::RpcTransactionError,
     },
-    JsonRpcClient, MethodCallResult,
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use near_primitives::{
@@ -21,9 +21,8 @@ use near_primitives::{
 use near_token::NearToken;
 use tokio::sync::Mutex;
 
-use super::error::Error;
-use super::operations::DEFAULT_PRIORITY_FEE;
 use super::Result;
+use super::error::Error;
 
 pub(crate) struct Client {
     client: JsonRpcClient,
@@ -32,9 +31,9 @@ pub(crate) struct Client {
 }
 
 impl Client {
-    pub(crate) fn new(addr: &str, api_key: Option<String>) -> Result<Self> {
+    pub(crate) fn new<U: AsUrl>(url: U, api_key: Option<String>) -> Result<Self> {
         let connector = JsonRpcClient::new_client();
-        let mut client = connector.connect(addr);
+        let mut client = connector.connect(url);
         if let Some(api_key) = api_key {
             let api_key = near_jsonrpc_client::auth::ApiKey::new(api_key)?;
             client = client.header(api_key);
@@ -50,7 +49,7 @@ impl Client {
         &self,
         method: &RpcBroadcastTxCommitRequest,
     ) -> MethodCallResult<FinalExecutionOutcomeView, RpcTransactionError> {
-        self.client.call(method).await.map_err(Into::into)
+        self.client.call(method).await
     }
 
     pub(crate) async fn query<M>(&self, method: M) -> MethodCallResult<M::Response, M::Error>
@@ -67,8 +66,10 @@ impl Client {
         signer: &InMemorySigner,
         receiver_id: &AccountId,
         action: Action,
+        priority_fee: u64,
     ) -> Result<FinalExecutionOutcomeView> {
-        self.send_batch_tx(signer, receiver_id, vec![action]).await
+        self.send_batch_tx(signer, receiver_id, vec![action], priority_fee)
+            .await
     }
 
     pub(crate) async fn view_block(&self, block_ref: Option<BlockReference>) -> Result<BlockView> {
@@ -90,7 +91,8 @@ impl Client {
             let current_nonce = *next_nonce_ref;
             *next_nonce_ref += 1;
 
-            // Fetch latest block_hash since the previous one is probably invalid for a new transaction
+            // Fetch the latest block_hash since the previous one is probably invalid
+            // for a new transaction.
             let block = self.view_block(Some(Finality::Final.into())).await?;
             let block_hash = block.header.hash;
             Ok((block_hash, current_nonce))
@@ -138,6 +140,7 @@ impl Client {
         signer: &InMemorySigner,
         receiver_id: &AccountId,
         actions: Vec<Action>,
+        priority_fee: u64,
     ) -> Result<FinalExecutionOutcomeView> {
         let cache_key = (signer.account_id.clone(), signer.secret_key.public_key());
 
@@ -150,9 +153,9 @@ impl Client {
                 signer.account_id.clone(),
                 receiver_id.clone(),
                 &Signer::InMemory(signer.clone()),
-                actions.clone(),
+                actions,
                 block_hash,
-                DEFAULT_PRIORITY_FEE,
+                priority_fee,
             ),
         )
         .await
@@ -163,6 +166,7 @@ impl Client {
         signer: &InMemorySigner,
         receiver_id: &AccountId,
         actions: Vec<Action>,
+        priority_fee: u64,
     ) -> Result<CryptoHash> {
         let cache_key = (signer.account_id.clone(), signer.secret_key.public_key());
         let (block_hash, nonce) = self.fetch_tx_nonce(&cache_key).await?;
@@ -175,7 +179,7 @@ impl Client {
                 &Signer::InMemory(signer.clone()),
                 actions,
                 block_hash,
-                DEFAULT_PRIORITY_FEE,
+                priority_fee,
             ),
         })
         .await
@@ -190,6 +194,7 @@ impl Client {
         args: Vec<u8>,
         gas: Gas,
         deposit: NearToken,
+        priority_fee: u64,
     ) -> Result<FinalExecutionOutcomeView> {
         self.send_tx(
             signer,
@@ -201,6 +206,7 @@ impl Client {
                 deposit: deposit.as_yoctonear(),
             }
             .into(),
+            priority_fee,
         )
         .await
     }

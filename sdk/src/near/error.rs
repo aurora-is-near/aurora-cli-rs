@@ -33,13 +33,13 @@ pub enum Error {
 
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
-        Error::DataConversionError(DataConversionError::Json(err))
+        Self::DataConversionError(DataConversionError::Json(err))
     }
 }
 
 impl From<borsh::io::Error> for Error {
     fn from(err: borsh::io::Error) -> Self {
-        Error::DataConversionError(DataConversionError::Borsh(err))
+        Self::DataConversionError(DataConversionError::Borsh(err))
     }
 }
 

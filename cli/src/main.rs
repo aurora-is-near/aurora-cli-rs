@@ -1,4 +1,4 @@
-#![deny(clippy::pedantic, clippy::nursery)]
+#![deny(clippy::all, clippy::pedantic, clippy::nursery)]
 #![allow(
     clippy::too_many_lines,
     clippy::module_name_repetitions,
