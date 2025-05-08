@@ -4,7 +4,8 @@ use near_primitives::{
     account::AccessKey,
     action::{
         AddKeyAction, CreateAccountAction, DeleteAccountAction, DeleteKeyAction,
-        DeployContractAction, FunctionCallAction, StakeAction, TransferAction,
+        DeployContractAction, DeployGlobalContractAction, FunctionCallAction, StakeAction,
+        TransferAction, UseGlobalContractAction,
     },
     hash::CryptoHash,
     transaction::Action,
@@ -13,6 +14,8 @@ use near_primitives::{
 };
 use near_token::NearToken;
 
+use crate::near::types::{GlobalContractDeployMode, GlobalContractIdentifier};
+
 const MAX_GAS: NearGas = NearGas::from_tgas(300);
 
 pub(crate) const DEFAULT_CALL_FN_GAS: NearGas = NearGas::from_tgas(10);
@@ -20,13 +23,13 @@ pub(crate) const DEFAULT_CALL_DEPOSIT: NearToken = NearToken::from_near(0);
 pub(crate) const DEFAULT_PRIORITY_FEE: u64 = 0;
 
 use super::Result;
-use super::client::Client;
+use super::rpc_client::RpcClient;
 
 pub struct Function {
-    pub(crate) name: String,
     pub(crate) args: Vec<u8>,
-    pub(crate) deposit: NearToken,
-    pub(crate) gas: NearGas,
+    deposit: NearToken,
+    gas: NearGas,
+    pub(crate) name: String,
 }
 
 impl Function {
@@ -34,10 +37,10 @@ impl Function {
     /// contract that lives directly on a contract we've specified in [`Transaction`].
     pub fn new<S: Into<String>>(name: S) -> Self {
         Self {
-            name: name.into(),
             args: vec![],
             deposit: DEFAULT_CALL_DEPOSIT,
             gas: DEFAULT_CALL_FN_GAS,
+            name: name.into(),
         }
     }
 
@@ -95,7 +98,7 @@ impl Function {
 }
 
 pub struct Transaction<'a> {
-    client: &'a Client,
+    client: &'a RpcClient,
     signer: InMemorySigner,
     receiver_id: AccountId,
     actions: Vec<Action>,
@@ -104,7 +107,7 @@ pub struct Transaction<'a> {
 
 impl<'a> Transaction<'a> {
     pub(crate) const fn new(
-        client: &'a Client,
+        client: &'a RpcClient,
         signer: InMemorySigner,
         receiver_id: AccountId,
     ) -> Self {
@@ -174,7 +177,7 @@ impl<'a> Transaction<'a> {
         self
     }
 
-    /// Deploy contract code or WASM bytes to the `receiver_id`'s account.
+    /// Deploy contract code of WASM bytes to the `receiver_id`'s account.
     #[must_use]
     pub fn deploy(mut self, code: &[u8]) -> Self {
         self.actions
@@ -182,13 +185,43 @@ impl<'a> Transaction<'a> {
         self
     }
 
-    /// An action which stakes the signer's tokens and setups a validator public key.
+    /// Deploy a global contract code of WASM bytes to the `receiver_id`'s account
+    /// with the given `deploy_mode`.
     #[must_use]
-    pub fn stake(mut self, stake: NearToken, pk: PublicKey) -> Self {
+    pub fn deploy_global_contract(
+        mut self,
+        code: &[u8],
+        deploy_mode: GlobalContractDeployMode,
+    ) -> Self {
+        self.actions.push(
+            DeployGlobalContractAction {
+                code: code.into(),
+                deploy_mode: deploy_mode.into(),
+            }
+            .into(),
+        );
+        self
+    }
+
+    /// Use a global contract for the `receiver_id`'s account.
+    #[must_use]
+    pub fn use_global_contract(mut self, contract_identifier: GlobalContractIdentifier) -> Self {
+        self.actions.push(Action::UseGlobalContract(
+            UseGlobalContractAction {
+                contract_identifier: contract_identifier.into(),
+            }
+            .into(),
+        ));
+        self
+    }
+
+    /// An action which stakes the signer's tokens and sets a validator public key.
+    #[must_use]
+    pub fn stake(mut self, stake: NearToken, public_key: PublicKey) -> Self {
         self.actions.push(
             StakeAction {
                 stake: stake.as_yoctonear(),
-                public_key: pk,
+                public_key,
             }
             .into(),
         );
@@ -247,7 +280,7 @@ impl<'a> Transaction<'a> {
 /// Similar to a [`Transaction`], but more specific to making a call into a contract.
 /// Note, only one call can be made per `CallTransaction`.
 pub struct CallTransaction<'a> {
-    client: &'a Client,
+    client: &'a RpcClient,
     signer: InMemorySigner,
     contract_id: AccountId,
     function: Function,
@@ -256,7 +289,7 @@ pub struct CallTransaction<'a> {
 
 impl<'a> CallTransaction<'a> {
     pub(crate) fn new<F: Into<String>>(
-        client: &'a Client,
+        client: &'a RpcClient,
         contract_id: AccountId,
         signer: InMemorySigner,
         function: F,

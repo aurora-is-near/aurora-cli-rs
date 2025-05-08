@@ -6,9 +6,9 @@ const URL: &str = "https://rpc.testnet.near.org";
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let signer = signer()?;
-    let workspace = near::workspace::Workspace::new(URL, None, signer.clone())?;
+    let client = near::client::Client::new(URL, None, signer.clone())?;
 
-    let hash = workspace
+    let hash = client
         .call(&"c.aurora".parse()?, "")
         .signer(signer)
         .transact_async()

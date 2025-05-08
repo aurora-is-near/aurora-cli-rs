@@ -1,9 +1,9 @@
 use std::fmt::{Debug, Display};
 
 use super::Result;
-use super::client::Client;
 use super::error::Error;
 use super::operations::Function;
+use super::rpc_client::RpcClient;
 use near_crypto::PublicKey;
 use near_jsonrpc_client::{
     errors::JsonRpcError, methods, methods::RpcMethod, methods::query::RpcQueryRequest,
@@ -17,13 +17,13 @@ use near_primitives::{
 };
 
 pub struct Query<'a, M> {
-    pub(crate) method: M,
-    pub(crate) client: &'a Client,
-    pub(crate) block_ref: BlockReference,
+    method: M,
+    client: &'a RpcClient,
+    block_ref: BlockReference,
 }
 
 impl<'a, M> Query<'a, M> {
-    pub(crate) fn new(client: &'a Client, method: M) -> Self {
+    pub(crate) fn new(client: &'a RpcClient, method: M) -> Self {
         Self {
             method,
             client,
@@ -103,8 +103,6 @@ pub struct ViewAccessKey {
 pub struct ViewAccessKeyList {
     pub(crate) account_id: AccountId,
 }
-
-pub struct GasPrice;
 
 impl ProcessQuery for ViewFunction {
     type Method = RpcQueryRequest;

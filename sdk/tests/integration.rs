@@ -1,14 +1,14 @@
 use std::str::FromStr;
 
+use aurora_sdk_rs::near::client::Client;
 use aurora_sdk_rs::near::operations::Function;
-use aurora_sdk_rs::near::workspace::Workspace;
 use near_crypto::Signer;
 use near_primitives::views::{AccessKeyList, AccessKeyPermissionView};
 use near_workspaces::network::Sandbox;
 use near_workspaces::types::NearToken;
 use near_workspaces::{Account, Contract, Worker};
 
-async fn setup_sandbox() -> anyhow::Result<(Worker<Sandbox>, Contract, Account)> {
+async fn setup_sandbox() -> anyhow::Result<(Worker<Sandbox>, Client, Contract, Account)> {
     let worker = near_workspaces::sandbox().await?;
 
     let wasm_path = "tests/res/nep141.wasm";
@@ -34,27 +34,23 @@ async fn setup_sandbox() -> anyhow::Result<(Worker<Sandbox>, Contract, Account)>
         .await?;
     assert!(outcome.is_success());
 
-    // Return the owner account along with worker and contract
-    Ok((worker, contract, owner_account))
-}
-
-#[tokio::test]
-async fn test_view_call_sandbox() -> anyhow::Result<()> {
-    let (worker, contract, _owner_account) = setup_sandbox().await?;
-
-    // Create a Workspace instance.
-    // It needs an InMemorySigner. Let's use the worker's root account signer for now.
-    // Note: For view calls, the signer might not be strictly necessary depending on Workspace implementation,
-    // but the constructor requires one.
-    let root = worker.root_account()?;
-    let workspace = Workspace::new(
+    let root = worker.root_account()?; // Use root signer for the workspace client
+    let client = Client::new(
         worker.rpc_addr().as_str(),
         None,
         signer_from_secret(root.id(), root.secret_key()),
     )?;
 
+    // Return the owner account along with worker, client and contract
+    Ok((worker, client, contract, owner_account))
+}
+
+#[tokio::test]
+async fn test_view_call_sandbox() -> anyhow::Result<()> {
+    let (_, client, contract, _) = setup_sandbox().await?;
+
     // Call the ft_metadata view function
-    let result = workspace.view(contract.id(), "ft_metadata").await?;
+    let result = client.view(contract.id(), "ft_metadata").await?;
 
     // Deserialize into serde_json::Value
     let metadata_val: serde_json::Value = serde_json::from_slice(&result.result)?;
@@ -87,20 +83,18 @@ async fn test_view_call_sandbox() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn test_transaction_sandbox() -> anyhow::Result<()> {
-    let (worker, contract, owner_account) = setup_sandbox().await?;
+    let (worker, _, contract, owner_account) = setup_sandbox().await?;
 
     let receiver_account = worker.dev_create_account().await?;
 
-    let workspace = Workspace::new(
+    let client = Client::new(
         worker.rpc_addr().as_str(),
         None,
         signer_from_secret(owner_account.id(), owner_account.secret_key()),
     )?;
 
     // Query storage balance bounds
-    let bounds_result = workspace
-        .view(contract.id(), "storage_balance_bounds")
-        .await?;
+    let bounds_result = client.view(contract.id(), "storage_balance_bounds").await?;
     // Deserialize into serde_json::Value
     let bounds_val: serde_json::Value = serde_json::from_slice(&bounds_result.result)?;
     // Extract min bound string
@@ -123,7 +117,7 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
     let one_yocto = NearToken::from_yoctonear(1);
 
     // Register the receiver account by calling storage_deposit
-    let storage_outcome = workspace
+    let storage_outcome = client
         .call(contract.id(), "storage_deposit")
         .args_json(serde_json::json!({
             "account_id": receiver_account.id(),
@@ -137,7 +131,7 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
     storage_outcome.assert_success();
 
     // Perform the ft_transfer call
-    let outcome = workspace
+    let outcome = client
         .call(contract.id(), "ft_transfer")
         .args_json(serde_json::json!({
             "receiver_id": receiver_account.id(),
@@ -151,7 +145,7 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
 
     // Verify balances using NearToken
     // Owner balance check
-    let owner_balance_result = workspace
+    let owner_balance_result = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": owner_account.id()
@@ -171,7 +165,7 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
     assert_eq!(owner_balance, expected_owner_balance);
 
     // Receiver balance check
-    let receiver_balance_result = workspace
+    let receiver_balance_result = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": receiver_account.id()
@@ -193,18 +187,11 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn test_ft_balance_of_sandbox() -> anyhow::Result<()> {
-    let (worker, contract, owner_account) = setup_sandbox().await?;
-
-    let root = worker.root_account()?;
-    let workspace = Workspace::new(
-        worker.rpc_addr().as_str(),
-        None,
-        signer_from_secret(root.id(), root.secret_key()),
-    )?;
+    let (worker, client, contract, owner_account) = setup_sandbox().await?;
 
     let expected_balance = NearToken::from_near(1);
 
-    let result = workspace
+    let result = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": owner_account.id()
@@ -226,7 +213,7 @@ async fn test_ft_balance_of_sandbox() -> anyhow::Result<()> {
 
     // Check the balance of a different, empty account
     let other_account = worker.dev_create_account().await?;
-    let result_other = workspace
+    let result_other = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": other_account.id()
@@ -248,21 +235,13 @@ async fn test_ft_balance_of_sandbox() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn test_view_access_keys_sandbox() -> anyhow::Result<()> {
-    let (worker, _contract, owner_account) = setup_sandbox().await?;
-
-    // Initialize Workspace
-    let root = worker.root_account()?; // Use root signer for the workspace client
-    let workspace = Workspace::new(
-        worker.rpc_addr().as_str(),
-        None,
-        signer_from_secret(root.id(), root.secret_key()),
-    )?;
+    let (_, client, _, owner_account) = setup_sandbox().await?;
 
     // Get the owner account's public key for comparison
     let owner_public_key = owner_account.secret_key().public_key();
 
     // Call view_access_keys for the owner account
-    let access_key_list: AccessKeyList = workspace.view_access_keys(owner_account.id()).await?;
+    let access_key_list: AccessKeyList = client.view_access_keys(owner_account.id()).await?;
 
     // Assertions
     assert!(
@@ -294,22 +273,20 @@ async fn test_view_access_keys_sandbox() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
-    let (worker, contract, owner_account) = setup_sandbox().await?;
+    let (worker, _, contract, owner_account) = setup_sandbox().await?;
 
     // Create a receiver account that needs registration and tokens
     let receiver_account = worker.dev_create_account().await?;
 
     // Initialize Workspace with the owner's signer who pays for the tx and owns the tokens
-    let workspace = Workspace::new(
+    let client = Client::new(
         worker.rpc_addr().as_str(),
         None,
         signer_from_secret(owner_account.id(), owner_account.secret_key()),
     )?;
 
     // --- Get Minimum Deposit for Storage ---
-    let bounds_result = workspace
-        .view(contract.id(), "storage_balance_bounds")
-        .await?;
+    let bounds_result = client.view(contract.id(), "storage_balance_bounds").await?;
     let bounds_val: serde_json::Value = serde_json::from_slice(&bounds_result.result)?;
     let min_bound_str = bounds_val["min"]
         .as_str()
@@ -320,12 +297,11 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
     // --- Define Transfer Details ---
     let transfer_amount = NearToken::from_millinear(5); // 0.05 NEAR
     let one_yocto = NearToken::from_yoctonear(1);
-    const TGAS: u64 = 10u64.pow(12); // 1 TGas
 
     // --- Build and Send Batch Transaction ---
     // The batch targets the contract where the actions (calls) will happen.
     // The signer (owner_account) pays for the gas and provides attached deposits.
-    let batch_outcome = workspace
+    let batch_outcome = client
         .batch(contract.id()) // Target the NEP-141 contract
         // Action 1: Call storage_deposit for the receiver
         .call(
@@ -334,8 +310,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                     "account_id": receiver_account.id(),
                     "registration_only": true
                 }))?
-                .deposit(minimum_deposit) // Attach NEAR deposit for storage cost
-                .gas(10 * TGAS), // Use new()
+                .deposit(minimum_deposit), // Attach NEAR deposit for storage cost
         )
         // Action 2: Call ft_transfer from owner to receiver
         .call(
@@ -344,8 +319,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                     "receiver_id": receiver_account.id(),
                     "amount": transfer_amount.as_yoctonear().to_string()
                 }))?
-                .deposit(one_yocto) // Attach 1 yoctoNEAR for the transfer standard
-                .gas(10 * TGAS),
+                .deposit(one_yocto), // Attach 1 yoctoNEAR for the transfer standard
         )
         .priority_fee(1000)
         .transact()
@@ -354,7 +328,7 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
     batch_outcome.assert_success();
 
     // --- Verify Receiver's Balance ---
-    let receiver_balance_result = workspace
+    let receiver_balance_result = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": receiver_account.id()
