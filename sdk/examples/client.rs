@@ -1,14 +1,16 @@
 use aurora_sdk_rs::near;
 use near_crypto::{InMemorySigner, Signer};
 
+const URL: &str = "https://rpc.testnet.near.org";
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let signer = signer()?;
-    let workspace = near::workspace::Workspace::new("some-addr", None, signer.clone())?;
+    let client = near::client::Client::new(URL, None, signer.clone())?;
 
-    let hash = workspace
+    let hash = client
         .call(&"c.aurora".parse()?, "")
-        .signer(signer.clone())
+        .signer(signer)
         .transact_async()
         .await?;
 

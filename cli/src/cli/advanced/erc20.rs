@@ -121,7 +121,6 @@ impl Erc20 {
 #[cfg(test)]
 mod tests {
     use ethabi::{Address, Function, ParamType, Token, Uint};
-    use rand::Rng;
 
     #[test]
     fn test_total_supply_encoding() {
@@ -147,8 +146,7 @@ mod tests {
 
     #[test]
     fn test_balance_of_encoding() {
-        let mut rng = rand::thread_rng();
-        let address: [u8; 20] = rng.gen();
+        let address: [u8; 20] = rand::random();
 
         let address = Address::from(address);
 
@@ -184,9 +182,8 @@ mod tests {
 
     #[test]
     fn test_transfer_encoding() {
-        let mut rng = rand::thread_rng();
-        let address: [u8; 20] = rng.gen();
-        let amount: [u8; 32] = rng.gen();
+        let address: [u8; 20] = rand::random();
+        let amount: [u8; 32] = rand::random();
 
         let address = Address::from(address);
         let amount = Uint::from_big_endian(&amount);
@@ -231,9 +228,8 @@ mod tests {
 
     #[test]
     fn test_allowance_encoding() {
-        let mut rng = rand::thread_rng();
-        let owner: [u8; 20] = rng.gen();
-        let spender: [u8; 20] = rng.gen();
+        let owner: [u8; 20] = rand::random();
+        let spender: [u8; 20] = rand::random();
 
         let owner = Address::from(owner);
         let spender = Address::from(spender);
@@ -278,9 +274,8 @@ mod tests {
 
     #[test]
     fn test_approve_encoding() {
-        let mut rng = rand::thread_rng();
-        let address: [u8; 20] = rng.gen();
-        let amount: [u8; 32] = rng.gen();
+        let address: [u8; 20] = rand::random();
+        let amount: [u8; 32] = rand::random();
 
         let address = Address::from(address);
         let amount = Uint::from_big_endian(&amount);
@@ -325,10 +320,9 @@ mod tests {
 
     #[test]
     fn test_transfer_from_encoding() {
-        let mut rng = rand::thread_rng();
-        let from: [u8; 20] = rng.gen();
-        let to: [u8; 20] = rng.gen();
-        let amount: [u8; 32] = rng.gen();
+        let from: [u8; 20] = rand::random();
+        let to: [u8; 20] = rand::random();
+        let amount: [u8; 32] = rand::random();
 
         let from = Address::from(from);
         let to = Address::from(to);

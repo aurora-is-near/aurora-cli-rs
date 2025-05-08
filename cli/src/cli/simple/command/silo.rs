@@ -7,7 +7,7 @@ use aurora_engine_types::types::EthGas;
 use near_primitives::views::CallResult;
 use std::fmt::{Display, Formatter};
 
-use super::{get_value, ContractCall};
+use super::{ContractCall, get_value};
 use crate::cli::command::FromCallResult;
 use crate::client::Context;
 use crate::contract_call;

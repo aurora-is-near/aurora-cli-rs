@@ -1,5 +1,5 @@
 use aurora_engine_transactions::legacy::{LegacyEthSignedTransaction, TransactionLegacy};
-use aurora_engine_types::{types::Address, U256};
+use aurora_engine_types::{U256, types::Address};
 use libsecp256k1::{Message, PublicKey, SecretKey};
 use near_crypto::InMemorySigner;
 use rlp::RlpStream;

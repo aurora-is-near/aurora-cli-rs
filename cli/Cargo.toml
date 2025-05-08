@@ -1,13 +1,13 @@
 [package]
 name = "aurora-cli-rs"
-version = "0.1.0"
-authors = ["Aurora Labs <hello@aurora.dev>"]
-edition = "2021"
-rust-version = "1.80.0"
-homepage = "https://github.com/aurora-is-near/aurora-cli-rs"
-repository = "https://github.com/aurora-is-near/aurora-cli-rs"
 description = "Aurora CLI is a command line interface to bootstrap Aurora Engine"
-readme = "../README.md"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
 
 [lib]
 name = "aurora_cli"
@@ -23,31 +23,31 @@ simple = ["toml"]
 advanced = ["near-chain-configs"]
 
 [dependencies]
+anyhow.workspace = true
 aurora-engine-precompiles.workspace = true
 aurora-engine-sdk.workspace = true
 aurora-engine-transactions.workspace = true
 aurora-engine-types.workspace = true
-anyhow.workspace = true
 borsh.workspace = true
-bs58 = "0.5"
-clap = { version = "4", features = ["derive"] }
-ethabi = "18"
-hex = "0.4"
-libsecp256k1 = { version = "0.7", features = ["std"] }
+bs58.workspace = true
+clap = { workspace = true, features = ["derive"] }
+ethabi.workspace = true
+hex.workspace = true
+libsecp256k1 = { workspace = true, features = ["std"] }
 near-chain-configs = { workspace = true, optional = true }
 near-crypto.workspace = true
 near-jsonrpc-client.workspace = true
 near-jsonrpc-primitives.workspace = true
 near-primitives.workspace = true
 reqwest.workspace = true
-rand = "0.8"
-rlp = "0.6.1"
+rand.workspace = true
+rlp.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-shadow-rs = "0.38"
-toml = { version = "0.8", optional = true }
+shadow-rs.workspace = true
+toml = { workspace = true, optional = true }
 thiserror.workspace = true
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 
 [build-dependencies]
-shadow-rs = "0.38"
+shadow-rs.workspace = true
