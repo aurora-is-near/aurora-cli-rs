@@ -60,7 +60,7 @@ First what we need to do is to install `aurora-cli`:
 
 ```shell
 git clone https://github.com/aurora-engine/aurora-cli-rs
-cd aurora-cli-rs && cargo install --path . 
+cd aurora-cli-rs/cli && cargo install --path . 
 ```
 
 Next we need to start a NEAR node locally. We can use the NEAR utility, `nearup`.

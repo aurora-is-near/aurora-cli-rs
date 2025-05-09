@@ -4,10 +4,10 @@ mod advanced;
 pub mod simple;
 
 #[cfg(feature = "advanced")]
-pub use advanced::{run, Cli};
+pub use advanced::{Cli, run};
 
 #[cfg(feature = "simple")]
-pub use simple::{command, run, Cli};
+pub use simple::{Cli, command, run};
 
 /// NEAR Endpoints.
 const NEAR_MAINNET_ENDPOINT: &str = "https://rpc.mainnet.near.org/";

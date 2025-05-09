@@ -9,10 +9,10 @@ use aurora_engine_types::parameters::engine::{
     TransactionStatus,
 };
 use aurora_engine_types::{
+    H256, U256,
     account_id::AccountId,
     parameters::{CrossContractCallArgs, PromiseArgs, PromiseCreateArgs},
     types::{Address, NearGas, Wei, Yocto},
-    H256, U256,
 };
 use clap::Subcommand;
 use near_primitives::version::PROTOCOL_VERSION;
@@ -360,7 +360,7 @@ pub async fn execute_command(
                             panic!("{error_msg}");
                         }
                     }
-                };
+                }
             }
             ReadCommand::GetAuroraErc20 { nep_141_account } => {
                 let address = client
@@ -706,7 +706,7 @@ pub async fn execute_command(
                 println!("Updated CLI config at {config_path}");
             }
         },
-    };
+    }
     Ok(())
 }
 
