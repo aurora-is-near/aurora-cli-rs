@@ -21,14 +21,14 @@ pub struct GetOwner {}
 impl ContractMethod for GetOwner {
     type Response = AccountId;
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "get_owner"
     }
 }
 
 impl ContractMethodResponse for AccountId {
     fn parse(rsp: Vec<u8>) -> Result<Self, super::error::Error> {
-        AccountId::try_from_slice(&rsp).map_err(Into::into)
+        Self::try_from_slice(&rsp).map_err(Into::into)
     }
 }
 
@@ -39,7 +39,7 @@ pub struct SetEthConnectorContractAccount {
 impl ContractMethod for SetEthConnectorContractAccount {
     type Response = ();
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "set_eth_connector_contract_account"
     }
 
@@ -55,7 +55,7 @@ pub struct MirrorErc20Token {
 impl ContractMethod for MirrorErc20Token {
     type Response = Address;
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "mirror_erc20_token"
     }
 
@@ -66,7 +66,7 @@ impl ContractMethod for MirrorErc20Token {
 
 impl ContractMethodResponse for Address {
     fn parse(rsp: Vec<u8>) -> Result<Self, super::error::Error> {
-        Address::try_from_slice(&rsp).map_err(Into::into)
+        Self::try_from_slice(&rsp).map_err(Into::into)
     }
 }
 
@@ -77,7 +77,7 @@ pub struct FactoryUpdate {
 impl ContractMethod for FactoryUpdate {
     type Response = ();
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "factory_update"
     }
 
@@ -93,7 +93,7 @@ pub struct SetSiloParams {
 impl ContractMethod for SetSiloParams {
     type Response = ();
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "set_silo_params"
     }
 
@@ -107,7 +107,7 @@ pub struct GetFixedGas {}
 impl ContractMethod for GetFixedGas {
     type Response = Option<EthGas>;
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "get_fixed_gas"
     }
 
@@ -127,7 +127,7 @@ pub struct GetFallbackAddress {}
 impl ContractMethod for GetFallbackAddress {
     type Response = Option<Address>;
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "get_fallback_address"
     }
 
@@ -149,7 +149,7 @@ pub struct AddEntryToWhitelist {
 impl ContractMethod for AddEntryToWhitelist {
     type Response = ();
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "add_entry_to_whitelist"
     }
 
@@ -165,7 +165,7 @@ pub struct RemoveEntryFromWhitelist {
 impl ContractMethod for RemoveEntryFromWhitelist {
     type Response = ();
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "remove_entry_from_whitelist"
     }
 
@@ -181,7 +181,7 @@ pub struct SetWhitelistStatus {
 impl ContractMethod for SetWhitelistStatus {
     type Response = ();
 
-    fn method_name(&self) -> &str {
+    fn method_name(&self) -> &'static str {
         "set_whitelist_status"
     }
 

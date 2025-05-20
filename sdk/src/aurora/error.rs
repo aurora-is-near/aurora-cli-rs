@@ -18,6 +18,20 @@ pub enum Error {
     Near(#[from] crate::near::error::Error),
 }
 
+impl From<AddressError> for Error {
+    fn from(e: AddressError) -> Self {
+        match e {
+            AddressError::FailedDecodeHex => {
+                io::Error::new(io::ErrorKind::InvalidData, "Failed to decode hex")
+            }
+            AddressError::IncorrectLength => {
+                io::Error::new(io::ErrorKind::InvalidData, "Incorrect length")
+            }
+        }
+        .into()
+    }
+}
+
 #[derive(Debug, thiserror::Error, Deserialize)]
 pub enum SiloError {
     #[error("ERR_CALL_TOO_DEEP")]
@@ -226,9 +240,12 @@ pub enum SiloError {
     Nep141TokenAlreadyRegistered,
     #[error("ERR_REJECT_CALL_WITH_CODE")]
     RejectCallWithCode,
+    #[error("ERR_UNKNOWN")]
+    Unknown(String),
 }
 
 impl From<String> for SiloError {
+    #[allow(clippy::too_many_lines)]
     fn from(s: String) -> Self {
         match s.as_str() {
             "ERR_CALL_TOO_DEEP" => Self::CallTooDeep,
@@ -336,21 +353,7 @@ impl From<String> for SiloError {
             "ERR_NEP141_NOT_FOUND" => Self::Nep141NotFound,
             "ERR_NEP141_TOKEN_ALREADY_REGISTERED" => Self::Nep141TokenAlreadyRegistered,
             "ERR_REJECT_CALL_WITH_CODE" => Self::RejectCallWithCode,
-            _ => panic!("Unknown error string: {}", s),
+            _ => Self::Unknown(s),
         }
-    }
-}
-
-impl From<AddressError> for Error {
-    fn from(e: AddressError) -> Self {
-        match e {
-            AddressError::FailedDecodeHex => {
-                io::Error::new(io::ErrorKind::InvalidData, "Failed to decode hex")
-            }
-            AddressError::IncorrectLength => {
-                io::Error::new(io::ErrorKind::InvalidData, "Incorrect length")
-            }
-        }
-        .into()
     }
 }

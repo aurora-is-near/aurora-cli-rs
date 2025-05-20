@@ -10,7 +10,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(near: near::client::Client) -> Self {
+    pub const fn new(near: near::client::Client) -> Self {
         Self { near }
     }
 
