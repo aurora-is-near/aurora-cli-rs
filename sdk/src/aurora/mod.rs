@@ -30,6 +30,7 @@ where
 
     fn method_name(&self) -> &'static str;
 
+    #[must_use]
     fn method_type() -> MethodType {
         MethodType::Call
     }
@@ -109,10 +110,7 @@ fn catch_view_panic(input: &str) -> Result<error::EngineError, std::io::Error> {
     re.captures(input)
         .and_then(|caps| caps.get(1))
         .map(|msg| EngineError::from(msg.as_str().to_string()))
-        .ok_or(io::Error::new(
-            io::ErrorKind::NotFound,
-            "panic message not found",
-        ))
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "panic message not found"))
 }
 
 impl ContractMethodResponse for String {
