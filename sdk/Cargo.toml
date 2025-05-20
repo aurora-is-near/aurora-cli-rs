@@ -22,6 +22,7 @@ serde.workspace = true
 serde_json.workspace = true
 near-jsonrpc-client.workspace = true
 near-jsonrpc-primitives.workspace = true
+regex.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

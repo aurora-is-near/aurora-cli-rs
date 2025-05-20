@@ -16,10 +16,14 @@ impl ContractMethodResponse for () {
     }
 }
 
-pub struct GetOwner {}
+pub struct GetOwner;
 
 impl ContractMethod for GetOwner {
     type Response = AccountId;
+
+    fn method_type() -> super::MethodType {
+        super::MethodType::View
+    }
 
     fn method_name(&self) -> &'static str {
         "get_owner"
@@ -102,10 +106,14 @@ impl ContractMethod for SetSiloParams {
     }
 }
 
-pub struct GetFixedGas {}
+pub struct GetFixedGas;
 
 impl ContractMethod for GetFixedGas {
     type Response = Option<EthGas>;
+
+    fn method_type() -> super::MethodType {
+        super::MethodType::View
+    }
 
     fn method_name(&self) -> &'static str {
         "get_fixed_gas"
@@ -122,10 +130,14 @@ impl ContractMethodResponse for Option<EthGas> {
     }
 }
 
-pub struct GetFallbackAddress {}
+pub struct GetFallbackAddress;
 
 impl ContractMethod for GetFallbackAddress {
     type Response = Option<Address>;
+
+    fn method_type() -> super::MethodType {
+        super::MethodType::View
+    }
 
     fn method_name(&self) -> &'static str {
         "get_fallback_address"

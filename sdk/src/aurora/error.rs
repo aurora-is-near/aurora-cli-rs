@@ -13,7 +13,7 @@ pub enum Error {
     #[error(transparent)]
     Execution(#[from] TxExecutionError),
     #[error(transparent)]
-    Silo(#[from] SiloError),
+    Engine(#[from] EngineError),
     #[error(transparent)]
     Near(#[from] crate::near::error::Error),
 }
@@ -33,7 +33,7 @@ impl From<AddressError> for Error {
 }
 
 #[derive(Debug, thiserror::Error, Deserialize)]
-pub enum SiloError {
+pub enum EngineError {
     #[error("ERR_CALL_TOO_DEEP")]
     CallTooDeep,
     #[error("ERR_OUT_OF_FUNDS")]
@@ -244,7 +244,7 @@ pub enum SiloError {
     Unknown(String),
 }
 
-impl From<String> for SiloError {
+impl From<String> for EngineError {
     #[allow(clippy::too_many_lines)]
     fn from(s: String) -> Self {
         match s.as_str() {
