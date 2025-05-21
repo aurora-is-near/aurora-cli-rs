@@ -1,7 +1,7 @@
 pub mod client;
 pub mod error;
 pub mod operations;
-pub(crate) mod query;
+pub mod query;
 pub(crate) mod rpc_client;
 pub mod types;
 

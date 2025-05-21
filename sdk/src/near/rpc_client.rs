@@ -207,7 +207,7 @@ impl RpcClient {
 
         match query_resp.kind {
             QueryResponseKind::AccessKey(access_key) => Ok((access_key, query_resp.block_hash)),
-            kind => Err(Error::UnexpectedQueryResponseKind(kind)),
+            kind => Err(Error::UnexpectedQueryResponseKind(Box::new(kind))),
         }
     }
 }

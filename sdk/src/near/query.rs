@@ -1,9 +1,4 @@
-use std::fmt::{Debug, Display};
-
-use super::Result;
-use super::error::Error;
-use super::operations::Function;
-use super::rpc_client::RpcClient;
+use borsh::BorshDeserialize;
 use near_crypto::PublicKey;
 use near_jsonrpc_client::{
     errors::JsonRpcError, methods, methods::RpcMethod, methods::query::RpcQueryRequest,
@@ -15,6 +10,13 @@ use near_primitives::{
     types::{AccountId, BlockHeight, BlockId, BlockReference},
     views::{BlockView, QueryRequest},
 };
+use serde::de::DeserializeOwned;
+use std::fmt::{Debug, Display};
+
+use super::Result;
+use super::error::Error;
+use super::operations::Function;
+use super::rpc_client::RpcClient;
 
 pub struct Query<'a, M> {
     method: M,
@@ -124,12 +126,32 @@ impl ProcessQuery for ViewFunction {
     fn from_response(resp: <Self::Method as RpcMethod>::Response) -> Result<Self::Output> {
         match resp.kind {
             QueryResponseKind::CallResult(result) => Ok(result),
-            _ => Err(Error::UnexpectedQueryResponseKind(resp.kind)),
+            _ => Err(Error::UnexpectedQueryResponseKind(Box::new(resp.kind))),
         }
     }
 
     fn from_error(err: JsonRpcError<<Self::Method as RpcMethod>::Error>) -> Error {
         err.into()
+    }
+}
+
+pub trait JsonIntoResult<T> {
+    fn into_result(self) -> Result<T>;
+}
+
+impl<T: DeserializeOwned> JsonIntoResult<T> for near_primitives::views::CallResult {
+    fn into_result(self) -> Result<T> {
+        serde_json::from_slice(&self.result).map_err(Into::into)
+    }
+}
+
+pub trait BorshIntoResult<T> {
+    fn into_result(self) -> Result<T>;
+}
+
+impl<T: BorshDeserialize> BorshIntoResult<T> for near_primitives::views::CallResult {
+    fn into_result(self) -> Result<T> {
+        borsh::from_slice(&self.result).map_err(Into::into)
     }
 }
 
@@ -181,7 +203,7 @@ impl ProcessQuery for ViewCode {
     fn from_response(resp: <Self::Method as RpcMethod>::Response) -> Result<Self::Output> {
         match resp.kind {
             QueryResponseKind::ViewCode(code) => Ok(code.code),
-            _ => Err(Error::UnexpectedQueryResponseKind(resp.kind)),
+            _ => Err(Error::UnexpectedQueryResponseKind(Box::new(resp.kind))),
         }
     }
 
@@ -206,7 +228,7 @@ impl ProcessQuery for ViewAccount {
     fn from_response(resp: <Self::Method as RpcMethod>::Response) -> Result<Self::Output> {
         match resp.kind {
             QueryResponseKind::ViewAccount(account) => Ok(account),
-            _ => Err(Error::UnexpectedQueryResponseKind(resp.kind)),
+            _ => Err(Error::UnexpectedQueryResponseKind(Box::new(resp.kind))),
         }
     }
 
@@ -249,7 +271,7 @@ impl ProcessQuery for ViewAccessKey {
     fn from_response(resp: <Self::Method as RpcMethod>::Response) -> Result<Self::Output> {
         match resp.kind {
             QueryResponseKind::AccessKey(key) => Ok(key.into()),
-            _ => Err(Error::UnexpectedQueryResponseKind(resp.kind)),
+            _ => Err(Error::UnexpectedQueryResponseKind(Box::new(resp.kind))),
         }
     }
 
@@ -274,7 +296,7 @@ impl ProcessQuery for ViewAccessKeyList {
     fn from_response(resp: <Self::Method as RpcMethod>::Response) -> Result<Self::Output> {
         match resp.kind {
             QueryResponseKind::AccessKeyList(list) => Ok(list),
-            _ => Err(Error::UnexpectedQueryResponseKind(resp.kind)),
+            _ => Err(Error::UnexpectedQueryResponseKind(Box::new(resp.kind))),
         }
     }
 
