@@ -116,7 +116,7 @@ fn convert_view_msg_to_error(input: &str) -> Result<EngineError, io::Error> {
 impl ContractMethodResponse for String {
     fn parse(rsp: Vec<u8>) -> Result<Self, error::Error> {
         Self::from_utf8(rsp)
-            .map(|s| s.trim_matches('\"').to_string())
+            .map(|s| s.trim_matches('"').to_string())
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e).into())
     }
 }
