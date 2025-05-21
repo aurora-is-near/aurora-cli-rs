@@ -64,7 +64,7 @@ pub trait ContractMethodResponse: borsh::BorshDeserialize {
 fn parse_action_error(action_error: ActionError) -> Result<error::EngineError, io::Error> {
     match action_error.kind {
         ActionErrorKind::FunctionCallError(FunctionCallError::ExecutionError(error_msg)) => {
-            catch_panic(&error_msg)
+            convert_call_msg_to_error(&error_msg)
         }
         _ => Err(io::Error::new(
             io::ErrorKind::Other,
@@ -73,7 +73,7 @@ fn parse_action_error(action_error: ActionError) -> Result<error::EngineError, i
     }
 }
 
-fn catch_panic(error_msg: &str) -> Result<error::EngineError, io::Error> {
+fn convert_call_msg_to_error(error_msg: &str) -> Result<error::EngineError, io::Error> {
     const ERR_MSG_PREFIX: &str = "Smart contract panicked: ";
 
     if let Some(msg) = error_msg.strip_prefix(ERR_MSG_PREFIX) {
@@ -94,7 +94,7 @@ fn parse_query_error(query_error: RpcQueryError) -> Result<error::EngineError, s
             vm_error,
             block_height: _,
             block_hash: _,
-        } => catch_view_panic(&vm_error),
+        } => convert_view_msg_to_error(&vm_error),
         _ => Err(io::Error::new(
             io::ErrorKind::Other,
             "Unexpected query error: ".to_string() + &query_error.to_string(),
@@ -104,7 +104,7 @@ fn parse_query_error(query_error: RpcQueryError) -> Result<error::EngineError, s
 
 static PANIC_REGEX: OnceLock<Regex> = OnceLock::new();
 
-fn catch_view_panic(input: &str) -> Result<error::EngineError, std::io::Error> {
+fn convert_view_msg_to_error(input: &str) -> Result<error::EngineError, std::io::Error> {
     let re = PANIC_REGEX.get_or_init(|| Regex::new(r#"panic_msg: "([^"]+)""#).unwrap());
 
     re.captures(input)
