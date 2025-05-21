@@ -1,4 +1,4 @@
-use super::{ContractMethod, ContractMethodResponse};
+use super::{ContractMethod, ContractMethodResponse, error::Error};
 
 use aurora_engine_types::{
     parameters::{
@@ -11,7 +11,7 @@ use borsh::BorshDeserialize;
 use near_primitives::types::AccountId;
 
 impl ContractMethodResponse for () {
-    fn parse(_rsp: Vec<u8>) -> Result<Self, super::error::Error> {
+    fn parse(_rsp: Vec<u8>) -> Result<Self, Error> {
         Ok(())
     }
 }
@@ -31,7 +31,7 @@ impl ContractMethod for GetOwner {
 }
 
 impl ContractMethodResponse for AccountId {
-    fn parse(rsp: Vec<u8>) -> Result<Self, super::error::Error> {
+    fn parse(rsp: Vec<u8>) -> Result<Self, Error> {
         Self::try_from_slice(&rsp).map_err(Into::into)
     }
 }
@@ -69,7 +69,7 @@ impl ContractMethod for MirrorErc20Token {
 }
 
 impl ContractMethodResponse for Address {
-    fn parse(rsp: Vec<u8>) -> Result<Self, super::error::Error> {
+    fn parse(rsp: Vec<u8>) -> Result<Self, Error> {
         Self::try_from_slice(&rsp).map_err(Into::into)
     }
 }
@@ -125,7 +125,7 @@ impl ContractMethod for GetFixedGas {
 }
 
 impl ContractMethodResponse for Option<EthGas> {
-    fn parse(rsp: Vec<u8>) -> Result<Self, super::error::Error> {
+    fn parse(rsp: Vec<u8>) -> Result<Self, Error> {
         borsh::from_slice(&rsp).map_err(Into::into)
     }
 }
@@ -149,7 +149,7 @@ impl ContractMethod for GetFallbackAddress {
 }
 
 impl ContractMethodResponse for Option<Address> {
-    fn parse(rsp: Vec<u8>) -> Result<Self, super::error::Error> {
+    fn parse(rsp: Vec<u8>) -> Result<Self, Error> {
         borsh::from_slice(&rsp).map_err(Into::into)
     }
 }

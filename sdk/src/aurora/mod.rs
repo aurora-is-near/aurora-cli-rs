@@ -39,7 +39,7 @@ where
         0
     }
 
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+    fn params(&self) -> Result<Vec<u8>, io::Error> {
         Ok(Vec::new())
     }
 
@@ -47,7 +47,7 @@ where
         Self::Response::parse(response)
     }
 
-    fn parse_error(error: MethodExecutionError) -> Result<error::EngineError, std::io::Error> {
+    fn parse_error(error: MethodExecutionError) -> Result<EngineError, io::Error> {
         match error {
             MethodExecutionError::ActionError(action_error) => parse_action_error(action_error),
             MethodExecutionError::QueryError(query_error) => parse_query_error(query_error),
@@ -61,7 +61,7 @@ pub trait ContractMethodResponse: borsh::BorshDeserialize {
     }
 }
 
-fn parse_action_error(action_error: ActionError) -> Result<error::EngineError, io::Error> {
+fn parse_action_error(action_error: ActionError) -> Result<EngineError, io::Error> {
     match action_error.kind {
         ActionErrorKind::FunctionCallError(FunctionCallError::ExecutionError(error_msg)) => {
             convert_call_msg_to_error(&error_msg)
@@ -73,22 +73,22 @@ fn parse_action_error(action_error: ActionError) -> Result<error::EngineError, i
     }
 }
 
-fn convert_call_msg_to_error(error_msg: &str) -> Result<error::EngineError, io::Error> {
+fn convert_call_msg_to_error(error_msg: &str) -> Result<EngineError, io::Error> {
     const ERR_MSG_PREFIX: &str = "Smart contract panicked: ";
 
     if let Some(msg) = error_msg.strip_prefix(ERR_MSG_PREFIX) {
-        let error = serde_json::from_str::<error::EngineError>(msg)
+        let error = serde_json::from_str::<EngineError>(msg)
             .map_err(|_| io::Error::new(io::ErrorKind::Other, msg))?;
         Ok(error)
     } else {
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        Err(io::Error::new(
+            io::ErrorKind::Other,
             "Unexpected error: ".to_string() + error_msg,
         ))
     }
 }
 
-fn parse_query_error(query_error: RpcQueryError) -> Result<error::EngineError, std::io::Error> {
+fn parse_query_error(query_error: RpcQueryError) -> Result<EngineError, io::Error> {
     match query_error {
         RpcQueryError::ContractExecutionError {
             vm_error,
@@ -104,7 +104,7 @@ fn parse_query_error(query_error: RpcQueryError) -> Result<error::EngineError, s
 
 static PANIC_REGEX: OnceLock<Regex> = OnceLock::new();
 
-fn convert_view_msg_to_error(input: &str) -> Result<error::EngineError, std::io::Error> {
+fn convert_view_msg_to_error(input: &str) -> Result<EngineError, io::Error> {
     let re = PANIC_REGEX.get_or_init(|| Regex::new(r#"panic_msg: "([^"]+)""#).unwrap());
 
     re.captures(input)
@@ -117,6 +117,6 @@ impl ContractMethodResponse for String {
     fn parse(rsp: Vec<u8>) -> Result<Self, error::Error> {
         Self::from_utf8(rsp)
             .map(|s| s.trim_matches('\"').to_string())
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e).into())
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e).into())
     }
 }

@@ -1,10 +1,10 @@
 use near_jsonrpc_client::errors::{JsonRpcError, JsonRpcServerError};
-use near_primitives::{errors::TxExecutionError, hash::CryptoHash};
+use near_primitives::{errors::TxExecutionError, hash::CryptoHash, types::AccountId};
 use near_token::NearToken;
 
 use crate::near;
 
-use super::{ContractMethod, ContractMethodResponse};
+use super::{ContractMethod, ContractMethodResponse, error::Error};
 
 pub struct Client {
     pub(crate) near: near::client::Client,
@@ -15,11 +15,7 @@ impl Client {
         Self { near }
     }
 
-    pub async fn call<M>(
-        &self,
-        account_id: &near_primitives::types::AccountId,
-        method: M,
-    ) -> Result<M::Response, super::error::Error>
+    pub async fn call<M>(&self, account_id: &AccountId, method: M) -> Result<M::Response, Error>
     where
         M: ContractMethod,
         M::Response: ContractMethodResponse,
@@ -43,15 +39,15 @@ impl Client {
             near_primitives::views::FinalExecutionStatus::Failure(
                 TxExecutionError::ActionError(action_error),
             ) => Err(M::parse_error(action_error.into())?.into()), // catching silo errors
-            _ => Err(super::error::Error::ExecutionNotStarted),
+            _ => Err(Error::ExecutionNotStarted),
         }
     }
 
     pub async fn call_async<M>(
         &self,
-        account_id: &near_primitives::types::AccountId,
+        account_id: &AccountId,
         method: M,
-    ) -> Result<CryptoHash, super::error::Error>
+    ) -> Result<CryptoHash, Error>
     where
         M: ContractMethod,
         M::Response: ContractMethodResponse,
@@ -68,11 +64,7 @@ impl Client {
             .map_err(Into::into)
     }
 
-    pub async fn view<M>(
-        &self,
-        account_id: &near_primitives::types::AccountId,
-        method: M,
-    ) -> Result<M::Response, super::error::Error>
+    pub async fn view<M>(&self, account_id: &AccountId, method: M) -> Result<M::Response, Error>
     where
         M: ContractMethod,
         M::Response: ContractMethodResponse,

@@ -4,7 +4,7 @@ use near_token::NearToken;
 
 mod helpers;
 
-struct FtTotalSupply {}
+struct FtTotalSupply;
 
 impl ContractMethod for FtTotalSupply {
     type Response = String;
@@ -18,7 +18,7 @@ impl ContractMethod for FtTotalSupply {
 async fn test_total_supply() -> anyhow::Result<()> {
     let (_, client, contract, _) = setup_sandbox().await?;
     let aurora_client = aurora_sdk_rs::aurora::client::Client::new(client);
-    let total_supply = aurora_client.call(contract.id(), FtTotalSupply {}).await?;
+    let total_supply = aurora_client.call(contract.id(), FtTotalSupply).await?;
 
     assert_eq!(
         total_supply,
