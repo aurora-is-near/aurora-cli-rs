@@ -9,6 +9,9 @@ pub mod client;
 pub mod contract;
 pub mod error;
 
+#[cfg(test)]
+mod tests;
+
 pub enum MethodType {
     View,
     Call,
@@ -61,7 +64,7 @@ pub trait ContractMethodResponse: borsh::BorshDeserialize {
     }
 }
 
-fn parse_action_error(action_error: ActionError) -> Result<EngineError, io::Error> {
+pub(crate) fn parse_action_error(action_error: ActionError) -> Result<EngineError, io::Error> {
     match action_error.kind {
         ActionErrorKind::FunctionCallError(FunctionCallError::ExecutionError(error_msg)) => {
             convert_call_msg_to_error(&error_msg)
@@ -73,22 +76,21 @@ fn parse_action_error(action_error: ActionError) -> Result<EngineError, io::Erro
     }
 }
 
-fn convert_call_msg_to_error(error_msg: &str) -> Result<EngineError, io::Error> {
+pub(crate) fn convert_call_msg_to_error(error_msg: &str) -> Result<EngineError, io::Error> {
     const ERR_MSG_PREFIX: &str = "Smart contract panicked: ";
 
-    if let Some(msg) = error_msg.strip_prefix(ERR_MSG_PREFIX) {
-        let error = serde_json::from_str::<EngineError>(msg)
-            .map_err(|_| io::Error::new(io::ErrorKind::Other, msg))?;
-        Ok(error)
-    } else {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            "Unexpected error: ".to_string() + error_msg,
-        ))
-    }
+    error_msg.strip_prefix(ERR_MSG_PREFIX).map_or_else(
+        || {
+            Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Unexpected error: ".to_string() + error_msg,
+            ))
+        },
+        |msg| Ok(EngineError::from(msg.to_string())),
+    )
 }
 
-fn parse_query_error(query_error: RpcQueryError) -> Result<EngineError, io::Error> {
+pub(crate) fn parse_query_error(query_error: RpcQueryError) -> Result<EngineError, io::Error> {
     match query_error {
         RpcQueryError::ContractExecutionError {
             vm_error,
@@ -104,7 +106,7 @@ fn parse_query_error(query_error: RpcQueryError) -> Result<EngineError, io::Erro
 
 static PANIC_REGEX: OnceLock<Regex> = OnceLock::new();
 
-fn convert_view_msg_to_error(input: &str) -> Result<EngineError, io::Error> {
+pub(crate) fn convert_view_msg_to_error(input: &str) -> Result<EngineError, io::Error> {
     let re = PANIC_REGEX.get_or_init(|| Regex::new(r#"panic_msg: "([^"]+)""#).unwrap());
 
     re.captures(input)
