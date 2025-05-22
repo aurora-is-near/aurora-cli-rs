@@ -1,82 +1,29 @@
-use std::str::FromStr;
-
+use aurora_engine_types::parameters::connector::FungibleTokenMetadata;
 use aurora_sdk_rs::near::client::Client;
 use aurora_sdk_rs::near::operations::Function;
-use near_crypto::Signer;
+use aurora_sdk_rs::near::query::JsonIntoResult;
+use helpers::{setup_sandbox, signer_from_secret};
+use near_contract_standards::storage_management::StorageBalanceBounds;
 use near_primitives::views::{AccessKeyList, AccessKeyPermissionView};
-use near_workspaces::network::Sandbox;
 use near_workspaces::types::NearToken;
-use near_workspaces::{Account, Contract, Worker};
 
-async fn setup_sandbox() -> anyhow::Result<(Worker<Sandbox>, Client, Contract, Account)> {
-    let worker = near_workspaces::sandbox().await?;
-
-    let wasm_path = "tests/res/nep141.wasm";
-    let wasm = std::fs::read(wasm_path).map_err(|e|
-        anyhow::anyhow!("Failed to read the WASM file at {wasm_path}: {e}. Please ensure the file exists and the path is correct.")
-    )?;
-
-    let contract = worker.dev_deploy(&wasm).await?;
-
-    // Most NEP-141 contracts require initialization.
-    // Example: Initialize with owner_id and total_supply.
-    // Adjust the method name ("new") and arguments based on your specific contract.
-    let owner_account = worker.root_account()?;
-    // Define total_supply using NearToken, then convert to string for JSON args
-    let total_supply = NearToken::from_near(1);
-    let outcome = contract
-        .call("new_default_meta") // Common init function, adjust if needed
-        .args_json(serde_json::json!({
-            "owner_id": owner_account.id(),
-            "total_supply": total_supply.as_yoctonear().to_string(),
-        }))
-        .transact()
-        .await?;
-    assert!(outcome.is_success());
-
-    let root = worker.root_account()?; // Use root signer for the workspace client
-    let client = Client::new(
-        worker.rpc_addr().as_str(),
-        None,
-        signer_from_secret(root.id(), root.secret_key()),
-    )?;
-
-    // Return the owner account along with worker, client and contract
-    Ok((worker, client, contract, owner_account))
-}
+mod helpers;
 
 #[tokio::test]
 async fn test_view_call_sandbox() -> anyhow::Result<()> {
     let (_, client, contract, _) = setup_sandbox().await?;
 
     // Call the ft_metadata view function
-    let result = client.view(contract.id(), "ft_metadata").await?;
-
-    // Deserialize into serde_json::Value
-    let metadata_val: serde_json::Value = serde_json::from_slice(&result.result)?;
-
-    // Extract values manually from the JSON Value
-    let spec = metadata_val["spec"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'spec' in metadata"))?;
-    let name = metadata_val["name"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'name' in metadata"))?;
-    let symbol = metadata_val["symbol"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'symbol' in metadata"))?;
-    let decimals = metadata_val["decimals"]
-        .as_u64()
-        .ok_or_else(|| anyhow::anyhow!("Missing or invalid 'decimals' in metadata"))?
-        as u8;
-    // Optional fields can be handled similarly if needed
-    // let icon = metadata_val["icon"].as_str();
+    let metadata: FungibleTokenMetadata = client
+        .view(contract.id(), "ft_metadata")
+        .await?
+        .into_result()?;
 
     // Assertions using extracted values
-    assert_eq!(spec, "ft-1.0.0");
-    assert_eq!(name, "Example NEAR fungible token");
-    assert_eq!(symbol, "EXAMPLE");
-    assert_eq!(decimals, 24);
+    assert_eq!(metadata.spec, "ft-1.0.0");
+    assert_eq!(metadata.name, "Example NEAR fungible token");
+    assert_eq!(metadata.symbol, "EXAMPLE");
+    assert_eq!(metadata.decimals, 24);
 
     Ok(())
 }
@@ -90,26 +37,15 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
     let client = Client::new(
         worker.rpc_addr().as_str(),
         None,
-        signer_from_secret(owner_account.id(), owner_account.secret_key()),
+        signer_from_secret(owner_account.id(), owner_account.secret_key())?,
     )?;
 
     // Query storage balance bounds
-    let bounds_result = client.view(contract.id(), "storage_balance_bounds").await?;
-    // Deserialize into serde_json::Value
-    let bounds_val: serde_json::Value = serde_json::from_slice(&bounds_result.result)?;
-    // Extract min bound string
-    let min_bound_str = bounds_val["min"].as_str().ok_or_else(|| {
-        anyhow::anyhow!("Missing or invalid 'min' in storage_balance_bounds response")
-    })?;
-    // Parse the min bound string to u128, then create NearToken
-    let min_bound_u128 = min_bound_str.parse::<u128>().map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to parse min bound string '{}' to u128: {}",
-            min_bound_str,
-            e
-        )
-    })?;
-    let minimum_deposit = NearToken::from_yoctonear(min_bound_u128);
+    let bounds: StorageBalanceBounds = client
+        .view(contract.id(), "storage_balance_bounds")
+        .await?
+        .into_result()?;
+    let minimum_deposit = bounds.min;
 
     // Define amounts using NearToken
     let initial_total_supply = NearToken::from_near(1);
@@ -145,41 +81,25 @@ async fn test_transaction_sandbox() -> anyhow::Result<()> {
 
     // Verify balances using NearToken
     // Owner balance check
-    let owner_balance_result = client
+    let owner_balance: NearToken = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": owner_account.id()
         }))?
-        .await?;
-    let owner_balance_str: String = serde_json::from_slice(&owner_balance_result.result)?;
-    let owner_balance_u128 = owner_balance_str.parse::<u128>().map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to parse owner balance string '{}' to u128: {}",
-            owner_balance_str,
-            e
-        )
-    })?;
-    let owner_balance = NearToken::from_yoctonear(owner_balance_u128);
+        .await?
+        .into_result()?;
     // Perform arithmetic with NearToken
     let expected_owner_balance = initial_total_supply.checked_sub(transfer_amount).unwrap();
     assert_eq!(owner_balance, expected_owner_balance);
 
     // Receiver balance check
-    let receiver_balance_result = client
+    let receiver_balance: NearToken = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": receiver_account.id()
         }))?
-        .await?;
-    let receiver_balance_str: String = serde_json::from_slice(&receiver_balance_result.result)?;
-    let receiver_balance_u128 = receiver_balance_str.parse::<u128>().map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to parse receiver balance string '{}' to u128: {}",
-            receiver_balance_str,
-            e
-        )
-    })?;
-    let receiver_balance = NearToken::from_yoctonear(receiver_balance_u128);
+        .await?
+        .into_result()?;
     assert_eq!(receiver_balance, transfer_amount);
 
     Ok(())
@@ -191,43 +111,25 @@ async fn test_ft_balance_of_sandbox() -> anyhow::Result<()> {
 
     let expected_balance = NearToken::from_near(1);
 
-    let result = client
+    let balance: NearToken = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": owner_account.id()
         }))?
-        .await?;
-
-    // Deserialize the balance string, parse to u128, then create NearToken
-    let balance_str: String = serde_json::from_slice(&result.result)?;
-    let balance_u128 = balance_str.parse::<u128>().map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to parse balance string '{}' to u128: {}",
-            balance_str,
-            e
-        )
-    })?;
-    let balance = NearToken::from_yoctonear(balance_u128);
+        .await?
+        .into_result()?;
 
     assert_eq!(balance, expected_balance);
 
     // Check the balance of a different, empty account
     let other_account = worker.dev_create_account().await?;
-    let result_other = client
+    let balance_other: NearToken = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": other_account.id()
         }))?
-        .await?;
-    let balance_other_str: String = serde_json::from_slice(&result_other.result)?;
-    let balance_other_u128 = balance_other_str.parse::<u128>().map_err(|e| {
-        anyhow::anyhow!(
-            "Failed to parse other balance string '{}' to u128: {}",
-            balance_other_str,
-            e
-        )
-    })?;
-    let balance_other = NearToken::from_yoctonear(balance_other_u128);
+        .await?
+        .into_result()?;
     assert_eq!(balance_other, NearToken::from_yoctonear(0));
 
     Ok(())
@@ -266,7 +168,7 @@ async fn test_view_access_keys_sandbox() -> anyhow::Result<()> {
         "Successfully verified access key for: {}",
         owner_account.id()
     );
-    println!("Key: {:?}", owner_key_info);
+    println!("Key: {owner_key_info:?}");
 
     Ok(())
 }
@@ -282,17 +184,15 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
     let client = Client::new(
         worker.rpc_addr().as_str(),
         None,
-        signer_from_secret(owner_account.id(), owner_account.secret_key()),
+        signer_from_secret(owner_account.id(), owner_account.secret_key())?,
     )?;
 
     // --- Get Minimum Deposit for Storage ---
-    let bounds_result = client.view(contract.id(), "storage_balance_bounds").await?;
-    let bounds_val: serde_json::Value = serde_json::from_slice(&bounds_result.result)?;
-    let min_bound_str = bounds_val["min"]
-        .as_str()
-        .ok_or_else(|| anyhow::anyhow!("Missing min bound"))?;
-    let min_bound_u128 = min_bound_str.parse::<u128>()?;
-    let minimum_deposit = NearToken::from_yoctonear(min_bound_u128);
+    let bounds: StorageBalanceBounds = client
+        .view(contract.id(), "storage_balance_bounds")
+        .await?
+        .into_result()?;
+    let minimum_deposit = bounds.min;
 
     // --- Define Transfer Details ---
     let transfer_amount = NearToken::from_millinear(5); // 0.05 NEAR
@@ -328,15 +228,13 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
     batch_outcome.assert_success();
 
     // --- Verify Receiver's Balance ---
-    let receiver_balance_result = client
+    let receiver_balance: NearToken = client
         .view(contract.id(), "ft_balance_of")
         .args_json(serde_json::json!({
             "account_id": receiver_account.id()
         }))?
-        .await?;
-    let receiver_balance_str: String = serde_json::from_slice(&receiver_balance_result.result)?;
-    let receiver_balance_u128 = receiver_balance_str.parse::<u128>()?;
-    let receiver_balance = NearToken::from_yoctonear(receiver_balance_u128);
+        .await?
+        .into_result()?;
 
     assert_eq!(
         receiver_balance, transfer_amount,
@@ -344,19 +242,4 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
     );
 
     Ok(())
-}
-
-fn signer_from_secret(
-    account_id: &near_workspaces::AccountId,
-    sk: &near_workspaces::types::SecretKey,
-) -> near_crypto::InMemorySigner {
-    let signer = near_crypto::InMemorySigner::from_secret_key(
-        account_id.to_owned(),
-        near_crypto::SecretKey::from_str(&sk.to_string()).unwrap(),
-    );
-
-    match signer {
-        Signer::Empty(_) => panic!("Signer should not be empty"),
-        Signer::InMemory(signer) => signer,
-    }
 }

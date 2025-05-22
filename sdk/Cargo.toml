@@ -11,6 +11,7 @@ readme.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+aurora-engine-types = { workspace = true, features = ["std", "impl-serde"] }
 near-crypto.workspace = true
 borsh.workspace = true
 near-gas.workspace = true
@@ -21,7 +22,9 @@ serde.workspace = true
 serde_json.workspace = true
 near-jsonrpc-client.workspace = true
 near-jsonrpc-primitives.workspace = true
+regex.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+near-contract-standards.workspace = true
 near-workspaces.workspace = true

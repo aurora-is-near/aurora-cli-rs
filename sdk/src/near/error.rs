@@ -28,7 +28,7 @@ pub enum Error {
     DataConversionError(#[from] DataConversionError),
 
     #[error("Unexpected query response kind: {0:?}")]
-    UnexpectedQueryResponseKind(QueryResponseKind),
+    UnexpectedQueryResponseKind(Box<QueryResponseKind>),
 }
 
 impl From<serde_json::Error> for Error {

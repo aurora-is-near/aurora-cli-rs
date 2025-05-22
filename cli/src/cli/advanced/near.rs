@@ -15,10 +15,9 @@ use aurora_engine_types::{
     types::{Address, NearGas, Wei, Yocto},
 };
 use clap::Subcommand;
-use near_primitives::version::PROTOCOL_VERSION;
+use near_primitives::account::AccountContract;
 use near_primitives::{
     account::{AccessKey, Account},
-    hash::CryptoHash,
     state_record::StateRecord,
     views::FinalExecutionOutcomeView,
 };
@@ -653,14 +652,7 @@ pub async fn execute_command(
                 };
                 let aurora_account_record = StateRecord::Account {
                     account_id: aurora_id.clone(),
-                    account: Account::new(
-                        aurora_amount,
-                        0,
-                        0,
-                        CryptoHash::default(),
-                        0,
-                        PROTOCOL_VERSION,
-                    ),
+                    account: Account::new(aurora_amount, 0, AccountContract::None, 0),
                 };
                 records.0.push(aurora_key_record);
                 records.0.push(aurora_account_record);
