@@ -1,5 +1,3 @@
-use std::io;
-
 use near_jsonrpc_client::methods::query::RpcQueryError;
 use near_primitives::errors::{ActionError, ActionErrorKind, FunctionCallError};
 use near_primitives::hash::CryptoHash;
