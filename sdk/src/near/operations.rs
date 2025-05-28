@@ -243,6 +243,9 @@ impl<'a> Transaction<'a> {
         self
     }
 
+    /// Changes the signer account id for the transaction.
+    /// Usable when your account ids have the same public/secret key
+    #[must_use]
     pub fn signer_id(mut self, id: &AccountId) -> Self {
         let key_file: KeyFile = self.signer.into(); // a hack to access the secret key
         self.signer = InMemorySigner::from_secret_key(id.clone(), key_file.secret_key);
@@ -364,6 +367,7 @@ impl<'a> CallTransaction<'a> {
         self
     }
 
+    #[must_use]
     pub fn signer_id(mut self, id: &AccountId) -> Self {
         let key_file: KeyFile = self.signer.into(); // a hack to access the secret key
         self.signer = InMemorySigner::from_secret_key(id.clone(), key_file.secret_key);

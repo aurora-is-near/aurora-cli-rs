@@ -101,7 +101,7 @@ impl RpcClient {
                 nonce,
                 signer.get_account_id(),
                 receiver_id.clone(),
-                &signer,
+                signer,
                 actions,
                 block_hash,
                 priority_fee,
@@ -125,7 +125,7 @@ impl RpcClient {
                 nonce,
                 signer.get_account_id(),
                 receiver_id.clone(),
-                &signer,
+                signer,
                 actions,
                 block_hash,
                 priority_fee,
@@ -145,7 +145,7 @@ impl RpcClient {
             .client
             .call(RpcTransactionStatusRequest {
                 transaction_info: TransactionInfo::TransactionId {
-                    tx_hash: hash.clone(),
+                    tx_hash: *hash,
                     sender_account_id: sender.clone(),
                 },
                 wait_until: wait_until.unwrap_or(TxExecutionStatus::Final),
