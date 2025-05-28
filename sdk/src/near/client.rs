@@ -169,16 +169,13 @@ impl Client {
         sender: Option<&AccountId>,
         wait_until: Option<TxExecutionStatus>,
     ) -> Result<RpcTransactionResponse> {
+        let default_acc_id = &self.signer.get_account_id();
         self.client
-            .status(
-                hash,
-                sender.unwrap_or(&self.signer.get_account_id()),
-                wait_until,
-            )
+            .status(hash, sender.unwrap_or(default_acc_id), wait_until)
             .await
     }
 
-    pub fn signer(&self) -> &Signer {
+    pub const fn signer(&self) -> &Signer {
         &self.signer
     }
 }

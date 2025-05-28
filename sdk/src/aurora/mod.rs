@@ -104,7 +104,7 @@ pub(crate) fn parse_query_error(query_error: RpcQueryError) -> Result<error::Err
             vm_error,
             block_height: _,
             block_hash: _,
-        } => Ok(convert_view_msg_to_error(&vm_error)
+        } => Ok(convert_view_msg_to_error(vm_error)
             .unwrap_or_else(|| near::error::Error::from(query_error).into())),
         _ => Err(io::Error::new(
             io::ErrorKind::Other,

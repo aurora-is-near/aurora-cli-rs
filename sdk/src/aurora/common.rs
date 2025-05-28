@@ -6,6 +6,6 @@ pub trait IntoAurora<T> {
 
 impl IntoAurora<AccountId> for crate::near::primitives::types::AccountId {
     fn into_aurora(self) -> AccountId {
-        AccountId::new(&self.to_string()).unwrap()
+        AccountId::new(self.as_ref()).unwrap()
     }
 }
