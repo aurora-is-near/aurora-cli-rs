@@ -107,7 +107,11 @@ impl ContractMethod for SetSiloParams {
     }
 }
 
-impl ContractMethod for FixedGasArgs {
+pub struct SetFixedGas {
+    pub args: FixedGasArgs,
+}
+
+impl ContractMethod for SetFixedGas {
     type Response = ();
 
     fn method_name(&self) -> &'static str {
@@ -115,7 +119,7 @@ impl ContractMethod for FixedGasArgs {
     }
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(&self)
+        borsh::to_vec(&self.args)
     }
 }
 
