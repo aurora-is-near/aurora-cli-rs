@@ -73,7 +73,6 @@ impl Client {
         let params = method.params()?;
 
         let view_result = self.near.view(account_id, method_name).args(params).await;
-
         match view_result {
             Ok(call_result) => Ok(M::parse_response(call_result.result)?),
 
@@ -82,5 +81,9 @@ impl Client {
             ))) => Err(M::parse_error(query_error.into())?.into()),
             Err(e) => Err(e.into()),
         }
+    }
+
+    pub fn near(&self) -> &near::client::Client {
+        &self.near
     }
 }

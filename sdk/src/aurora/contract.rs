@@ -3,12 +3,13 @@ use super::{ContractMethod, ContractMethodResponse, error::Error};
 use aurora_engine_types::{
     parameters::{
         connector::{MirrorErc20TokenArgs, SetEthConnectorContractAccountArgs},
-        silo::{SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
+        silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
     },
     types::{Address, EthGas},
 };
 use borsh::BorshDeserialize;
 use near_primitives::types::AccountId;
+use near_sdk::near;
 
 impl ContractMethodResponse for () {
     fn parse(_rsp: Vec<u8>) -> Result<Self, Error> {
@@ -37,7 +38,7 @@ impl ContractMethodResponse for AccountId {
 }
 
 pub struct SetEthConnectorContractAccount {
-    args: SetEthConnectorContractAccountArgs,
+    pub args: SetEthConnectorContractAccountArgs,
 }
 
 impl ContractMethod for SetEthConnectorContractAccount {
@@ -91,7 +92,7 @@ impl ContractMethod for FactoryUpdate {
 }
 
 pub struct SetSiloParams {
-    pub args: SiloParamsArgs,
+    pub args: Option<SiloParamsArgs>,
 }
 
 impl ContractMethod for SetSiloParams {
@@ -103,6 +104,36 @@ impl ContractMethod for SetSiloParams {
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         borsh::to_vec(&self.args)
+    }
+}
+
+impl ContractMethod for FixedGasArgs {
+    type Response = ();
+
+    fn method_name(&self) -> &'static str {
+        "set_fixed_gas"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(&self)
+    }
+}
+
+// temporarly until engine 4.0.0 release
+#[near(serializers = [borsh])]
+pub struct Erc20FallbackAddressArgs {
+    pub address: Option<Address>,
+}
+
+impl ContractMethod for Erc20FallbackAddressArgs {
+    type Response = ();
+
+    fn method_name(&self) -> &'static str {
+        "set_erc20_fallback_address"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(&self)
     }
 }
 
@@ -140,7 +171,7 @@ impl ContractMethod for GetFallbackAddress {
     }
 
     fn method_name(&self) -> &'static str {
-        "get_fallback_address"
+        "get_erc20_fallback_address"
     }
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
@@ -199,5 +230,21 @@ impl ContractMethod for SetWhitelistStatus {
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         borsh::to_vec(&self.args)
+    }
+}
+
+pub struct GetBalance {
+    pub address: Address,
+}
+
+impl ContractMethod for GetBalance {
+    type Response = Vec<u8>;
+
+    fn method_name(&self) -> &'static str {
+        "get_balance"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        Ok(self.address.as_bytes().to_vec())
     }
 }

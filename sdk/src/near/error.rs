@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 
-use near_jsonrpc_client::errors::JsonRpcError;
+use near_jsonrpc_client::errors::{JsonRpcError, JsonRpcServerError};
 use near_jsonrpc_client::methods;
+use near_jsonrpc_client::methods::query::RpcQueryError;
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
 use thiserror::Error;
 
@@ -40,6 +41,14 @@ impl From<serde_json::Error> for Error {
 impl From<borsh::io::Error> for Error {
     fn from(err: borsh::io::Error) -> Self {
         Self::DataConversionError(DataConversionError::Borsh(err))
+    }
+}
+
+impl From<RpcQueryError> for Error {
+    fn from(err: RpcQueryError) -> Self {
+        Self::RpcQueryError(JsonRpcError::ServerError(JsonRpcServerError::HandlerError(
+            err,
+        )))
     }
 }
 

@@ -30,6 +30,7 @@ near-chain-configs = "0.30"
 near-contract-standards = "5"
 near-crypto = "0.30"
 near-gas = "0.3"
+near-sdk = "5"
 near-token = { version = "0.3", features = ["borsh", "serde"] }
 near-jsonrpc-client = "0.17"
 near-jsonrpc-primitives = "0.30"

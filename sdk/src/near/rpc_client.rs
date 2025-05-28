@@ -1,12 +1,17 @@
 use std::{collections::HashMap, fmt::Debug, vec};
 
-use near_crypto::{InMemorySigner, Signer};
+use near_crypto::Signer;
 use near_jsonrpc_client::{
     AsUrl, JsonRpcClient, MethodCallResult,
     errors::{JsonRpcError, JsonRpcServerError},
     methods::{
-        self, broadcast_tx_async::RpcBroadcastTxAsyncRequest,
-        broadcast_tx_commit::RpcBroadcastTxCommitRequest, tx::RpcTransactionError,
+        self,
+        broadcast_tx_async::RpcBroadcastTxAsyncRequest,
+        broadcast_tx_commit::RpcBroadcastTxCommitRequest,
+        tx::{
+            RpcTransactionError, RpcTransactionResponse, RpcTransactionStatusRequest,
+            TransactionInfo,
+        },
     },
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
@@ -16,7 +21,7 @@ use near_primitives::{
     hash::CryptoHash,
     transaction::SignedTransaction,
     types::{AccountId, BlockReference, Finality, Gas, Nonce},
-    views::{AccessKeyView, BlockView, FinalExecutionOutcomeView, QueryRequest},
+    views::{AccessKeyView, BlockView, FinalExecutionOutcomeView, QueryRequest, TxExecutionStatus},
 };
 use near_token::NearToken;
 use tokio::sync::Mutex;
@@ -56,7 +61,7 @@ impl RpcClient {
     #[allow(clippy::too_many_arguments)]
     pub(crate) async fn call(
         &self,
-        signer: &InMemorySigner,
+        signer: &Signer,
         contract_id: &AccountId,
         method_name: String,
         args: Vec<u8>,
@@ -81,12 +86,12 @@ impl RpcClient {
 
     pub(crate) async fn send_batch_tx(
         &self,
-        signer: &InMemorySigner,
+        signer: &Signer,
         receiver_id: &AccountId,
         actions: Vec<Action>,
         priority_fee: u64,
     ) -> Result<FinalExecutionOutcomeView> {
-        let cache_key = (signer.account_id.clone(), signer.secret_key.public_key());
+        let cache_key = (signer.get_account_id(), signer.public_key());
         let (block_hash, nonce) = self.fetch_tx_nonce(&cache_key).await?;
 
         send_tx(
@@ -94,9 +99,9 @@ impl RpcClient {
             &cache_key,
             SignedTransaction::from_actions(
                 nonce,
-                signer.account_id.clone(),
+                signer.get_account_id(),
                 receiver_id.clone(),
-                &Signer::InMemory(signer.clone()),
+                &signer,
                 actions,
                 block_hash,
                 priority_fee,
@@ -107,20 +112,20 @@ impl RpcClient {
 
     pub(crate) async fn send_batch_tx_async(
         &self,
-        signer: &InMemorySigner,
+        signer: &Signer,
         receiver_id: &AccountId,
         actions: Vec<Action>,
         priority_fee: u64,
     ) -> Result<CryptoHash> {
-        let cache_key = (signer.account_id.clone(), signer.secret_key.public_key());
+        let cache_key = (signer.get_account_id(), signer.public_key());
         let (block_hash, nonce) = self.fetch_tx_nonce(&cache_key).await?;
 
         self.query(RpcBroadcastTxAsyncRequest {
             signed_transaction: SignedTransaction::from_actions(
                 nonce,
-                signer.account_id.clone(),
+                signer.get_account_id(),
                 receiver_id.clone(),
-                &Signer::InMemory(signer.clone()),
+                &signer,
                 actions,
                 block_hash,
                 priority_fee,
@@ -128,6 +133,26 @@ impl RpcClient {
         })
         .await
         .map_err(Into::into)
+    }
+
+    pub(crate) async fn status(
+        &self,
+        hash: &CryptoHash,
+        sender: &AccountId,
+        wait_until: Option<TxExecutionStatus>,
+    ) -> Result<RpcTransactionResponse> {
+        let status = self
+            .client
+            .call(RpcTransactionStatusRequest {
+                transaction_info: TransactionInfo::TransactionId {
+                    tx_hash: hash.clone(),
+                    sender_account_id: sender.clone(),
+                },
+                wait_until: wait_until.unwrap_or(TxExecutionStatus::Final),
+            })
+            .await?;
+
+        Ok(status)
     }
 
     async fn query_broadcast_tx(
@@ -139,7 +164,7 @@ impl RpcClient {
 
     async fn send_tx(
         &self,
-        signer: &InMemorySigner,
+        signer: &Signer,
         receiver_id: &AccountId,
         action: Action,
         priority_fee: u64,
@@ -236,4 +261,13 @@ async fn send_tx(
     }
 
     result.map_err(Into::into)
+}
+
+impl Clone for RpcClient {
+    fn clone(&self) -> Self {
+        Self {
+            client: self.client.clone(),
+            access_key_nonces: Mutex::new(HashMap::new()),
+        }
+    }
 }

@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use aurora_sdk_rs::near::client::Client;
-use near_crypto::Signer;
 use near_token::NearToken;
 use near_workspaces::{Account, Contract, Worker, network::Sandbox};
 
@@ -45,14 +44,9 @@ pub async fn setup_sandbox() -> anyhow::Result<(Worker<Sandbox>, Client, Contrac
 pub fn signer_from_secret(
     account_id: &near_workspaces::AccountId,
     sk: &near_workspaces::types::SecretKey,
-) -> anyhow::Result<near_crypto::InMemorySigner, anyhow::Error> {
-    let signer = near_crypto::InMemorySigner::from_secret_key(
+) -> anyhow::Result<near_crypto::Signer> {
+    Ok(near_crypto::InMemorySigner::from_secret_key(
         account_id.to_owned(),
         near_crypto::SecretKey::from_str(&sk.to_string())?,
-    );
-
-    match signer {
-        Signer::InMemory(signer) => Ok(signer),
-        Signer::Empty(_) => Err(anyhow::anyhow!("Signer should not be empty")),
-    }
+    ))
 }

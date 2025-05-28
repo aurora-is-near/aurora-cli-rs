@@ -19,18 +19,13 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn signer() -> anyhow::Result<InMemorySigner> {
-    let signer = std::env::var("NEAR_KEY_PATH")
+fn signer() -> anyhow::Result<Signer> {
+    std::env::var("NEAR_KEY_PATH")
         .ok()
         .as_ref()
         .map(std::path::Path::new)
         .ok_or_else(|| {
             anyhow::anyhow!("Path to the key file must be provided to use this functionality")
         })
-        .and_then(|path| InMemorySigner::from_file(path).map_err(Into::into))?;
-
-    match signer {
-        Signer::Empty(_) => panic!("Signer must not be empty"),
-        Signer::InMemory(signer) => Ok(signer),
-    }
+        .and_then(|path| InMemorySigner::from_file(path).map_err(Into::into))
 }

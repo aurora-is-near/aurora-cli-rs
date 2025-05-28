@@ -1,7 +1,7 @@
 use aurora_engine_types::parameters::connector::FungibleTokenMetadata;
-use aurora_sdk_rs::near::client::Client;
 use aurora_sdk_rs::near::operations::Function;
 use aurora_sdk_rs::near::query::JsonIntoResult;
+use aurora_sdk_rs::near::{client::Client, operations::MAX_GAS};
 use helpers::{setup_sandbox, signer_from_secret};
 use near_contract_standards::storage_management::StorageBalanceBounds;
 use near_primitives::views::{AccessKeyList, AccessKeyPermissionView};
@@ -210,7 +210,8 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                     "account_id": receiver_account.id(),
                     "registration_only": true
                 }))?
-                .deposit(minimum_deposit), // Attach NEAR deposit for storage cost
+                .deposit(minimum_deposit)
+                .gas(MAX_GAS.as_gas() / 2), // Attach NEAR deposit for storage cost
         )
         // Action 2: Call ft_transfer from owner to receiver
         .call(
@@ -219,7 +220,8 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                     "receiver_id": receiver_account.id(),
                     "amount": transfer_amount.as_yoctonear().to_string()
                 }))?
-                .deposit(one_yocto), // Attach 1 yoctoNEAR for the transfer standard
+                .deposit(one_yocto)
+                .gas(MAX_GAS.as_gas() / 2), // Attach 1 yoctoNEAR for the transfer standard
         )
         .priority_fee(1000)
         .transact()
