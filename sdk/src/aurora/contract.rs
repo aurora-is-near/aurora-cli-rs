@@ -9,7 +9,6 @@ use aurora_engine_types::{
 };
 use borsh::BorshDeserialize;
 use near_primitives::types::AccountId;
-use near_sdk::near;
 
 impl ContractMethodResponse for () {
     fn parse(_rsp: Vec<u8>) -> Result<Self, Error> {
@@ -124,7 +123,7 @@ impl ContractMethod for SetFixedGas {
 }
 
 // temporarly until engine 4.0.0 release
-#[near(serializers = [borsh])]
+#[derive(Debug, borsh::BorshDeserialize, borsh::BorshSerialize)]
 pub struct Erc20FallbackAddressArgs {
     pub address: Option<Address>,
 }

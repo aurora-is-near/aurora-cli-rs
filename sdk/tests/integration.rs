@@ -210,8 +210,8 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                     "account_id": receiver_account.id(),
                     "registration_only": true
                 }))?
-                .deposit(minimum_deposit)
-                .gas(MAX_GAS.as_gas() / 2), // Attach NEAR deposit for storage cost
+                .deposit(minimum_deposit) // Attach NEAR deposit for storage cost
+                .gas(MAX_GAS.as_gas() / 2),
         )
         // Action 2: Call ft_transfer from owner to receiver
         .call(
@@ -220,8 +220,8 @@ async fn test_batch_transaction_sandbox() -> anyhow::Result<()> {
                     "receiver_id": receiver_account.id(),
                     "amount": transfer_amount.as_yoctonear().to_string()
                 }))?
-                .deposit(one_yocto)
-                .gas(MAX_GAS.as_gas() / 2), // Attach 1 yoctoNEAR for the transfer standard
+                .deposit(one_yocto) // Attach 1 yoctoNEAR for the transfer standard
+                .gas(MAX_GAS.as_gas() / 2),
         )
         .priority_fee(1000)
         .transact()
