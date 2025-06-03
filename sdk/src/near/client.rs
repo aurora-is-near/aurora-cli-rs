@@ -1,6 +1,9 @@
-use near_crypto::{InMemorySigner, PublicKey};
+use near_crypto::{PublicKey, Signer};
 use near_jsonrpc_client::AsUrl;
+use near_jsonrpc_client::methods::tx::RpcTransactionResponse;
+use near_primitives::hash::CryptoHash;
 use near_primitives::types::AccountId;
+use near_primitives::views::TxExecutionStatus;
 
 use super::Result;
 use super::operations::{CallTransaction, Function, Transaction};
@@ -9,9 +12,10 @@ use super::rpc_client::RpcClient;
 
 /// Represents a connection to a NEAR network, allowing interaction with contracts
 /// and accounts. Provides methods for sending transactions and querying state.
+#[derive(Clone)]
 pub struct Client {
     client: RpcClient,
-    signer: InMemorySigner,
+    signer: Signer,
 }
 
 impl Client {
@@ -21,7 +25,7 @@ impl Client {
     ///
     /// * `addr` - The URL of the NEAR RPC endpoint.
     /// * `api_key` - An optional API key for authenticated access to the RPC endpoint.
-    /// * `signer` - The `InMemorySigner` used to sign transactions originated from this workspace.
+    /// * `signer` - The `Signer` used to sign transactions originated from this workspace.
     ///
     /// # Returns
     ///
@@ -30,7 +34,7 @@ impl Client {
     /// # Errors
     ///
     /// An error is returned if the URL is invalid or if the API key is invalid.
-    pub fn new<U: AsUrl>(url: U, api_key: Option<String>, signer: InMemorySigner) -> Result<Self> {
+    pub fn new<U: AsUrl>(url: U, api_key: Option<String>, signer: Signer) -> Result<Self> {
         let client = RpcClient::new(url, api_key)?;
         Ok(Self { client, signer })
     }
@@ -157,5 +161,21 @@ impl Client {
                 function: Function::new(method.into()),
             },
         )
+    }
+
+    pub async fn status(
+        &self,
+        hash: &CryptoHash,
+        sender: Option<&AccountId>,
+        wait_until: Option<TxExecutionStatus>,
+    ) -> Result<RpcTransactionResponse> {
+        let default_acc_id = &self.signer.get_account_id();
+        self.client
+            .status(hash, sender.unwrap_or(default_acc_id), wait_until)
+            .await
+    }
+
+    pub const fn signer(&self) -> &Signer {
+        &self.signer
     }
 }

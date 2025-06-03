@@ -1,12 +1,11 @@
-use std::io;
-
 use near_jsonrpc_client::methods::query::RpcQueryError;
 use near_primitives::errors::{ActionError, ActionErrorKind, FunctionCallError};
 use near_primitives::hash::CryptoHash;
 
 use crate::aurora::error::EngineError;
 use crate::aurora::{
-    convert_call_msg_to_error, convert_view_msg_to_error, parse_action_error, parse_query_error,
+    self, convert_call_msg_to_error, convert_view_msg_to_error, parse_action_error,
+    parse_query_error,
 };
 
 #[test]
@@ -22,7 +21,10 @@ fn test_parse_action_error_with_function_call_error() {
     let result = parse_action_error(action_error);
 
     assert!(
-        matches!(result, Ok(EngineError::ParseArgs)),
+        matches!(
+            result,
+            Ok(aurora::error::Error::Engine(EngineError::ParseArgs))
+        ),
         "Expected EngineError::ParseArgs, got {result:?}",
     );
 }
@@ -58,7 +60,10 @@ fn test_convert_call_msg_to_error_with_valid_json() {
     // Assert
     match result {
         Ok(engine_error) => {
-            assert!(matches!(engine_error, EngineError::ParseArgs));
+            assert!(matches!(
+                engine_error,
+                aurora::error::Error::Engine(EngineError::ParseArgs)
+            ));
         }
         Err(e) => panic!("Expected EngineError, got error: {e}"),
     }
@@ -91,7 +96,7 @@ fn test_convert_call_msg_to_error_with_invalid_json() {
 
     let expected = ERR_MSG.to_string();
     match result {
-        Ok(EngineError::Unknown(msg)) => {
+        Ok(aurora::error::Error::Engine(EngineError::Unknown(msg))) => {
             assert_eq!(msg, expected);
         }
         Err(e) => panic!("Expected EngineError::Unknown, got {e}"),
@@ -114,7 +119,10 @@ fn test_parse_query_error_with_contract_execution_error() {
 
     // Assert
     assert!(
-        matches!(result, Ok(EngineError::OutOfGas)),
+        matches!(
+            result,
+            Ok(aurora::error::Error::Engine(EngineError::OutOfGas))
+        ),
         "Expected EngineError::OutOfGas, got {result:?}",
     );
 }
@@ -148,7 +156,10 @@ fn test_convert_view_msg_to_error_with_valid_message() {
 
     // Assert
     assert!(
-        matches!(result, Ok(EngineError::OutOfGas)),
+        matches!(
+            result,
+            Some(aurora::error::Error::Engine(EngineError::OutOfGas))
+        ),
         "Expected EngineError::OutOfGas, got {result:?}",
     );
 }
@@ -162,8 +173,5 @@ fn test_convert_view_msg_to_error_with_invalid_message() {
     let result = convert_view_msg_to_error(input);
 
     // Assert
-    assert!(result.is_err());
-    if let Err(e) = result {
-        assert_eq!(e.kind(), io::ErrorKind::NotFound);
-    }
+    assert!(result.is_none());
 }

@@ -38,7 +38,7 @@ impl Client {
 
             near_primitives::views::FinalExecutionStatus::Failure(
                 TxExecutionError::ActionError(action_error),
-            ) => Err(M::parse_error(action_error.into())?.into()), // catching silo errors
+            ) => Err(M::parse_error(action_error.into())?), // catching silo errors
             _ => Err(Error::ExecutionNotStarted),
         }
     }
@@ -73,14 +73,17 @@ impl Client {
         let params = method.params()?;
 
         let view_result = self.near.view(account_id, method_name).args(params).await;
-
         match view_result {
             Ok(call_result) => Ok(M::parse_response(call_result.result)?),
 
             Err(near::error::Error::RpcQueryError(JsonRpcError::ServerError(
                 JsonRpcServerError::HandlerError(query_error),
-            ))) => Err(M::parse_error(query_error.into())?.into()),
+            ))) => Err(M::parse_error(query_error.into())?),
             Err(e) => Err(e.into()),
         }
+    }
+
+    pub const fn near(&self) -> &near::client::Client {
+        &self.near
     }
 }

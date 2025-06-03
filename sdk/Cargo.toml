@@ -17,6 +17,7 @@ borsh.workspace = true
 near-gas.workspace = true
 near-token.workspace = true
 near-primitives.workspace = true
+near-sdk.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 serde.workspace = true
 serde_json.workspace = true

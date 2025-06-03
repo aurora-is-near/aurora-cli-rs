@@ -1,4 +1,4 @@
-use near_crypto::{InMemorySigner, PublicKey};
+use near_crypto::{InMemorySigner, KeyFile, PublicKey, Signer};
 use near_gas::NearGas;
 use near_primitives::{
     account::AccessKey,
@@ -16,7 +16,7 @@ use near_token::NearToken;
 
 use crate::near::types::{GlobalContractDeployMode, GlobalContractIdentifier};
 
-const MAX_GAS: NearGas = NearGas::from_tgas(300);
+pub const MAX_GAS: NearGas = NearGas::from_tgas(300);
 
 pub(crate) const DEFAULT_CALL_FN_GAS: NearGas = NearGas::from_tgas(10);
 pub(crate) const DEFAULT_CALL_DEPOSIT: NearToken = NearToken::from_near(0);
@@ -99,18 +99,14 @@ impl Function {
 
 pub struct Transaction<'a> {
     client: &'a RpcClient,
-    signer: InMemorySigner,
+    signer: Signer,
     receiver_id: AccountId,
     actions: Vec<Action>,
     priority_fee: u64,
 }
 
 impl<'a> Transaction<'a> {
-    pub(crate) const fn new(
-        client: &'a RpcClient,
-        signer: InMemorySigner,
-        receiver_id: AccountId,
-    ) -> Self {
+    pub(crate) const fn new(client: &'a RpcClient, signer: Signer, receiver_id: AccountId) -> Self {
         Self {
             client,
             signer,
@@ -247,6 +243,15 @@ impl<'a> Transaction<'a> {
         self
     }
 
+    /// Changes the signer account id for the transaction.
+    /// Usable when your account ids have the same public/secret key
+    #[must_use]
+    pub fn signer_id(mut self, id: &AccountId) -> Self {
+        let key_file: KeyFile = self.signer.into(); // a hack to access the secret key
+        self.signer = InMemorySigner::from_secret_key(id.clone(), key_file.secret_key);
+        self
+    }
+
     /// Executes the transaction, sending all queued actions to the network.
     ///
     /// Waits for the transaction to be finalized and returns the final outcome.
@@ -281,7 +286,7 @@ impl<'a> Transaction<'a> {
 /// Note, only one call can be made per `CallTransaction`.
 pub struct CallTransaction<'a> {
     client: &'a RpcClient,
-    signer: InMemorySigner,
+    signer: Signer,
     contract_id: AccountId,
     function: Function,
     priority_fee: u64,
@@ -291,7 +296,7 @@ impl<'a> CallTransaction<'a> {
     pub(crate) fn new<F: Into<String>>(
         client: &'a RpcClient,
         contract_id: AccountId,
-        signer: InMemorySigner,
+        signer: Signer,
         function: F,
     ) -> Self {
         Self {
@@ -350,7 +355,7 @@ impl<'a> CallTransaction<'a> {
 
     /// Specify the signer of the transaction.
     #[must_use]
-    pub fn signer(mut self, signer: InMemorySigner) -> Self {
+    pub fn signer(mut self, signer: Signer) -> Self {
         self.signer = signer;
         self
     }
@@ -359,6 +364,13 @@ impl<'a> CallTransaction<'a> {
     #[must_use]
     pub const fn priority_fee(mut self, priority_fee: u64) -> Self {
         self.priority_fee = priority_fee;
+        self
+    }
+
+    #[must_use]
+    pub fn signer_id(mut self, id: &AccountId) -> Self {
+        let key_file: KeyFile = self.signer.into(); // a hack to access the secret key
+        self.signer = InMemorySigner::from_secret_key(id.clone(), key_file.secret_key);
         self
     }
 

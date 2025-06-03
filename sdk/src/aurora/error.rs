@@ -1,7 +1,6 @@
 use std::io;
 
 use aurora_engine_types::types::address::error::AddressError;
-use near_primitives::errors::TxExecutionError;
 use serde::Deserialize;
 
 #[derive(Debug, thiserror::Error)]
@@ -10,8 +9,6 @@ pub enum Error {
     ExecutionNotStarted,
     #[error(transparent)]
     Io(#[from] io::Error),
-    #[error(transparent)]
-    Execution(#[from] TxExecutionError),
     #[error(transparent)]
     Engine(#[from] EngineError),
     #[error(transparent)]
