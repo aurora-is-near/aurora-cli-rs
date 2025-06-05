@@ -4,8 +4,8 @@ use near_primitives::types::AccountId;
 
 use super::{ContractMethodResponse, error::Error};
 
-mod read;
-mod write;
+pub mod read;
+pub mod write;
 
 impl ContractMethodResponse for () {
     fn parse(_rsp: Vec<u8>) -> Result<Self, Error> {

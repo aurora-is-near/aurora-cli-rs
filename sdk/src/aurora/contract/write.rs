@@ -1,12 +1,13 @@
-use aurora_engine_types::parameters::connector::{
-    MirrorErc20TokenArgs, SetEthConnectorContractAccountArgs,
+use crate::aurora::{ContractMethod, error::Error};
+use aurora_engine_types::{
+    parameters::{
+        connector::{MirrorErc20TokenArgs, SetEthConnectorContractAccountArgs},
+        engine::DeployErc20TokenArgs,
+        silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
+    },
+    types::Address,
 };
-use aurora_engine_types::parameters::silo::{
-    FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs,
-};
-use aurora_engine_types::types::Address;
-
-use crate::aurora::ContractMethod;
+use std::io;
 
 pub struct SetEthConnectorContractAccount {
     pub args: SetEthConnectorContractAccountArgs,
@@ -151,5 +152,30 @@ impl ContractMethod for SetWhitelistStatus {
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         borsh::to_vec(&self.args)
+    }
+}
+
+pub struct DeployERC20 {
+    pub args: DeployErc20TokenArgs,
+}
+
+impl ContractMethod for DeployERC20 {
+    type Response = Address;
+
+    fn method_name(&self) -> &'static str {
+        "deploy_erc20_token"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(&self.args)
+    }
+
+    fn parse_response(response: Vec<u8>) -> Result<Self::Response, Error> {
+        borsh::from_slice::<Vec<u8>>(&response)
+            .and_then(|addr_bytes| {
+                Self::Response::try_from_slice(&addr_bytes)
+                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.to_string()))
+            })
+            .map_err(Into::into)
     }
 }
