@@ -1,4 +1,5 @@
-use crate::aurora::{ContractMethod, error::Error};
+use std::io;
+
 use aurora_engine_types::{
     parameters::{
         connector::{MirrorErc20TokenArgs, SetEthConnectorContractAccountArgs},
@@ -7,7 +8,8 @@ use aurora_engine_types::{
     },
     types::Address,
 };
-use std::io;
+
+use crate::aurora::{ContractMethod, error::Error};
 
 pub struct SetEthConnectorContractAccount {
     pub args: SetEthConnectorContractAccountArgs,
