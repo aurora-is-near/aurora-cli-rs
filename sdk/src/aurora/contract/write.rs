@@ -181,3 +181,18 @@ impl ContractMethod for DeployERC20 {
             .map_err(Into::into)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::aurora::{ContractMethod, common, contract::write::DeployERC20};
+
+    #[test]
+    fn test_erc20_deploy_success() -> anyhow::Result<()> {
+        let addr = common::hex_to_address("0xdAC17F958D2ee523a2206206994597C13D831ec7")
+            .map_err(|_| anyhow::anyhow!("Failed to decode address"))?;
+        let borsh_addr_bytes = borsh::to_vec(&addr.as_bytes())?;
+
+        assert_eq!(addr, DeployERC20::parse_response(borsh_addr_bytes)?);
+        Ok(())
+    }
+}

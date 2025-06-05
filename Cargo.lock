@@ -293,6 +293,7 @@ dependencies = [
  "anyhow",
  "aurora-engine-types",
  "borsh 1.5.7",
+ "hex",
  "near-contract-standards",
  "near-crypto",
  "near-gas",
