@@ -1,12 +1,15 @@
-use aurora_engine_types::parameters::connector::{
-    MirrorErc20TokenArgs, SetEthConnectorContractAccountArgs,
-};
-use aurora_engine_types::parameters::silo::{
-    FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs,
-};
-use aurora_engine_types::types::Address;
+use std::io;
 
-use crate::aurora::ContractMethod;
+use aurora_engine_types::{
+    parameters::{
+        connector::{MirrorErc20TokenArgs, SetEthConnectorContractAccountArgs},
+        engine::DeployErc20TokenArgs,
+        silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
+    },
+    types::Address,
+};
+
+use crate::aurora::{ContractMethod, error::Error};
 
 pub struct SetEthConnectorContractAccount {
     pub args: SetEthConnectorContractAccountArgs,
@@ -151,5 +154,45 @@ impl ContractMethod for SetWhitelistStatus {
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         borsh::to_vec(&self.args)
+    }
+}
+
+pub struct DeployERC20 {
+    pub args: DeployErc20TokenArgs,
+}
+
+impl ContractMethod for DeployERC20 {
+    type Response = Address;
+
+    fn method_name(&self) -> &'static str {
+        "deploy_erc20_token"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(&self.args)
+    }
+
+    fn parse_response(response: Vec<u8>) -> Result<Self::Response, Error> {
+        borsh::from_slice::<Vec<u8>>(&response)
+            .and_then(|addr_bytes| {
+                Self::Response::try_from_slice(&addr_bytes)
+                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.to_string()))
+            })
+            .map_err(Into::into)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::aurora::{ContractMethod, common, contract::write::DeployERC20};
+
+    #[test]
+    fn test_erc20_deploy_success() -> anyhow::Result<()> {
+        let addr = common::hex_to_address("0xdAC17F958D2ee523a2206206994597C13D831ec7")
+            .map_err(|_| anyhow::anyhow!("Failed to decode address"))?;
+        let borsh_addr_bytes = borsh::to_vec(&addr.as_bytes())?;
+
+        assert_eq!(addr, DeployERC20::parse_response(borsh_addr_bytes)?);
+        Ok(())
     }
 }
