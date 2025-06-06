@@ -2,7 +2,9 @@ use std::io;
 
 use aurora_engine_types::{
     parameters::{
-        connector::{MirrorErc20TokenArgs, SetEthConnectorContractAccountArgs},
+        connector::{
+            MirrorErc20TokenArgs, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs,
+        },
         engine::DeployErc20TokenArgs,
         silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
     },
@@ -179,6 +181,22 @@ impl ContractMethod for DeployERC20 {
                     .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.to_string()))
             })
             .map_err(Into::into)
+    }
+}
+
+pub struct SetERC20Metadata {
+    pub args: SetErc20MetadataArgs,
+}
+
+impl ContractMethod for SetERC20Metadata {
+    type Response = ();
+
+    fn method_name(&self) -> &'static str {
+        "set_erc20_metadata"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        serde_json::to_vec(&self.args).map_err(Into::into)
     }
 }
 
