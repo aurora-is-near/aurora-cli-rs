@@ -287,11 +287,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "aurora-sdk-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "aurora-sdk-rs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "aurora-engine-types",
+ "aurora-sdk-macros",
  "borsh 1.5.7",
  "hex",
  "near-contract-standards",
