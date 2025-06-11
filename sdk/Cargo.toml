@@ -26,6 +26,7 @@ near-jsonrpc-primitives.workspace = true
 regex.workspace = true
 thiserror.workspace = true
 hex.workspace = true
+aurora-sdk-macros = { path = "macros" }
 
 [dev-dependencies]
 near-contract-standards.workspace = true

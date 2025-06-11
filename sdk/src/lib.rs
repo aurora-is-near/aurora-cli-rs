@@ -3,3 +3,6 @@
 
 pub mod aurora;
 pub mod near;
+
+// Re-export the procedural macros
+pub use aurora_sdk_macros::*;
