@@ -107,7 +107,7 @@ impl ContractMethod for DeployERC20 {
     fn parse_response(response: Vec<u8>) -> Result<Address, Error> {
         borsh::from_slice::<Vec<u8>>(&response)
             .and_then(|addr_bytes| {
-                Address::try_from_slice(&addr_bytes)
+                Self::Response::try_from_slice(&addr_bytes)
                     .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err.to_string()))
             })
             .map_err(Into::into)
@@ -123,7 +123,7 @@ pub struct SetERC20Metadata {
 
 #[cfg(test)]
 mod tests {
-    use crate::aurora::{common, contract::write::DeployERC20};
+    use crate::aurora::{ContractMethod, common, contract::write::DeployERC20};
 
     #[test]
     fn test_erc20_deploy_success() -> anyhow::Result<()> {
