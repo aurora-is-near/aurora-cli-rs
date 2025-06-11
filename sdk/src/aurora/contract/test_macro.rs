@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct RawDataMethod {
     #[contract_param]
     pub raw_bytes: Vec<u8>, // Should be returned as-is
+    #[allow(unused)]
     pub metadata: String, // Ignored
 }
 
@@ -25,6 +26,7 @@ pub struct TextMethod {
 pub struct RawBorshMethod {
     #[contract_param]
     pub data: Vec<u8>, // Should be returned as-is regardless of serialize_as
+    #[allow(unused)]
     pub extra: String, // Ignored
 }
 
@@ -85,7 +87,7 @@ mod tests {
     fn test_string_field_json_serialization() {
         let method = TextMethod {
             message: "hello world".to_string(),
-            timestamp: 1234567890,
+            timestamp: 1_234_567_890,
         };
 
         assert_eq!(method.method_name(), "text_method");

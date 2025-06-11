@@ -160,5 +160,4 @@ methods:
 - `u128`, `u64`, `u32` - numeric types
 - `AccountId` - NEAR account ID
 - `Address` - Aurora address
-- `Option<T>` where T is supported
 - Other types implementing `ContractMethodResponse`
