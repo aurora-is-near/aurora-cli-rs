@@ -151,13 +151,3 @@ methods:
 - For `serialize_as = "borsh"`: selected field must implement
   `borsh::BorshSerialize` (except `Vec<u8>`)
 - Response type must implement `ContractMethodResponse`
-
-### Supported response types
-
-- `()` - empty response
-- `String` - string response
-- `Vec<u8>` - byte array
-- `u128`, `u64`, `u32` - numeric types
-- `AccountId` - NEAR account ID
-- `Address` - Aurora address
-- Other types implementing `ContractMethodResponse`
