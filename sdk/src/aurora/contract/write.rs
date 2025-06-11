@@ -89,16 +89,22 @@ pub struct SetWhitelistStatus {
     pub args: WhitelistStatusArgs,
 }
 
-#[derive(ContractMethodDerive)]
-#[contract_method(method = "deploy_erc20_token", response = Address, serialize_as = "borsh")]
 pub struct DeployERC20 {
-    #[contract_param]
     pub args: DeployErc20TokenArgs,
 }
 
-// Override parse_response for DeployERC20 since it has custom logic
-impl DeployERC20 {
-    pub fn parse_response(response: Vec<u8>) -> Result<Address, Error> {
+impl ContractMethod for DeployERC20 {
+    type Response = Address;
+
+    fn method_name(&self) -> &'static str {
+        "deploy_erc20"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(&self.args)
+    }
+
+    fn parse_response(response: Vec<u8>) -> Result<Address, Error> {
         borsh::from_slice::<Vec<u8>>(&response)
             .and_then(|addr_bytes| {
                 Address::try_from_slice(&addr_bytes)
