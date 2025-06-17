@@ -15,37 +15,37 @@ use crate::ContractMethod as ContractMethodDerive;
 use crate::aurora::{ContractMethod, error::Error};
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "set_eth_connector_contract_account", response = (), serialize_as = "borsh")]
+#[contract_method(method = "set_eth_connector_contract_account", response = ())]
 pub struct SetEthConnectorContractAccount {
-    #[contract_param]
+    #[contract_param(serialize_as = "borsh")]
     pub args: SetEthConnectorContractAccountArgs,
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "mirror_erc20_token", response = Address, serialize_as = "borsh")]
+#[contract_method(method = "mirror_erc20_token", response = Address, deserialize_as = "borsh")]
 pub struct MirrorErc20Token {
-    #[contract_param]
+    #[contract_param(serialize_as = "borsh")]
     pub args: MirrorErc20TokenArgs,
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "factory_update", response = (), serialize_as = "borsh")]
+#[contract_method(method = "factory_update", response = ())]
 pub struct FactoryUpdate {
     #[contract_param]
     pub wasm: Vec<u8>,
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "set_silo_params", response = (), serialize_as = "borsh")]
+#[contract_method(method = "set_silo_params", response = ())]
 pub struct SetSiloParams {
-    #[contract_param]
+    #[contract_param(serialize_as = "borsh")]
     pub args: Option<SiloParamsArgs>,
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "set_fixed_gas", response = (), serialize_as = "borsh")]
+#[contract_method(method = "set_fixed_gas", response = ())]
 pub struct SetFixedGas {
-    #[contract_param]
+    #[contract_param(serialize_as = "borsh")]
     pub args: FixedGasArgs,
 }
 
@@ -69,23 +69,23 @@ impl ContractMethod for Erc20FallbackAddressArgs {
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "add_entry_to_whitelist", response = (), serialize_as = "borsh")]
+#[contract_method(method = "add_entry_to_whitelist", response = ())]
 pub struct AddEntryToWhitelist {
-    #[contract_param]
+    #[contract_param(serialize_as = "borsh")]
     pub args: WhitelistArgs,
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "remove_entry_from_whitelist", response = (), serialize_as = "borsh")]
+#[contract_method(method = "remove_entry_from_whitelist", response = ())]
 pub struct RemoveEntryFromWhitelist {
-    #[contract_param]
+    #[contract_param(serialize_as = "borsh")]
     pub args: WhitelistArgs,
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "set_whitelist_status", response = (), serialize_as = "borsh")]
+#[contract_method(method = "set_whitelist_status", response = ())]
 pub struct SetWhitelistStatus {
-    #[contract_param]
+    #[contract_param(serialize_as = "borsh")]
     pub args: WhitelistStatusArgs,
 }
 
@@ -97,7 +97,7 @@ impl ContractMethod for DeployERC20 {
     type Response = Address;
 
     fn method_name(&self) -> &'static str {
-        "deploy_erc20"
+        "deploy_erc20_token"
     }
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
@@ -115,9 +115,9 @@ impl ContractMethod for DeployERC20 {
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "set_erc20_metadata", response = (), serialize_as = "json")]
+#[contract_method(method = "set_erc20_metadata", response = ())]
 pub struct SetERC20Metadata {
-    #[contract_param]
+    #[contract_param(serialize_as = "json")]
     pub args: SetErc20MetadataArgs,
 }
 
