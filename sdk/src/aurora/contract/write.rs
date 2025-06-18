@@ -11,89 +11,46 @@ use aurora_engine_types::{
     types::Address,
 };
 
+use crate::ContractMethod as ContractMethodDerive;
 use crate::aurora::{ContractMethod, error::Error};
 
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_eth_connector_contract_account", response = ())]
 pub struct SetEthConnectorContractAccount {
+    #[contract_param(serialize_as = "borsh")]
     pub args: SetEthConnectorContractAccountArgs,
 }
 
-impl ContractMethod for SetEthConnectorContractAccount {
-    type Response = ();
-
-    fn method_name(&self) -> &'static str {
-        "set_eth_connector_contract_account"
-    }
-
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(&self.args)
-    }
-}
-
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "mirror_erc20_token", response = Address, deserialize_as = "borsh")]
 pub struct MirrorErc20Token {
+    #[contract_param(serialize_as = "borsh")]
     pub args: MirrorErc20TokenArgs,
 }
 
-impl ContractMethod for MirrorErc20Token {
-    type Response = Address;
-
-    fn method_name(&self) -> &'static str {
-        "mirror_erc20_token"
-    }
-
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(&self.args)
-    }
-}
-
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "factory_update", response = ())]
 pub struct FactoryUpdate {
+    #[contract_param]
     pub wasm: Vec<u8>,
 }
 
-impl ContractMethod for FactoryUpdate {
-    type Response = ();
-
-    fn method_name(&self) -> &'static str {
-        "factory_update"
-    }
-
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        Ok(self.wasm.clone())
-    }
-}
-
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_silo_params", response = ())]
 pub struct SetSiloParams {
+    #[contract_param(serialize_as = "borsh")]
     pub args: Option<SiloParamsArgs>,
 }
 
-impl ContractMethod for SetSiloParams {
-    type Response = ();
-
-    fn method_name(&self) -> &'static str {
-        "set_silo_params"
-    }
-
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(&self.args)
-    }
-}
-
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_fixed_gas", response = ())]
 pub struct SetFixedGas {
+    #[contract_param(serialize_as = "borsh")]
     pub args: FixedGasArgs,
 }
 
-impl ContractMethod for SetFixedGas {
-    type Response = ();
-
-    fn method_name(&self) -> &'static str {
-        "set_fixed_gas"
-    }
-
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(&self.args)
-    }
-}
-
 // Temporarily until engine 4.0.0 release
+// This structure serializes itself rather than a separate field, so we keep manual implementation
 #[derive(Debug, borsh::BorshDeserialize, borsh::BorshSerialize)]
 pub struct Erc20FallbackAddressArgs {
     pub address: Option<Address>,
@@ -111,52 +68,25 @@ impl ContractMethod for Erc20FallbackAddressArgs {
     }
 }
 
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "add_entry_to_whitelist", response = ())]
 pub struct AddEntryToWhitelist {
+    #[contract_param(serialize_as = "borsh")]
     pub args: WhitelistArgs,
 }
 
-impl ContractMethod for AddEntryToWhitelist {
-    type Response = ();
-
-    fn method_name(&self) -> &'static str {
-        "add_entry_to_whitelist"
-    }
-
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(&self.args)
-    }
-}
-
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "remove_entry_from_whitelist", response = ())]
 pub struct RemoveEntryFromWhitelist {
+    #[contract_param(serialize_as = "borsh")]
     pub args: WhitelistArgs,
 }
 
-impl ContractMethod for RemoveEntryFromWhitelist {
-    type Response = ();
-
-    fn method_name(&self) -> &'static str {
-        "remove_entry_from_whitelist"
-    }
-
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(&self.args)
-    }
-}
-
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_whitelist_status", response = ())]
 pub struct SetWhitelistStatus {
+    #[contract_param(serialize_as = "borsh")]
     pub args: WhitelistStatusArgs,
-}
-
-impl ContractMethod for SetWhitelistStatus {
-    type Response = ();
-
-    fn method_name(&self) -> &'static str {
-        "set_whitelist_status"
-    }
-
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(&self.args)
-    }
 }
 
 pub struct DeployERC20 {
@@ -174,7 +104,7 @@ impl ContractMethod for DeployERC20 {
         borsh::to_vec(&self.args)
     }
 
-    fn parse_response(response: Vec<u8>) -> Result<Self::Response, Error> {
+    fn parse_response(response: Vec<u8>) -> Result<Address, Error> {
         borsh::from_slice::<Vec<u8>>(&response)
             .and_then(|addr_bytes| {
                 Self::Response::try_from_slice(&addr_bytes)
@@ -184,20 +114,11 @@ impl ContractMethod for DeployERC20 {
     }
 }
 
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_erc20_metadata", response = ())]
 pub struct SetERC20Metadata {
+    #[contract_param(serialize_as = "json")]
     pub args: SetErc20MetadataArgs,
-}
-
-impl ContractMethod for SetERC20Metadata {
-    type Response = ();
-
-    fn method_name(&self) -> &'static str {
-        "set_erc20_metadata"
-    }
-
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        serde_json::to_vec(&self.args).map_err(Into::into)
-    }
 }
 
 #[cfg(test)]
