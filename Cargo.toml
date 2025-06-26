@@ -10,7 +10,7 @@ readme = "README.md"
 [workspace]
 resolver = "3"
 members = [
-    "cli",
+    "cli", "newcli",
     "sdk"
 ]
 
@@ -20,6 +20,7 @@ aurora-engine-precompiles = { version = "1", features = ["std"] }
 aurora-engine-sdk = { version = "1", features = ["std"] }
 aurora-engine-transactions = { version = "1", features = ["std"] }
 aurora-engine-types = { version = "1", features = ["std", "impl-serde"] }
+base64 = "0.22"
 borsh = "1"
 bs58 = "0.5"
 clap = "4"

@@ -1,18 +1,25 @@
 use std::io;
 
+use aurora_engine_transactions::EthTransactionKind;
 use aurora_engine_types::{
     parameters::{
         connector::{
-            MirrorErc20TokenArgs, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs,
+            InitCallArgs, MirrorErc20TokenArgs, PauseEthConnectorCallArgs, SetErc20MetadataArgs,
+            SetEthConnectorContractAccountArgs,
         },
-        engine::DeployErc20TokenArgs,
+        engine::{
+            DeployErc20TokenArgs, PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs,
+            SetOwnerArgs, SetUpgradeDelayBlocksArgs, StartHashchainArgs, SubmitResult,
+        },
         silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
+        xcc::FundXccArgs,
     },
     types::Address,
 };
+use borsh::de;
 
 use crate::ContractMethod as ContractMethodDerive;
-use crate::aurora::{ContractMethod, error::Error};
+use crate::aurora::{ContractMethod, ContractMethodResponse, error::Error};
 
 #[derive(ContractMethodDerive)]
 #[contract_method(method = "set_eth_connector_contract_account", response = ())]
@@ -47,6 +54,34 @@ pub struct SetSiloParams {
 pub struct SetFixedGas {
     #[contract_param(serialize_as = "borsh")]
     pub args: FixedGasArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_key_manager", response = ())]
+pub struct SetKeyManager {
+    #[contract_param(serialize_as = "json")]
+    pub args: RelayerKeyManagerArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "add_relayer_key", response = ())]
+pub struct AddRelayerKey {
+    #[contract_param(serialize_as = "json")]
+    args: RelayerKeyArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "remove_relayer_key", response = ())]
+pub struct RemoveRelayerKey {
+    #[contract_param(serialize_as = "json")]
+    pub args: RelayerKeyArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_upgrade_delay_blocks", response = ())]
+pub struct SetUpgradeDelayBlocks {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: SetUpgradeDelayBlocksArgs,
 }
 
 // Temporarily until engine 4.0.0 release
@@ -89,6 +124,33 @@ pub struct SetWhitelistStatus {
     pub args: WhitelistStatusArgs,
 }
 
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_owner", response = ())]
+pub struct SetOwner {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: SetOwnerArgs,
+}
+
+pub struct Submit {
+    pub transaction: EthTransactionKind,
+}
+
+impl ContractMethod for Submit {
+    type Response = SubmitResult;
+
+    fn method_name(&self) -> &'static str {
+        "submit"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        Ok((&self.transaction).into())
+    }
+
+    fn parse_response(response: Vec<u8>) -> Result<SubmitResult, Error> {
+        Self::Response::parse(response).map_err(Into::into)
+    }
+}
+
 pub struct DeployERC20 {
     pub args: DeployErc20TokenArgs,
 }
@@ -120,6 +182,97 @@ pub struct SetERC20Metadata {
     #[contract_param(serialize_as = "json")]
     pub args: SetErc20MetadataArgs,
 }
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_eth_connector_contract_data", response = ())]
+pub struct SetEthConnectorContractData {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: InitCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_paused_flags", response = ())]
+pub struct SetPausedFlags {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: PauseEthConnectorCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "register_relayer", response = ())]
+pub struct RegisterRelayer {
+    #[contract_param(serialize_as = "borsh")]
+    pub address: Address,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "start_hashchain", response = ())]
+pub struct StartHashchain {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: StartHashchainArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "pause_contract", response = ())]
+pub struct PauseContract;
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "resume_contract", response = ())]
+pub struct ResumeContract;
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "pause_precompiles", response = ())]
+pub struct PausePrecompiles {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: PausePrecompilesCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "resume_precompiles", response = ())]
+pub struct ResumePrecompiles {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: PausePrecompilesCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "factory_get_wnear_address", response = ())]
+pub struct FactorySetWnearAddress {
+    #[contract_param(serialize_as = "borsh")]
+    pub address: Address,
+}
+
+pub struct FundXccSubAccount {
+    pub args: FundXccArgs,
+}
+
+impl ContractMethod for FundXccSubAccount {
+    type Response = ();
+
+    fn method_name(&self) -> &'static str {
+        "fund_xcc_sub_account"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(&self.args)
+    }
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "upgrade", response = ())]
+pub struct Upgrade {
+    #[contract_param(serialize_as = "raw")]
+    pub code: Vec<u8>,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "stage_upgrade", response = ())]
+pub struct StageUpgrade {
+    #[contract_param(serialize_as = "raw")]
+    pub code: Vec<u8>,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "deploy_upgrade", response = ())]
+pub struct DeployUpgrade;
 
 #[cfg(test)]
 mod tests {
