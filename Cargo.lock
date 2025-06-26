@@ -301,10 +301,14 @@ name = "aurora-sdk-rs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "aurora-engine-sdk",
+ "aurora-engine-transactions",
  "aurora-engine-types",
  "aurora-sdk-macros",
  "borsh 1.5.7",
+ "ethabi",
  "hex",
+ "libsecp256k1",
  "near-contract-standards",
  "near-crypto",
  "near-gas",
@@ -314,7 +318,9 @@ dependencies = [
  "near-sdk",
  "near-token",
  "near-workspaces",
+ "rand",
  "regex",
+ "rlp 0.6.1",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -2427,6 +2433,21 @@ dependencies = [
  "serde_json",
  "syn 1.0.109",
  "uriparse",
+]
+
+[[package]]
+name = "newcli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aurora-sdk-rs",
+ "base64 0.22.1",
+ "clap",
+ "libsecp256k1",
+ "rlp 0.6.1",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
