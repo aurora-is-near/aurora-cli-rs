@@ -3,7 +3,7 @@ use std::{path::Path, u64};
 use aurora_sdk_rs::{
     aurora::{
         H256, U256, abi,
-        common::{self, IntoAurora, hex_to_address, hex_to_arr, str_to_identifier},
+        common::{self, IntoAurora, hex_to_arr, str_to_identifier},
         contract::{
             read::{
                 FactoryGetWnearAddress, GetBalance, GetBlockHash, GetChainId, GetCode,
@@ -40,11 +40,10 @@ use aurora_sdk_rs::{
             xcc::FundXccArgs,
         },
         transactions::{EthTransactionKind, legacy::TransactionLegacy},
-        types::{Address, EthGas, Wei, address},
+        types::{Address, EthGas, Wei},
     },
     near::{
-        crypto::{self, KeyType, PublicKey, SecretKey},
-        jsonrpc::methods::block,
+        crypto::{KeyType, PublicKey, SecretKey},
         operations::Function,
         primitives::{
             account::{AccessKey, AccessKeyPermission, FunctionCallPermission},
@@ -57,7 +56,7 @@ use aurora_sdk_rs::{
 use libsecp256k1::SecretKey as SecretKeyEth;
 use serde_json::json;
 
-use crate::{command::near, common::parse_ft_metadata, context::Context};
+use crate::{common::parse_ft_metadata, context::Context};
 
 pub async fn create_account(
     context: &Context,
@@ -317,25 +316,6 @@ pub async fn factory_set_wnear_address(context: &Context, address: Address) -> a
         .call(
             &context.cli.engine,
             aurora_sdk_rs::aurora::contract::write::FactorySetWnearAddress { address },
-        )
-        .await
-        .map_err(Into::into)
-}
-
-pub async fn set_eth_connector_account(
-    context: &Context,
-    base_token: &AccountId,
-) -> anyhow::Result<()> {
-    context
-        .client
-        .call(
-            &context.cli.engine,
-            SetEthConnectorContractAccount {
-                args: SetEthConnectorContractAccountArgs {
-                    account: base_token.clone().into_aurora(),
-                    withdraw_serialize_type: WithdrawSerializeType::Borsh,
-                },
-            },
         )
         .await
         .map_err(Into::into)

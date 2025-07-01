@@ -2,13 +2,13 @@ use std::io;
 
 use crate::aurora::ContractMethod;
 use aurora_engine_types::{
-    H256, U256,
+    H256,
     parameters::{
         connector::{Erc20Identifier, Erc20Metadata, PausedMask},
         engine::GetStorageAtArgs,
         silo::{SiloParamsArgs, WhitelistKindArgs, WhitelistStatusArgs},
     },
-    types::{Address, EthGas, RawU256, Wei, WeiU256},
+    types::{Address, EthGas, Wei},
 };
 use near_primitives::types::AccountId;
 

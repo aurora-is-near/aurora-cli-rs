@@ -1,10 +1,10 @@
-use std::str::FromStr;
-
 use aurora_sdk_rs::{
     aurora::parameters::connector::{FungibleReferenceHash, FungibleTokenMetadata},
     near::primitives::borsh::BorshDeserialize,
 };
 use base64::Engine;
+
+pub mod output;
 
 pub fn parse_ft_metadata(input: Option<String>) -> anyhow::Result<FungibleTokenMetadata> {
     let Some(input) = input else {

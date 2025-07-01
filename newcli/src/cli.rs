@@ -64,7 +64,7 @@ impl Cli {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, ValueEnum)]
 pub enum OutputFormat {
     #[default]
     Plain,
