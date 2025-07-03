@@ -10,7 +10,7 @@ on:
 jobs:
   fmt:
     name: Formatting
-    runs-on: ubuntu-latest
+    runs-on: k8s-infrastructure-generic
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -22,7 +22,7 @@ jobs:
 
   clippy:
     name: Clippy
-    runs-on: ubuntu-latest
+    runs-on: k8s-infrastructure-generic
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
         build: [ Linux, macOS ]
         include:
           - build: Linux
-            os: ubuntu-latest
+            os: k8s-infrastructure-generic
           - build: macOS
             os: macos-latest
     steps:
