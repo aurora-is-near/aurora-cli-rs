@@ -4,7 +4,7 @@ use aurora_engine_types::{
     H256, U256,
     parameters::{
         connector::{Erc20Metadata, PausedMask},
-        engine::SubmitResult,
+        engine::{StorageBalance, SubmitResult},
         silo::{SiloParamsArgs, WhitelistStatusArgs},
     },
     types::{Address, EthGas, Wei},
@@ -120,5 +120,18 @@ impl ContractMethodResponse for PausedMask {
 impl ContractMethodResponse for H256 {
     fn parse(value: Vec<u8>) -> Result<Self, Error> {
         Ok(Self::from_slice(&value))
+    }
+}
+
+impl ContractMethodResponse for serde_json::Value {
+    fn parse(value: Vec<u8>) -> Result<Self, Error> {
+        serde_json::from_slice(&value)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e).into())
+    }
+}
+
+impl ContractMethodResponse for StorageBalance {
+    fn parse(value: Vec<u8>) -> Result<Self, Error> {
+        serde_json::from_slice(&value).map_err(Into::into)
     }
 }

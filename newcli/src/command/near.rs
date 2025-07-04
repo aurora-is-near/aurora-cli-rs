@@ -6,41 +6,49 @@ use aurora_sdk_rs::{
         common::{self, IntoAurora, hex_to_arr, str_to_identifier},
         contract::{
             read::{
-                FactoryGetWnearAddress, GetBalance, GetBlockHash, GetChainId, GetCode,
-                GetErc20FromNep141, GetErc20Metadata, GetEthConnectorContractAccount, GetFixedGas,
+                FactoryGetWnearAddress, FtBalanceOf, FtTotalSupply, GetBalance, GetBlockHash,
+                GetChainId, GetCode, GetErc20FromNep141, GetErc20Metadata,
+                GetEthConnectorContractAccount, GetFixedGas, GetLatestHashchain,
                 GetNep141FromErc20, GetNonce, GetOwner, GetPausedFlags, GetSiloParams,
                 GetStorageAt, GetUpgradeDelayBlocks, GetUpgradeIndex, GetVersion,
                 GetWhitelistStatus, PausedPrecompiles,
             },
             write::{
-                AddEntryToWhitelist, DeployUpgrade, FactoryUpdate, MirrorErc20Token, PauseContract,
+                AddEntryToWhitelist, DeployERC20, DeployUpgrade, ExitToNearPrecompileCallback,
+                FactoryUpdate, FactoryUpdateAddressVersion, FtOnTransfer, FtTransfer,
+                FtTransferCall, MirrorErc20Token, MirrorErc20TokenCallback, PauseContract,
                 PausePrecompiles, RegisterRelayer, RemoveEntryFromWhitelist, RemoveRelayerKey,
                 ResumeContract, ResumePrecompiles, SetERC20Metadata,
                 SetEthConnectorContractAccount, SetEthConnectorContractData, SetFixedGas,
                 SetKeyManager, SetOwner, SetPausedFlags, SetSiloParams, SetUpgradeDelayBlocks,
-                SetWhitelistStatus, StageUpgrade, StartHashchain, Submit, Upgrade,
+                SetWhitelistStatus, StageUpgrade, StartHashchain, StorageDeposit,
+                StorageUnregister, StorageWithdraw, Submit, Upgrade, WithdrawWnearToRouter,
             },
         },
         near_account_to_evm_address,
         parameters::{
+            ExitToNearPrecompileCallbackCallArgs, RefundCallArgs, TransferNearCallArgs,
             connector::{
                 Erc20Metadata, FungibleTokenMetadata, InitCallArgs, MirrorErc20TokenArgs,
-                PauseEthConnectorCallArgs, PausedMask, SetErc20MetadataArgs,
-                SetEthConnectorContractAccountArgs, WithdrawSerializeType,
+                NEP141FtOnTransferArgs, PauseEthConnectorCallArgs, PausedMask,
+                SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, StorageDepositCallArgs,
+                StorageWithdrawCallArgs, TransferCallArgs, TransferCallCallArgs,
+                WithdrawSerializeType,
             },
             engine::{
-                GetStorageAtArgs, LegacyNewCallArgs, PausePrecompilesCallArgs, RelayerKeyArgs,
-                RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, StartHashchainArgs,
-                SubmitResult,
+                DeployErc20TokenArgs, GetStorageAtArgs, LegacyNewCallArgs,
+                PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs,
+                SetUpgradeDelayBlocksArgs, StartHashchainArgs, StorageBalance,
+                StorageUnregisterArgs, SubmitResult,
             },
             silo::{
                 FixedGasArgs, SiloParamsArgs, WhitelistAccountArgs, WhitelistAddressArgs,
                 WhitelistArgs, WhitelistKind, WhitelistKindArgs, WhitelistStatusArgs,
             },
-            xcc::FundXccArgs,
+            xcc::{AddressVersionUpdateArgs, CodeVersion, FundXccArgs, WithdrawWnearToRouterArgs},
         },
         transactions::{EthTransactionKind, legacy::TransactionLegacy},
-        types::{Address, EthGas, Wei},
+        types::{Address, Balance, EthGas, NEP141Wei, RawU256, Wei, Yocto},
     },
     near::{
         crypto::{KeyType, PublicKey, SecretKey},
@@ -253,6 +261,26 @@ pub async fn factory_update(context: &Context, wasm: Vec<u8>) -> anyhow::Result<
     context
         .client
         .call(&context.cli.engine, FactoryUpdate { wasm })
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn factory_update_address_version(
+    context: &Context,
+    address: Address,
+    version: u32,
+) -> anyhow::Result<()> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            FactoryUpdateAddressVersion {
+                args: AddressVersionUpdateArgs {
+                    address,
+                    version: CodeVersion(version),
+                },
+            },
+        )
         .await
         .map_err(Into::into)
 }
@@ -839,6 +867,242 @@ pub async fn add_relayer(
         )
         .signer_id(&context.cli.engine)
         .transact()
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn withdraw_wnear_to_router(
+    context: &Context,
+    address: Address,
+    amount: NearToken,
+) -> anyhow::Result<SubmitResult> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            WithdrawWnearToRouter {
+                args: WithdrawWnearToRouterArgs {
+                    target: address,
+                    amount: Yocto::new(amount.as_yoctonear()),
+                },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn mirror_erc20_token_callback(
+    context: &Context,
+    contract_id: AccountId,
+    nep141: AccountId,
+) -> anyhow::Result<()> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            MirrorErc20TokenCallback {
+                args: MirrorErc20TokenArgs {
+                    contract_id: contract_id.into_aurora(),
+                    nep141: nep141.into_aurora(),
+                },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn get_latest_hashchain(context: &Context) -> anyhow::Result<serde_json::Value> {
+    context
+        .client
+        .view(&context.cli.engine, GetLatestHashchain)
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn ft_total_supply(context: &Context) -> anyhow::Result<String> {
+    context
+        .client
+        .view(&context.cli.engine, FtTotalSupply)
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn ft_balance_of(context: &Context, account_id: AccountId) -> anyhow::Result<String> {
+    context
+        .client
+        .view(&context.cli.engine, FtBalanceOf { account_id })
+        .await
+        .map_err(Into::into)
+        .map(|wei| wei.to_string())
+}
+
+pub async fn ft_balance_of_eth(context: &Context, address: Address) -> anyhow::Result<Wei> {
+    context
+        .client
+        .view(&context.cli.engine, GetBalance { address })
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn ft_transfer(
+    context: &Context,
+    receiver_id: AccountId,
+    amount: NEP141Wei,
+    memo: Option<String>,
+) -> anyhow::Result<()> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            FtTransfer {
+                args: TransferCallArgs {
+                    receiver_id: receiver_id.into_aurora(),
+                    amount,
+                    memo,
+                },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn ft_transfer_call(
+    context: &Context,
+    receiver_id: AccountId,
+    amount: NEP141Wei,
+    memo: Option<String>,
+    msg: String,
+) -> anyhow::Result<()> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            FtTransferCall {
+                args: TransferCallCallArgs {
+                    receiver_id: receiver_id.into_aurora(),
+                    amount,
+                    memo,
+                    msg,
+                },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn ft_on_transfer(
+    context: &Context,
+    sender_id: AccountId,
+    amount: Balance,
+    msg: String,
+) -> anyhow::Result<()> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            FtOnTransfer {
+                args: NEP141FtOnTransferArgs {
+                    sender_id: sender_id.into_aurora(),
+                    amount,
+                    msg,
+                },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn deploy_erc20_token(context: &Context, nep141: AccountId) -> anyhow::Result<Address> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            DeployERC20 {
+                args: DeployErc20TokenArgs {
+                    nep141: nep141.into_aurora(),
+                },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn exit_to_near_precompile_callback(
+    context: &Context,
+    refund: Option<RefundCallArgs>,
+    transfer_near: Option<TransferNearCallArgs>,
+) -> anyhow::Result<()> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            ExitToNearPrecompileCallback {
+                args: ExitToNearPrecompileCallbackCallArgs {
+                    refund,
+                    transfer_near,
+                },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn storage_deposit(
+    context: &Context,
+    account_id: Option<AccountId>,
+    registration_only: Option<bool>,
+) -> anyhow::Result<()> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            StorageDeposit {
+                args: StorageDepositCallArgs {
+                    account_id: account_id.map(IntoAurora::into_aurora),
+                    registration_only,
+                },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn storage_unregister(context: &Context, force: bool) -> anyhow::Result<()> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            StorageUnregister {
+                args: StorageUnregisterArgs { force },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn storage_withdraw(context: &Context, amount: Option<Yocto>) -> anyhow::Result<()> {
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            StorageWithdraw {
+                args: StorageWithdrawCallArgs { amount },
+            },
+        )
+        .await
+        .map_err(Into::into)
+}
+
+pub async fn storage_balance_of(
+    context: &Context,
+    account_id: AccountId,
+) -> anyhow::Result<StorageBalance> {
+    context
+        .client
+        .view(
+            &context.cli.engine,
+            aurora_sdk_rs::aurora::contract::read::StorageBalanceOf { account_id },
+        )
         .await
         .map_err(Into::into)
 }

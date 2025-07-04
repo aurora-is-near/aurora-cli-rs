@@ -1,11 +1,11 @@
 use std::io;
 
-use crate::aurora::ContractMethod;
+use crate::aurora::{ContractMethod, ContractMethodResponse};
 use aurora_engine_types::{
     H256,
     parameters::{
         connector::{Erc20Identifier, Erc20Metadata, PausedMask},
-        engine::GetStorageAtArgs,
+        engine::{GetStorageAtArgs, StorageBalance},
         silo::{SiloParamsArgs, WhitelistKindArgs, WhitelistStatusArgs},
     },
     types::{Address, EthGas, Wei},
@@ -50,6 +50,12 @@ view_method!(
 );
 view_method!(GetPausedFlags, "get_paused_flags", PausedMask);
 view_method!(PausedPrecompiles, "paused_precompiles", u64);
+view_method!(
+    GetLatestHashchain,
+    "get_latest_hashchain",
+    serde_json::Value
+);
+view_method!(FtTotalSupply, "ft_total_supply", String);
 
 pub struct GetBalance {
     pub address: Address,
@@ -218,5 +224,65 @@ impl ContractMethod for FactoryGetWnearAddress {
 
     fn parse_response(response: Vec<u8>) -> Result<Self::Response, crate::aurora::error::Error> {
         Ok(hex::encode(response))
+    }
+}
+
+pub struct FtBalanceOf {
+    pub account_id: AccountId,
+}
+
+impl ContractMethod for FtBalanceOf {
+    type Response = String;
+
+    fn method_name(&self) -> &'static str {
+        "ft_balance_of"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        Ok(self.account_id.as_bytes().to_vec())
+    }
+
+    fn parse_response(response: Vec<u8>) -> Result<Self::Response, crate::aurora::error::Error> {
+        String::from_utf8(response).map_err(Into::into)
+    }
+}
+
+pub struct FtBalanceOfEth {
+    address: Address,
+}
+
+impl ContractMethod for FtBalanceOfEth {
+    type Response = Wei;
+
+    fn method_name(&self) -> &'static str {
+        "ft_balance_of_eth"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(&self.address)
+    }
+
+    fn parse_response(response: Vec<u8>) -> Result<Self::Response, crate::aurora::error::Error> {
+        serde_json::from_slice(&response).map_err(Into::into)
+    }
+}
+
+pub struct StorageBalanceOf {
+    pub account_id: AccountId,
+}
+
+impl ContractMethod for StorageBalanceOf {
+    type Response = StorageBalance;
+
+    fn method_name(&self) -> &'static str {
+        "storage_balance_of"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        Ok(self.account_id.as_bytes().to_vec())
+    }
+
+    fn parse_response(response: Vec<u8>) -> Result<Self::Response, crate::aurora::error::Error> {
+        Self::Response::parse(response)
     }
 }

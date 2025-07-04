@@ -3,19 +3,24 @@ use std::io;
 use aurora_engine_transactions::EthTransactionKind;
 use aurora_engine_types::{
     parameters::{
+        ExitToNearPrecompileCallbackCallArgs,
         connector::{
-            InitCallArgs, MirrorErc20TokenArgs, PauseEthConnectorCallArgs, SetErc20MetadataArgs,
-            SetEthConnectorContractAccountArgs,
+            InitCallArgs, MirrorErc20TokenArgs, NEP141FtOnTransferArgs, PauseEthConnectorCallArgs,
+            Proof, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs,
+            StorageDepositCallArgs, StorageUnregisterCallArgs, StorageWithdrawCallArgs,
+            TransferCallArgs, TransferCallCallArgs,
         },
         engine::{
             DeployErc20TokenArgs, PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs,
-            SetOwnerArgs, SetUpgradeDelayBlocksArgs, StartHashchainArgs, SubmitResult,
+            SetOwnerArgs, SetUpgradeDelayBlocksArgs, StartHashchainArgs, StorageUnregisterArgs,
+            SubmitResult,
         },
         silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
-        xcc::FundXccArgs,
+        xcc::{AddressVersionUpdateArgs, FundXccArgs, WithdrawWnearToRouterArgs},
     },
     types::Address,
 };
+use borsh::de;
 
 use crate::ContractMethod as ContractMethodDerive;
 use crate::aurora::{ContractMethod, ContractMethodResponse, error::Error};
@@ -272,6 +277,115 @@ pub struct StageUpgrade {
 #[derive(ContractMethodDerive)]
 #[contract_method(method = "deploy_upgrade", response = ())]
 pub struct DeployUpgrade;
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "factory_update_address_version", response = ())]
+pub struct FactoryUpdateAddressVersion {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: AddressVersionUpdateArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "withdraw_wnear_to_router", response = SubmitResult)]
+pub struct WithdrawWnearToRouter {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: WithdrawWnearToRouterArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "mirror_erc20_token_callback", response = ())]
+pub struct MirrorErc20TokenCallback {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: MirrorErc20TokenArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "ft_transfer", response = ())]
+pub struct FtTransfer {
+    #[contract_param(serialize_as = "json")]
+    pub args: TransferCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "ft_transfer_call", response = ())]
+pub struct FtTransferCall {
+    #[contract_param(serialize_as = "json")]
+    pub args: TransferCallCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "ft_on_transfer", response = ())]
+pub struct FtOnTransfer {
+    #[contract_param(serialize_as = "json")]
+    pub args: NEP141FtOnTransferArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "exit_to_near_precompile_callback", response = ())]
+pub struct ExitToNearPrecompileCallback {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: ExitToNearPrecompileCallbackCallArgs,
+}
+
+pub struct StorageDeposit {
+    pub args: StorageDepositCallArgs,
+}
+
+impl ContractMethod for StorageDeposit {
+    type Response = ();
+
+    fn deposit(&self) -> u128 {
+        1 // 1 yocto
+    }
+
+    fn method_name(&self) -> &'static str {
+        "storage_deposit"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        serde_json::to_vec(&self.args).map_err(Into::into)
+    }
+}
+
+pub struct StorageUnregister {
+    pub args: StorageUnregisterArgs,
+}
+
+impl ContractMethod for StorageUnregister {
+    type Response = ();
+
+    fn deposit(&self) -> u128 {
+        1 // 1 yocto
+    }
+
+    fn method_name(&self) -> &'static str {
+        "storage_unregister"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        serde_json::to_vec(&self.args).map_err(Into::into)
+    }
+}
+
+pub struct StorageWithdraw {
+    pub args: StorageWithdrawCallArgs,
+}
+
+impl ContractMethod for StorageWithdraw {
+    type Response = ();
+
+    fn method_name(&self) -> &'static str {
+        "storage_withdraw"
+    }
+
+    fn deposit(&self) -> u128 {
+        1 // 1 yocto
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        serde_json::to_vec(&self.args).map_err(Into::into)
+    }
+}
 
 #[cfg(test)]
 mod tests {

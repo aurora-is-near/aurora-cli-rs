@@ -7,7 +7,7 @@ use aurora_sdk_rs::{
             connector::{FungibleTokenMetadata, WithdrawSerializeType},
             silo::WhitelistKind,
         },
-        types::{Address, EthGas, Wei},
+        types::{Address, Balance, EthGas, NEP141Wei, Wei, Yocto, balance},
     },
     near::{
         crypto::{KeyType, PublicKey},
@@ -72,7 +72,9 @@ pub enum Command {
         address: Address,
     },
     /// Return block hash of the specified height
-    GetBlockHash { height: u64 },
+    GetBlockHash {
+        height: u64,
+    },
     /// Return smart contract's code for contract address
     GetCode {
         #[arg(short, long, value_parser = parse_address)]
@@ -90,7 +92,9 @@ pub enum Command {
     /// Return Aurora EVM owner
     GetOwner,
     /// Set a new owner of Aurora EVM
-    SetOwner { account_id: AccountId },
+    SetOwner {
+        account_id: AccountId,
+    },
     /// Return bridge prover
     GetBridgeProver,
     /// Return a value from storage at address with key
@@ -119,19 +123,30 @@ pub enum Command {
     /// Resume contract
     ResumeContract,
     /// Pause precompiles
-    PausePrecompiles { mask: u32 },
+    PausePrecompiles {
+        mask: u32,
+    },
     /// Resume precompiles
-    ResumePrecompiles { mask: u32 },
+    ResumePrecompiles {
+        mask: u32,
+    },
     /// Return paused precompiles
     PausedPrecompiles,
     /// Updates the bytecode for user's router contracts
-    FactoryUpdate { path: String },
+    FactoryUpdate {
+        path: String,
+    },
     /// Return the address of the `wNEAR` ERC-20 contract
     FactoryGetWnearAddress,
     /// Sets the address for the `wNEAR` ERC-20 contract
     FactorySetWnearAddress {
         #[arg(value_parser = parse_address)]
         address: Address,
+    },
+    FactoryUpdateAddressVersion {
+        #[arg(value_parser = parse_address)]
+        address: Address,
+        version: u32,
     },
     /// Create and/or fund an XCC sub-account directly
     FundXccSubAccount {
@@ -144,9 +159,13 @@ pub enum Command {
         deposit: NearToken,
     },
     /// Upgrade contract with provided code
-    Upgrade { path: String },
+    Upgrade {
+        path: String,
+    },
     /// Stage a new code for upgrade
-    StageUpgrade { path: String },
+    StageUpgrade {
+        path: String,
+    },
     /// Deploy staged upgrade
     DeployUpgrade,
     /// Deploy EVM smart contract's code in hex
@@ -219,7 +238,9 @@ pub enum Command {
         aurora_secret_key: String,
     },
     /// Encode address
-    EncodeAddress { account: AccountId },
+    EncodeAddress {
+        account: AccountId,
+    },
     /// Return Public and Secret ED25519 keys
     KeyPair {
         /// Random
@@ -394,6 +415,73 @@ pub enum Command {
         full_access_pub_key: PublicKey,
         #[arg(long)]
         function_call_pub_key: PublicKey,
+    },
+    WithdrawWnearToRouter {
+        #[arg(long, value_parser = parse_address)]
+        address: Address,
+        amount: NearToken,
+    },
+    MirrorErc20TokenCallback {
+        #[arg(long)]
+        contract_id: AccountId,
+        #[arg(long)]
+        nep141: AccountId,
+    },
+    GetLatestHashchain,
+    FtTotalSupply,
+    FtBalanceOf {
+        #[arg(long)]
+        account_id: AccountId,
+    },
+    FtBalanceOfEth {
+        #[arg(long, value_parser = parse_address)]
+        address: Address,
+    },
+    FtTransfer {
+        #[arg(long)]
+        receiver_id: AccountId,
+        #[arg(long)]
+        amount: NearToken,
+        #[arg(long)]
+        memo: Option<String>,
+    },
+    FtTransferCall {
+        #[arg(long)]
+        receiver_id: AccountId,
+        #[arg(long)]
+        amount: NearToken,
+        #[arg(long)]
+        memo: Option<String>,
+        #[arg(long)]
+        msg: String,
+    },
+    FtOnTransfer {
+        #[arg(long)]
+        sender_id: AccountId,
+        #[arg(long)]
+        amount: NearToken,
+        #[arg(long)]
+        msg: String,
+    },
+    DeployErc20Token {
+        #[arg(long)]
+        nep141: AccountId,
+    },
+    StorageDeposit {
+        account_id: Option<AccountId>,
+        registration_only: Option<bool>,
+    },
+    StorageUnregister {
+        #[arg(long, default_value = "false")]
+        force: bool,
+    },
+    StorageWithdraw {
+        #[arg(long)]
+        amount: Option<NearToken>,
+    },
+    StorageBalanceOf {
+        #[arg(long)]
+        account_id: AccountId,
     },
 }
 
@@ -588,6 +676,13 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             output!(
                 &context.cli.output_format,
                 result_object!("wnear_address" => format!("{:?}", address))
+            );
+        }
+        Command::FactoryUpdateAddressVersion { address, version } => {
+            near::factory_update_address_version(context, address, version).await?;
+            output!(
+                &context.cli.output_format,
+                CommandResult::success("Factory address version updated successfully")
             );
         }
         Command::FactorySetWnearAddress { address } => {
@@ -923,6 +1018,137 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             output!(
                 &context.cli.output_format,
                 result_object!("relayer_added" => format!("{:?}", outcome))
+            );
+        }
+        Command::WithdrawWnearToRouter { address, amount } => {
+            near::withdraw_wnear_to_router(context, address, amount).await?;
+            output!(
+                &context.cli.output_format,
+                CommandResult::success("wNEAR withdrawn to router successfully")
+            );
+        }
+        Command::MirrorErc20TokenCallback {
+            contract_id,
+            nep141,
+        } => {
+            near::mirror_erc20_token_callback(context, contract_id, nep141).await?;
+            output!(
+                &context.cli.output_format,
+                CommandResult::success("ERC-20 token mirrored successfully")
+            );
+        }
+        Command::GetLatestHashchain => {
+            let latest_hashchain = near::get_latest_hashchain(context).await?;
+            output!(
+                &context.cli.output_format,
+                result_object!("latest_hashchain" => format!("{:?}", latest_hashchain.to_string()))
+            );
+        }
+        Command::FtTotalSupply => {
+            let total_supply = near::ft_total_supply(context).await?;
+            output!(
+                &context.cli.output_format,
+                result_object!("total_supply" => format!("{:?}", total_supply))
+            );
+        }
+        Command::FtBalanceOf { account_id } => {
+            let balance = near::ft_balance_of(context, account_id.clone()).await?;
+            output!(
+                &context.cli.output_format,
+                result_object!("account_id" => account_id.to_string(), "balance" => format!("{:?}", balance))
+            );
+        }
+        Command::FtBalanceOfEth { address } => {
+            let balance = near::ft_balance_of_eth(context, address.clone()).await?;
+            output!(
+                &context.cli.output_format,
+                result_object!("address" => address.encode(), "balance" => format!("{:?}", balance))
+            );
+        }
+        Command::FtTransfer {
+            receiver_id,
+            amount,
+            memo,
+        } => {
+            near::ft_transfer(
+                context,
+                receiver_id,
+                NEP141Wei::new(amount.as_yoctonear()),
+                memo,
+            )
+            .await?;
+            output!(
+                &context.cli.output_format,
+                CommandResult::success("FT transfer executed successfully")
+            );
+        }
+        Command::FtTransferCall {
+            receiver_id,
+            amount,
+            memo,
+            msg,
+        } => {
+            near::ft_transfer_call(
+                context,
+                receiver_id,
+                NEP141Wei::new(amount.as_yoctonear()),
+                memo,
+                msg,
+            )
+            .await?;
+            output!(
+                &context.cli.output_format,
+                CommandResult::success("FT transfer call executed successfully")
+            );
+        }
+        Command::FtOnTransfer {
+            sender_id,
+            amount,
+            msg,
+        } => {
+            near::ft_on_transfer(context, sender_id, Balance::new(amount.as_yoctonear()), msg)
+                .await?;
+            output!(
+                &context.cli.output_format,
+                CommandResult::success("FT on transfer executed successfully")
+            );
+        }
+        Command::DeployErc20Token { nep141 } => {
+            let address = near::deploy_erc20_token(context, nep141).await?;
+            output!(
+                &context.cli.output_format,
+                result_object!("deployed_erc20_token_address" => format!("{:?}", address))
+            );
+        }
+        Command::StorageDeposit {
+            account_id,
+            registration_only,
+        } => {
+            near::storage_deposit(context, account_id, registration_only).await?;
+            output!(
+                &context.cli.output_format,
+                CommandResult::success("Storage deposit executed successfully")
+            );
+        }
+        Command::StorageUnregister { force } => {
+            near::storage_unregister(context, force).await?;
+            output!(
+                &context.cli.output_format,
+                CommandResult::success("Storage unregistered successfully")
+            );
+        }
+        Command::StorageWithdraw { amount } => {
+            near::storage_withdraw(context, amount.map(|n| Yocto::new(n.as_yoctonear()))).await?;
+            output!(
+                &context.cli.output_format,
+                CommandResult::success("Storage withdrawn successfully")
+            );
+        }
+        Command::StorageBalanceOf { account_id } => {
+            let balance = near::storage_balance_of(context, account_id.clone()).await?;
+            output!(
+                &context.cli.output_format,
+                result_object!("account_id" => account_id.to_string(), "storage_balance" => format!("{:?}", balance))
             );
         }
     }
