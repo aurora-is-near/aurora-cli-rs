@@ -5,17 +5,19 @@ use near_jsonrpc_client::methods::query::RpcQueryError;
 use near_primitives::errors::{ActionError, ActionErrorKind, FunctionCallError};
 use regex::Regex;
 
+pub mod abi;
 pub mod client;
 pub mod common;
 pub mod contract;
 pub mod error;
 
+use crate::near;
+pub use aurora_engine_sdk::types::near_account_to_evm_address;
+pub use aurora_engine_transactions as transactions;
 pub use aurora_engine_types::account_id::AccountId;
 pub use aurora_engine_types::parameters;
 pub use aurora_engine_types::types;
 pub use aurora_engine_types::{H256, U256};
-
-use crate::near;
 
 #[cfg(test)]
 mod tests;
@@ -66,10 +68,8 @@ where
     }
 }
 
-pub trait ContractMethodResponse: borsh::BorshDeserialize {
-    fn parse(value: Vec<u8>) -> Result<Self, error::Error> {
-        borsh::from_slice(&value).map_err(Into::into)
-    }
+pub trait ContractMethodResponse: Sized {
+    fn parse(value: Vec<u8>) -> Result<Self, error::Error>;
 }
 
 pub(crate) fn parse_action_error(action_error: ActionError) -> Result<error::Error, io::Error> {

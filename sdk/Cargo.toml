@@ -11,13 +11,19 @@ readme.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+aurora-engine-sdk = { workspace = true, features = ["std"] }
 aurora-engine-types = { workspace = true, features = ["std", "impl-serde"] }
+aurora-engine-transactions.workspace = true
+ethabi.workspace = true
+libsecp256k1 = { workspace = true, features = ["std"] }
 near-crypto.workspace = true
 borsh.workspace = true
 near-gas.workspace = true
 near-token.workspace = true
 near-primitives.workspace = true
 near-sdk.workspace = true
+rand.workspace = true
+rlp.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 serde.workspace = true
 serde_json.workspace = true
