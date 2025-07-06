@@ -1,11 +1,11 @@
 use std::io;
 
-use crate::aurora::{ContractMethod, ContractMethodResponse};
+use crate::aurora::{ContractMethod, MethodType};
 use aurora_engine_types::{
     H256,
     parameters::{
         connector::{Erc20Identifier, Erc20Metadata, PausedMask},
-        engine::{GetStorageAtArgs, StorageBalance},
+        engine::{GetStorageAtArgs, StorageBalance, TransactionStatus, ViewCallArgs},
         silo::{SiloParamsArgs, WhitelistKindArgs, WhitelistStatusArgs},
     },
     types::{Address, EthGas, Wei},
@@ -68,6 +68,10 @@ impl ContractMethod for GetBalance {
         "get_balance"
     }
 
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         Ok(self.address.as_bytes().to_vec())
     }
@@ -84,6 +88,10 @@ impl ContractMethod for GetNonce {
         "get_nonce"
     }
 
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         Ok(self.address.as_bytes().to_vec())
     }
@@ -98,6 +106,10 @@ impl ContractMethod for GetBlockHash {
 
     fn method_name(&self) -> &'static str {
         "get_block_hash"
+    }
+
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
     }
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
@@ -120,6 +132,10 @@ impl ContractMethod for GetCode {
         "get_code"
     }
 
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         Ok(self.address.as_bytes().to_vec())
     }
@@ -134,6 +150,10 @@ impl ContractMethod for GetWhitelistStatus {
 
     fn method_name(&self) -> &'static str {
         "get_whitelist_status"
+    }
+
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
     }
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
@@ -156,6 +176,10 @@ impl ContractMethod for GetErc20FromNep141 {
         Ok(self.nep141_account_id.as_bytes().to_vec())
     }
 
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
     fn parse_response(response: Vec<u8>) -> Result<Self::Response, crate::aurora::error::Error> {
         Ok(hex::encode(response))
     }
@@ -170,6 +194,10 @@ impl ContractMethod for GetNep141FromErc20 {
 
     fn method_name(&self) -> &'static str {
         "get_nep141_from_erc20"
+    }
+
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
     }
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
@@ -188,6 +216,10 @@ impl ContractMethod for GetErc20Metadata {
         "get_erc20_metadata"
     }
 
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         serde_json::to_vec(&self.id).map_err(|e| io::Error::new(std::io::ErrorKind::InvalidData, e))
     }
@@ -204,8 +236,12 @@ impl ContractMethod for GetStorageAt {
         "get_storage_at"
     }
 
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(&self.args).map_err(Into::into)
+        borsh::to_vec(&self.args)
     }
 }
 
@@ -222,6 +258,10 @@ impl ContractMethod for FactoryGetWnearAddress {
         Ok(vec![])
     }
 
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
     fn parse_response(response: Vec<u8>) -> Result<Self::Response, crate::aurora::error::Error> {
         Ok(hex::encode(response))
     }
@@ -236,6 +276,10 @@ impl ContractMethod for FtBalanceOf {
 
     fn method_name(&self) -> &'static str {
         "ft_balance_of"
+    }
+
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
     }
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
@@ -258,6 +302,10 @@ impl ContractMethod for FtBalanceOfEth {
         "ft_balance_of_eth"
     }
 
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         borsh::to_vec(&self.address)
     }
@@ -278,11 +326,31 @@ impl ContractMethod for StorageBalanceOf {
         "storage_balance_of"
     }
 
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         Ok(self.account_id.as_bytes().to_vec())
     }
+}
 
-    fn parse_response(response: Vec<u8>) -> Result<Self::Response, crate::aurora::error::Error> {
-        Self::Response::parse(response)
+pub struct ViewCall {
+    pub args: ViewCallArgs,
+}
+
+impl ContractMethod for ViewCall {
+    type Response = TransactionStatus;
+
+    fn method_name(&self) -> &'static str {
+        "view"
+    }
+
+    fn method_type() -> crate::aurora::MethodType {
+        MethodType::View
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(&self.args)
     }
 }

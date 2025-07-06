@@ -18,6 +18,7 @@ pub use aurora_engine_types::account_id::AccountId;
 pub use aurora_engine_types::parameters;
 pub use aurora_engine_types::types;
 pub use aurora_engine_types::{H256, U256};
+pub use ethabi;
 
 #[cfg(test)]
 mod tests;

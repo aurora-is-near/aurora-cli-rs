@@ -1,4 +1,4 @@
-use std::{io, str::Utf8Error, string::FromUtf8Error};
+use std::{io, string::FromUtf8Error};
 
 use aurora_engine_types::types::address::error::AddressError;
 use serde::Deserialize;

@@ -1,8 +1,10 @@
-use std::{path::Path, u64};
+use std::path::Path;
 
+use anyhow::Ok;
 use aurora_sdk_rs::{
     aurora::{
-        H256, U256, abi,
+        H256, U256,
+        abi::{self},
         common::{self, IntoAurora, hex_to_arr, str_to_identifier},
         contract::{
             read::{
@@ -11,23 +13,23 @@ use aurora_sdk_rs::{
                 GetEthConnectorContractAccount, GetFixedGas, GetLatestHashchain,
                 GetNep141FromErc20, GetNonce, GetOwner, GetPausedFlags, GetSiloParams,
                 GetStorageAt, GetUpgradeDelayBlocks, GetUpgradeIndex, GetVersion,
-                GetWhitelistStatus, PausedPrecompiles,
+                GetWhitelistStatus, PausedPrecompiles, ViewCall,
             },
             write::{
-                AddEntryToWhitelist, DeployERC20, DeployUpgrade, ExitToNearPrecompileCallback,
-                FactoryUpdate, FactoryUpdateAddressVersion, FtOnTransfer, FtTransfer,
-                FtTransferCall, MirrorErc20Token, MirrorErc20TokenCallback, PauseContract,
-                PausePrecompiles, RegisterRelayer, RemoveEntryFromWhitelist, RemoveRelayerKey,
-                ResumeContract, ResumePrecompiles, SetERC20Metadata,
-                SetEthConnectorContractAccount, SetEthConnectorContractData, SetFixedGas,
-                SetKeyManager, SetOwner, SetPausedFlags, SetSiloParams, SetUpgradeDelayBlocks,
-                SetWhitelistStatus, StageUpgrade, StartHashchain, StorageDeposit,
-                StorageUnregister, StorageWithdraw, Submit, Upgrade, WithdrawWnearToRouter,
+                AddEntryToWhitelist, DeployERC20, DeployUpgrade, FactoryUpdate,
+                FactoryUpdateAddressVersion, FtOnTransfer, FtTransfer, FtTransferCall,
+                MirrorErc20Token, MirrorErc20TokenCallback, PauseContract, PausePrecompiles,
+                RegisterRelayer, RemoveEntryFromWhitelist, RemoveRelayerKey, ResumeContract,
+                ResumePrecompiles, SetERC20Metadata, SetEthConnectorContractAccount,
+                SetEthConnectorContractData, SetFixedGas, SetKeyManager, SetOwner, SetPausedFlags,
+                SetSiloParams, SetUpgradeDelayBlocks, SetWhitelistStatus, StageUpgrade,
+                StartHashchain, StorageDeposit, StorageUnregister, StorageWithdraw, Submit,
+                Upgrade, WithdrawWnearToRouter,
             },
         },
+        ethabi::{self, Contract},
         near_account_to_evm_address,
         parameters::{
-            ExitToNearPrecompileCallbackCallArgs, RefundCallArgs, TransferNearCallArgs,
             connector::{
                 Erc20Metadata, FungibleTokenMetadata, InitCallArgs, MirrorErc20TokenArgs,
                 NEP141FtOnTransferArgs, PauseEthConnectorCallArgs, PausedMask,
@@ -36,10 +38,10 @@ use aurora_sdk_rs::{
                 WithdrawSerializeType,
             },
             engine::{
-                DeployErc20TokenArgs, GetStorageAtArgs, LegacyNewCallArgs,
-                PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs,
-                SetUpgradeDelayBlocksArgs, StartHashchainArgs, StorageBalance,
-                StorageUnregisterArgs, SubmitResult,
+                CallArgs, DeployErc20TokenArgs, FunctionCallArgsV2, GetStorageAtArgs,
+                LegacyNewCallArgs, PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs,
+                SetOwnerArgs, SetUpgradeDelayBlocksArgs, StartHashchainArgs, StorageBalance,
+                StorageUnregisterArgs, SubmitResult, TransactionStatus, ViewCallArgs,
             },
             silo::{
                 FixedGasArgs, SiloParamsArgs, WhitelistAccountArgs, WhitelistAddressArgs,
@@ -48,7 +50,7 @@ use aurora_sdk_rs::{
             xcc::{AddressVersionUpdateArgs, CodeVersion, FundXccArgs, WithdrawWnearToRouterArgs},
         },
         transactions::{EthTransactionKind, legacy::TransactionLegacy},
-        types::{Address, Balance, EthGas, NEP141Wei, RawU256, Wei, Yocto},
+        types::{Address, Balance, EthGas, NEP141Wei, Wei, Yocto},
     },
     near::{
         crypto::{KeyType, PublicKey, SecretKey},
@@ -103,7 +105,7 @@ pub async fn view_account(context: &Context, account: &AccountId) -> anyhow::Res
     context
         .client
         .near()
-        .view_account(&account)
+        .view_account(account)
         .await
         .map_err(Into::into)
 }
@@ -448,44 +450,20 @@ pub async fn submit(
     amount: Wei,
     aurora_secret_key: String,
 ) -> anyhow::Result<SubmitResult> {
-    let secret_key = common::hex_to_arr(&aurora_secret_key.trim())
+    let secret_key = common::hex_to_arr(aurora_secret_key.trim())
         .and_then(|bytes| SecretKeyEth::parse(&bytes).map_err(Into::into))
         .map_err(|e| anyhow::anyhow!("Couldn't create secret key from hex: {e}"))?;
 
     let contract = abi::read_contract(abi_path)?;
     let function = contract.function(&function)?;
     let args: serde_json::Value = args.map_or(Ok(serde_json::Value::Null), |args| {
-        serde_json::from_str(&args)
+        serde_json::from_str(&args).map_err(Into::into)
     })?;
 
     let tokens = abi::parse_args(&function.inputs, &args)?;
     let input = function.encode_input(&tokens)?;
 
-    let sender_address = common::address_from_secret_key(&secret_key)?;
-    let nonce = get_nonce(context, sender_address).await?;
-
-    let tx = TransactionLegacy {
-        nonce: nonce.into(),
-        gas_price: U256::zero(),
-        gas_limit: U256::from(u64::MAX),
-        to: Some(to),
-        value: amount.into(),
-        data: input,
-    };
-
-    let chain_id = get_chain_id(context).await?;
-    let signed_tx = common::sign_transaction(tx, chain_id, &secret_key);
-
-    context
-        .client
-        .call(
-            &context.cli.engine,
-            Submit {
-                transaction: EthTransactionKind::Legacy(signed_tx),
-            },
-        )
-        .await
-        .map_err(Into::into)
+    send_aurora_transaction(context, Some(to), amount, input, secret_key).await
 }
 
 pub fn encode_to_address(account_id: &AccountId) -> Address {
@@ -1027,26 +1005,6 @@ pub async fn deploy_erc20_token(context: &Context, nep141: AccountId) -> anyhow:
         .map_err(Into::into)
 }
 
-pub async fn exit_to_near_precompile_callback(
-    context: &Context,
-    refund: Option<RefundCallArgs>,
-    transfer_near: Option<TransferNearCallArgs>,
-) -> anyhow::Result<()> {
-    context
-        .client
-        .call(
-            &context.cli.engine,
-            ExitToNearPrecompileCallback {
-                args: ExitToNearPrecompileCallbackCallArgs {
-                    refund,
-                    transfer_near,
-                },
-            },
-        )
-        .await
-        .map_err(Into::into)
-}
-
 pub async fn storage_deposit(
     context: &Context,
     account_id: Option<AccountId>,
@@ -1107,6 +1065,85 @@ pub async fn storage_balance_of(
         .map_err(Into::into)
 }
 
+pub async fn deploy(
+    context: &Context,
+    input: Vec<u8>,
+    aurora_secret_key: String,
+) -> anyhow::Result<SubmitResult> {
+    let secret_key = common::hex_to_arr(aurora_secret_key.trim())
+        .and_then(|bytes| SecretKeyEth::parse(&bytes).map_err(Into::into))
+        .map_err(|e| anyhow::anyhow!("Couldn't create secret key from hex: {e}"))?;
+
+    send_aurora_transaction(context, None, Wei::zero(), input, secret_key).await
+}
+
+pub async fn call(
+    context: &Context,
+    address: Address,
+    input: Option<String>,
+    value: Option<u128>,
+    from: Option<AccountId>,
+) -> anyhow::Result<FinalExecutionOutcomeView> {
+    let input = input.map_or(Ok(vec![]), |input| {
+        Ok(hex::decode(input.trim_start_matches("0x"))?)
+    })?;
+
+    let call_tx = context
+        .client
+        .near()
+        .call(&context.cli.engine, "call")
+        .args_borsh(CallArgs::V2(FunctionCallArgsV2 {
+            contract: address,
+            value: Wei::new_u128(value.unwrap_or_default()).to_bytes(),
+            input,
+        }))?;
+
+    let call_tx = if let Some(from) = from {
+        call_tx.signer_id(&from)
+    } else {
+        call_tx
+    };
+
+    call_tx.transact().await.map_err(Into::into)
+}
+
+pub async fn view_call(
+    context: &Context,
+    address: Address,
+    function: String,
+    args: Option<String>,
+    from: Address,
+    contract: Contract,
+) -> anyhow::Result<Vec<ethabi::Token>> {
+    let function = contract.function(&function)?;
+    let args: serde_json::Value = args.map_or(Ok(serde_json::Value::Null), |args| {
+        serde_json::from_str(&args).map_err(Into::into)
+    })?;
+    let tokens = abi::parse_args(&function.inputs, &args)?;
+    let input = function.encode_input(&tokens)?;
+
+    let status = context
+        .client
+        .view(
+            &context.cli.engine,
+            ViewCall {
+                args: ViewCallArgs {
+                    sender: from,
+                    address,
+                    amount: Wei::zero().to_bytes(),
+                    input,
+                },
+            },
+        )
+        .await?;
+
+    if let TransactionStatus::Succeed(bytes) = status {
+        Ok(function.decode_output(&bytes)?)
+    } else {
+        anyhow::bail!("View call failed: {status:?}");
+    }
+}
+
 fn args_from_kind(kind: WhitelistKind, entry: String) -> anyhow::Result<WhitelistArgs> {
     match kind {
         WhitelistKind::Admin | WhitelistKind::Account => {
@@ -1127,4 +1164,38 @@ fn args_from_kind(kind: WhitelistKind, entry: String) -> anyhow::Result<Whitelis
             }))
         }
     }
+}
+
+async fn send_aurora_transaction(
+    context: &Context,
+    to: Option<Address>,
+    amount: Wei,
+    input: Vec<u8>,
+    aurora_secret_key: SecretKeyEth,
+) -> anyhow::Result<SubmitResult> {
+    let sender_address = common::address_from_secret_key(&aurora_secret_key)?;
+    let nonce = get_nonce(context, sender_address).await?;
+
+    let tx = TransactionLegacy {
+        nonce: nonce.into(),
+        gas_price: U256::zero(),
+        gas_limit: U256::from(u64::MAX),
+        to,
+        value: amount,
+        data: input,
+    };
+
+    let chain_id = get_chain_id(context).await?;
+    let signed_tx = common::sign_transaction(tx, chain_id, &aurora_secret_key)?;
+
+    context
+        .client
+        .call(
+            &context.cli.engine,
+            Submit {
+                transaction: EthTransactionKind::Legacy(signed_tx),
+            },
+        )
+        .await
+        .map_err(Into::into)
 }

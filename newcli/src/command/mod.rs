@@ -2,23 +2,24 @@ use std::path::PathBuf;
 
 use aurora_sdk_rs::{
     aurora::{
-        self, H256, U256,
+        self, H256, U256, abi, ethabi,
         parameters::{
             connector::{FungibleTokenMetadata, WithdrawSerializeType},
+            engine::{SubmitResult, TransactionStatus},
             silo::WhitelistKind,
         },
-        types::{Address, Balance, EthGas, NEP141Wei, Wei, Yocto, balance},
+        types::{Address, Balance, EthGas, NEP141Wei, Wei, Yocto},
     },
     near::{
         crypto::{KeyType, PublicKey},
-        primitives::types::AccountId,
+        primitives::{borsh::BorshDeserialize, types::AccountId, views::FinalExecutionStatus},
         token::NearToken,
     },
 };
 use clap::Subcommand;
 
-use crate::common::output::CommandResult;
-use crate::{cli::Cli, common, context::Context, output, result_object};
+use crate::{cli::Cli, common, output, result_object};
+use crate::{common::output::CommandResult, context::Context};
 
 mod near;
 
@@ -178,10 +179,10 @@ pub enum Command {
         args: Option<String>,
         /// Path to ABI of the contract
         #[arg(long)]
-        abi_path: Option<String>,
+        abi_path: Option<PathBuf>,
         /// Aurora EVM secret key
         #[arg(long)]
-        aurora_secret_key: Option<String>,
+        aurora_secret_key: String,
     },
     /// Call a method of the smart contract
     Call {
@@ -201,8 +202,8 @@ pub enum Command {
     /// Call a view method of the smart contract
     ViewCall {
         /// Address of the smart contract
-        #[arg(long, short)]
-        address: String,
+        #[arg(long, short, value_parser = parse_address)]
+        address: Address,
         /// Name of the function to call
         #[arg(long, short)]
         function: String,
@@ -210,8 +211,8 @@ pub enum Command {
         #[arg(long)]
         args: Option<String>,
         /// Sender address
-        #[arg(long)]
-        from: String,
+        #[arg(long, value_parser = parse_address)]
+        from: Address,
         /// Path to ABI of the contract
         #[arg(long)]
         abi_path: String,
@@ -502,14 +503,14 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             let account_str = account.to_string();
             let outcome = near::create_account(context, account, balance).await?;
             output!(
-                &context.cli.output_format,
+                &&context.cli.output_format,
                 result_object!("status" => "created", "account" => account_str, "outcome" => format!("{:?}", outcome))
             );
         }
         Command::ViewAccount { ref account } => {
             let view = near::view_account(context, account).await?;
             output!(
-                &context.cli.output_format,
+                &&context.cli.output_format,
                 result_object!("account" => account.to_string(), "view" => format!("{:?}", view))
             );
         }
@@ -517,7 +518,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             let wasm = std::fs::read(path)?;
             let outcome = near::deploy_aurora(context, wasm).await?;
             output!(
-                &context.cli.output_format,
+                &&context.cli.output_format,
                 result_object!("status" => "deployed", "path" => path.display().to_string(), "outcome" => format!("{:?}", outcome))
             );
         }
@@ -578,35 +579,35 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             );
         }
         Command::GetUpgradeIndex => {
-            let index = near::get_upgrade_index(&context).await?;
+            let index = near::get_upgrade_index(context).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("upgrade_index" => index)
             );
         }
         Command::GetVersion => {
-            let version = near::get_version(&context).await?;
+            let version = near::get_version(context).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("version" => version)
             );
         }
         Command::GetOwner => {
-            let owner = near::get_owner(&context).await?;
+            let owner = near::get_owner(context).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("owner" => owner.to_string())
             );
         }
         Command::SetOwner { account_id } => {
-            near::set_owner(&context, account_id).await?;
+            near::set_owner(context, account_id).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Owner set successfully")
             );
         }
         Command::GetBridgeProver => {
-            let prover = near::get_bridge_prover(&context).await?;
+            let prover = near::get_bridge_prover(context).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("bridge_prover" => prover.to_string())
@@ -727,27 +728,91 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             );
         }
         Command::Deploy {
-            code: _,
-            args: _,
-            abi_path: _,
-            aurora_secret_key: _,
-        } => todo!(),
-        Command::Call {
-            address: _,
-            input: _,
-            value: _,
-            from: _,
+            code,
+            args,
+            abi_path,
+            aurora_secret_key,
         } => {
-            todo!()
+            let input = if let Some((abi_path, args)) =
+                abi_path.and_then(|path| args.map(|args| (path, args)))
+            {
+                let contract = abi::read_contract(abi_path)?;
+                let constructor = contract
+                    .constructor()
+                    .ok_or_else(|| anyhow::anyhow!("Constructor not found in ABI"))?;
+                let args: serde_json::Value = serde_json::from_str(&args)?;
+                let tokens = abi::parse_args(&constructor.inputs, &args)?;
+                let code = hex::decode(code)?;
+                constructor.encode_input(code, &tokens)?
+            } else {
+                hex::decode(code)?
+            };
+
+            let result = near::deploy(context, input, aurora_secret_key).await?;
+            output!(
+                &context.cli.output_format,
+                result_object!("deploy_result" => format!("{:?}", result.status))
+            );
+        }
+        Command::Call {
+            address,
+            input,
+            value,
+            from,
+        } => {
+            let outcome = near::call(context, address, input, value, from).await?;
+            match outcome.status {
+                FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {}
+                FinalExecutionStatus::Failure(failure) => {
+                    output!(
+                        &context.cli.output_format,
+                        result_object!("status" => "failure", "error" => failure.to_string())
+                    );
+                }
+                FinalExecutionStatus::SuccessValue(result) => {
+                    let submit_result = SubmitResult::try_from_slice(&result)?;
+                    match submit_result.status {
+                        TransactionStatus::Succeed(_) => {
+                            output!(
+                                &context.cli.output_format,
+                                result_object!("status" => "success")
+                            );
+                        }
+                        TransactionStatus::Revert(_) => {
+                            output!(
+                                &context.cli.output_format,
+                                result_object!("status" => "reverted")
+                            );
+                        }
+                        _ => {
+                            output!(
+                                &context.cli.output_format,
+                                result_object!("status" => "failed")
+                            );
+                        }
+                    }
+                }
+            }
         }
         Command::ViewCall {
-            address: _,
-            function: _,
-            args: _,
-            from: _,
-            abi_path: _,
+            address,
+            function,
+            args,
+            from,
+            abi_path,
         } => {
-            todo!()
+            let contract = abi::read_contract(abi_path)?;
+            let tokens = near::view_call(context, address, function, args, from, contract).await?;
+
+            let result = tokens
+                .iter()
+                .map(ethabi::Token::to_string)
+                .collect::<Vec<_>>();
+
+            output!(
+                &context.cli.output_format,
+                result_object!("address" => format!("{:?}", address), "result" => result)
+            );
         }
         Command::Submit {
             address,
@@ -758,12 +823,12 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             aurora_secret_key,
         } => {
             let result = near::submit(
-                &context,
+                context,
                 address,
                 function,
                 args,
                 abi_path,
-                value.into(),
+                value,
                 aurora_secret_key,
             )
             .await?;
@@ -797,7 +862,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             );
         }
         Command::GetFixedGas => {
-            let gas = near::get_fixed_gas(&context).await?;
+            let gas = near::get_fixed_gas(context).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("fixed_gas" => format!("{:?}", gas))
@@ -805,14 +870,14 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         }
         Command::SetFixedGas { cost } => {
             // Assuming EthGas can be constructed from a u64 cost.
-            near::set_fixed_gas(&context, Some(cost.into())).await?;
+            near::set_fixed_gas(context, Some(cost)).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Fixed gas set successfully")
             );
         }
         Command::GetSiloParams => {
-            let params = near::get_silo_params(&context).await?;
+            let params = near::get_silo_params(context).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("silo_params" => format!("{:?}", params))
@@ -826,49 +891,49 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
                 fixed_gas: gas,
                 erc20_fallback_address: fallback_address,
             };
-            near::set_silo_params(&context, Some(params)).await?;
+            near::set_silo_params(context, Some(params)).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Silo params set")
             );
         }
         Command::DisableSiloMode => {
-            near::set_silo_params(&context, None).await?;
+            near::set_silo_params(context, None).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Silo mode disabled")
             );
         }
         Command::GetWhitelistStatus { kind } => {
-            let status = near::get_whitelist_status(&context, kind).await?;
+            let status = near::get_whitelist_status(context, kind).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("whitelist_kind" => format!("{:?}", kind), "status" => format!("{:?}", status))
             );
         }
         Command::SetWhitelistStatus { kind, status } => {
-            near::set_whitelist_status(&context, kind, status != 0).await?;
+            near::set_whitelist_status(context, kind, status != 0).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Whitelist status set")
             );
         }
         Command::AddEntryToWhitelist { kind, entry } => {
-            near::add_entry_to_whitelist(&context, kind, entry).await?;
+            near::add_entry_to_whitelist(context, kind, entry).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Entry added to whitelist")
             );
         }
         Command::RemoveEntryFromWhitelist { kind, entry } => {
-            near::remove_entry_from_whitelist(&context, kind, entry).await?;
+            near::remove_entry_from_whitelist(context, kind, entry).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Entry removed from whitelist")
             );
         }
         Command::SetKeyManager { account_id } => {
-            near::set_key_manager(&context, account_id).await?;
+            near::set_key_manager(context, account_id).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Key manager set")
@@ -878,28 +943,28 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             public_key,
             allowance,
         } => {
-            let outcome = near::add_relayer_key(&context, public_key, allowance).await?;
+            let outcome = near::add_relayer_key(context, public_key, allowance).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("relayer_key_added" => format!("{:?}", outcome))
             );
         }
         Command::RemoveRelayerKey { public_key } => {
-            near::remove_relayer_key(&context, public_key).await?;
+            near::remove_relayer_key(context, public_key).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Relayer key removed")
             );
         }
         Command::GetUpgradeDelayBlocks => {
-            let blocks = near::get_upgrade_delay_blocks(&context).await?;
+            let blocks = near::get_upgrade_delay_blocks(context).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("upgrade_delay_blocks" => blocks)
             );
         }
         Command::SetUpgradeDelayBlocks { blocks } => {
-            near::set_upgrade_delay_blocks(&context, blocks).await?;
+            near::set_upgrade_delay_blocks(context, blocks).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Upgrade delay blocks set")
@@ -907,14 +972,14 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         }
         Command::GetErc20FromNep141 { account_id } => {
             let account_str = account_id.to_string();
-            let erc20 = near::get_erc20_from_nep141(&context, account_id).await?;
+            let erc20 = near::get_erc20_from_nep141(context, account_id).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("nep141_account" => account_str, "erc20_address" => format!("{:?}", erc20))
             );
         }
         Command::GetNep141FromErc20 { address } => {
-            let acc_id = near::get_nep141_from_erc20(&context, address).await?;
+            let acc_id = near::get_nep141_from_erc20(context, address).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("erc20_address" => format!("{:?}", address), "nep141_account" => acc_id.to_string())
@@ -922,7 +987,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         }
         Command::GetErc20Metadata { erc20_id } => {
             let erc20_id_str = erc20_id.clone();
-            let meta = near::get_erc20_metadata(&context, erc20_id).await?;
+            let meta = near::get_erc20_metadata(context, erc20_id).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("erc20_id" => erc20_id_str, "metadata" => format!("{:?}", meta))
@@ -939,7 +1004,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
                 symbol,
                 decimals,
             };
-            near::set_erc20_metadata(&context, erc20_id, metadata).await?;
+            near::set_erc20_metadata(context, erc20_id, metadata).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("ERC20 metadata set")
@@ -949,7 +1014,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             contract_id,
             nep141,
         } => {
-            let addr = near::mirror_erc20_token(&context, contract_id, nep141).await?;
+            let addr = near::mirror_erc20_token(context, contract_id, nep141).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("mirrored_erc20_token_address" => format!("{:?}", addr))
@@ -959,14 +1024,14 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             account_id,
             withdraw_ser: _,
         } => {
-            near::set_eth_connector_contract_account(&context, account_id).await?;
+            near::set_eth_connector_contract_account(context, account_id).await?;
             output!(
-                &context.cli.output_format,
+                &&context.cli.output_format,
                 CommandResult::success("Eth connector contract account set")
             );
         }
         Command::GetEthConnectorContractAccount => {
-            let account = near::get_eth_connector_contract_account(&context).await?;
+            let account = near::get_eth_connector_contract_account(context).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("eth_connector_contract_account" => account.to_string())
@@ -978,7 +1043,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             ft_metadata_path,
         } => {
             near::set_eth_connector_contract_data(
-                &context,
+                context,
                 prover_id,
                 custodian_address,
                 ft_metadata_path,
@@ -990,14 +1055,14 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             );
         }
         Command::SetPausedFlags { mask } => {
-            near::set_paused_flags(&context, mask).await?;
+            near::set_paused_flags(context, mask).await?;
             output!(
                 &context.cli.output_format,
                 CommandResult::success("Paused flags set")
             );
         }
         Command::GetPausedFlags => {
-            let flags = near::get_paused_flags(&context).await?;
+            let flags = near::get_paused_flags(context).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("paused_flags" => format!("{:?}", flags))
@@ -1008,13 +1073,9 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             full_access_pub_key,
             function_call_pub_key,
         } => {
-            let outcome = near::add_relayer(
-                &context,
-                deposit,
-                full_access_pub_key,
-                function_call_pub_key,
-            )
-            .await?;
+            let outcome =
+                near::add_relayer(context, deposit, full_access_pub_key, function_call_pub_key)
+                    .await?;
             output!(
                 &context.cli.output_format,
                 result_object!("relayer_added" => format!("{:?}", outcome))
@@ -1059,7 +1120,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             );
         }
         Command::FtBalanceOfEth { address } => {
-            let balance = near::ft_balance_of_eth(context, address.clone()).await?;
+            let balance = near::ft_balance_of_eth(context, address).await?;
             output!(
                 &context.cli.output_format,
                 result_object!("address" => address.encode(), "balance" => format!("{:?}", balance))
@@ -1140,14 +1201,14 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         Command::StorageWithdraw { amount } => {
             near::storage_withdraw(context, amount.map(|n| Yocto::new(n.as_yoctonear()))).await?;
             output!(
-                &context.cli.output_format,
+                &&context.cli.output_format,
                 CommandResult::success("Storage withdrawn successfully")
             );
         }
         Command::StorageBalanceOf { account_id } => {
             let balance = near::storage_balance_of(context, account_id.clone()).await?;
             output!(
-                &context.cli.output_format,
+                &&context.cli.output_format,
                 result_object!("account_id" => account_id.to_string(), "storage_balance" => format!("{:?}", balance))
             );
         }

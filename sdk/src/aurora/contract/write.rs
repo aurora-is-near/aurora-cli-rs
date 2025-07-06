@@ -6,24 +6,22 @@ use aurora_engine_types::{
         ExitToNearPrecompileCallbackCallArgs,
         connector::{
             InitCallArgs, MirrorErc20TokenArgs, NEP141FtOnTransferArgs, PauseEthConnectorCallArgs,
-            Proof, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs,
-            StorageDepositCallArgs, StorageUnregisterCallArgs, StorageWithdrawCallArgs,
-            TransferCallArgs, TransferCallCallArgs,
+            SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, StorageDepositCallArgs,
+            StorageWithdrawCallArgs, TransferCallArgs, TransferCallCallArgs,
         },
         engine::{
-            DeployErc20TokenArgs, PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs,
-            SetOwnerArgs, SetUpgradeDelayBlocksArgs, StartHashchainArgs, StorageUnregisterArgs,
-            SubmitResult,
+            CallArgs, DeployErc20TokenArgs, PausePrecompilesCallArgs, RelayerKeyArgs,
+            RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, StartHashchainArgs,
+            StorageUnregisterArgs, SubmitResult,
         },
         silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
         xcc::{AddressVersionUpdateArgs, FundXccArgs, WithdrawWnearToRouterArgs},
     },
     types::Address,
 };
-use borsh::de;
 
 use crate::ContractMethod as ContractMethodDerive;
-use crate::aurora::{ContractMethod, ContractMethodResponse, error::Error};
+use crate::aurora::{ContractMethod, error::Error};
 
 #[derive(ContractMethodDerive)]
 #[contract_method(method = "set_eth_connector_contract_account", response = ())]
@@ -148,10 +146,6 @@ impl ContractMethod for Submit {
 
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         Ok((&self.transaction).into())
-    }
-
-    fn parse_response(response: Vec<u8>) -> Result<SubmitResult, Error> {
-        Self::Response::parse(response).map_err(Into::into)
     }
 }
 
@@ -385,6 +379,13 @@ impl ContractMethod for StorageWithdraw {
     fn params(&self) -> Result<Vec<u8>, std::io::Error> {
         serde_json::to_vec(&self.args).map_err(Into::into)
     }
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "call", response = ())]
+pub struct Call {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: CallArgs,
 }
 
 #[cfg(test)]

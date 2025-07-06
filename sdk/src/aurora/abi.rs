@@ -87,7 +87,7 @@ pub fn parse_arg(arg: &str, kind: &ethabi::ParamType) -> anyhow::Result<Token> {
             let mut tokens = Vec::with_capacity(values.len());
 
             for (v, kind) in values.iter().zip(tuple_kinds.iter()) {
-                let token = parse_arg(&serde_json::to_string(v).unwrap(), kind)?;
+                let token = parse_arg(&serde_json::to_string(v)?, kind)?;
                 tokens.push(token);
             }
 

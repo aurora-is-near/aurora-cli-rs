@@ -67,7 +67,10 @@ fn format_value_plain(value: &Value) -> String {
 #[macro_export]
 macro_rules! output {
     ($format:expr, $result:expr) => {
-        println!("{}", crate::common::output::format_output($result, $format));
+        println!(
+            "{}",
+            $crate::common::output::format_output($result, $format)
+        );
     };
 }
 
@@ -79,7 +82,7 @@ macro_rules! result_object {
             $(
                 map.insert($key.to_string(), serde_json::json!($value));
             )*
-            crate::common::output::CommandResult::Object(map)
+            $crate::common::output::CommandResult::Object(map)
         }
     };
 }
@@ -92,7 +95,7 @@ macro_rules! result_array {
             $(
                 arr.push(serde_json::json!($value));
             )*
-            crate::common::output::CommandResult::Array(arr)
+            $crate::common::output::CommandResult::Array(arr)
         }
     };
 }

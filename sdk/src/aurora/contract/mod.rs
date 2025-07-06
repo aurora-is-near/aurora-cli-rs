@@ -4,7 +4,7 @@ use aurora_engine_types::{
     H256, U256,
     parameters::{
         connector::{Erc20Metadata, PausedMask},
-        engine::{StorageBalance, SubmitResult},
+        engine::{StorageBalance, SubmitResult, TransactionStatus},
         silo::{SiloParamsArgs, WhitelistStatusArgs},
     },
     types::{Address, EthGas, Wei},
@@ -80,7 +80,7 @@ impl ContractMethodResponse for SubmitResult {
 
 impl ContractMethodResponse for Wei {
     fn parse(value: Vec<u8>) -> Result<Self, Error> {
-        Wei::from_eth(U256::from_big_endian(&value)).ok_or_else(|| {
+        Self::from_eth(U256::from_big_endian(&value)).ok_or_else(|| {
             {
                 io::Error::new(
                     io::ErrorKind::InvalidData,
@@ -133,5 +133,11 @@ impl ContractMethodResponse for serde_json::Value {
 impl ContractMethodResponse for StorageBalance {
     fn parse(value: Vec<u8>) -> Result<Self, Error> {
         serde_json::from_slice(&value).map_err(Into::into)
+    }
+}
+
+impl ContractMethodResponse for TransactionStatus {
+    fn parse(value: Vec<u8>) -> Result<Self, super::error::Error> {
+        Self::try_from_slice(&value).map_err(Into::into)
     }
 }

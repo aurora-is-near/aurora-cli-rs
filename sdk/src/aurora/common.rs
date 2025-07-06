@@ -53,23 +53,23 @@ pub fn sign_transaction(
     tx: TransactionLegacy,
     chain_id: u64,
     secret_key: &SecretKey,
-) -> LegacyEthSignedTransaction {
+) -> anyhow::Result<LegacyEthSignedTransaction> {
     let mut rlp_stream = RlpStream::new();
     tx.rlp_append_unsigned(&mut rlp_stream, Some(chain_id));
 
     let message_hash = aurora_engine_sdk::keccak(rlp_stream.as_raw());
-    let message = Message::parse_slice(message_hash.as_bytes()).unwrap();
+    let message = Message::parse_slice(message_hash.as_bytes())?;
 
     let (signature, recovery_id) = libsecp256k1::sign(&message, secret_key);
     let v: u64 = (u64::from(recovery_id.serialize())) + 2 * chain_id + 35;
     let r = U256::from_big_endian(&signature.r.b32());
     let s = U256::from_big_endian(&signature.s.b32());
-    LegacyEthSignedTransaction {
+    Ok(LegacyEthSignedTransaction {
         transaction: tx,
         v,
         r,
         s,
-    }
+    })
 }
 
 pub fn gen_key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<(Address, SecretKey)> {
