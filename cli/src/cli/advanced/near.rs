@@ -374,14 +374,14 @@ pub async fn execute_command(
             }
             ReadCommand::GetChainId => {
                 let chain_id = {
-                    let result = client.view_call("get_chain_id", vec![]).await?;
+                    let result = client.view_call("get_chain_id", vec![], None).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{chain_id}");
             }
             ReadCommand::GetUpgradeIndex => {
                 let upgrade_index = {
-                    let result = client.view_call("get_upgrade_index", vec![]).await?;
+                    let result = client.view_call("get_upgrade_index", vec![], None).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{upgrade_index}");
@@ -389,7 +389,11 @@ pub async fn execute_command(
             ReadCommand::GetBlockHash { block_number } => {
                 let height_serialized: u128 = block_number.parse::<u128>().unwrap();
                 let block_hash = client
-                    .view_call("get_block_hash", height_serialized.to_le_bytes().to_vec())
+                    .view_call(
+                        "get_block_hash",
+                        height_serialized.to_le_bytes().to_vec(),
+                        None,
+                    )
                     .await?
                     .result;
                 let block_hex = hex::encode(block_hash);
@@ -397,14 +401,14 @@ pub async fn execute_command(
             }
             ReadCommand::GetCode { address_hex } => {
                 let address = utils::hex_to_address(&address_hex)?.as_bytes().to_vec();
-                let code = client.view_call("get_code", address).await?.result;
+                let code = client.view_call("get_code", address, None).await?.result;
                 let code_hex = hex::encode(code);
                 println!("{code_hex}");
             }
             ReadCommand::GetBalance { address_hex } => {
                 let address = utils::hex_to_address(&address_hex)?.as_bytes().to_vec();
                 let balance = {
-                    let result = client.view_call("get_balance", address).await?;
+                    let result = client.view_call("get_balance", address, None).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{balance}");
@@ -412,7 +416,7 @@ pub async fn execute_command(
             ReadCommand::GetNonce { address_hex } => {
                 let address = utils::hex_to_address(&address_hex)?.as_bytes().to_vec();
                 let nonce = {
-                    let result = client.view_call("get_nonce", address).await?;
+                    let result = client.view_call("get_nonce", address, None).await?;
                     U256::from_big_endian(&result.result).low_u64()
                 };
                 println!("{nonce}");
@@ -427,14 +431,17 @@ pub async fn execute_command(
                 };
                 let storage = {
                     let result = client
-                        .view_call("get_storage_at", borsh::to_vec(&input)?)
+                        .view_call("get_storage_at", borsh::to_vec(&input)?, None)
                         .await?;
                     H256::from_slice(&result.result)
                 };
                 println!("{storage}");
             }
             ReadCommand::GetPausedFlags => {
-                let paused_flags = client.view_call("get_paused_flags", vec![]).await?.result;
+                let paused_flags = client
+                    .view_call("get_paused_flags", vec![], None)
+                    .await?
+                    .result;
                 println!("{paused_flags:?}");
             }
         },

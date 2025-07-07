@@ -124,7 +124,7 @@ impl NearClient {
     #[cfg(feature = "advanced")]
     pub async fn get_nep141_from_erc20(&self, erc20: Address) -> anyhow::Result<String> {
         let result = self
-            .view_call("get_nep141_from_erc20", erc20.as_bytes().to_vec())
+            .view_call("get_nep141_from_erc20", erc20.as_bytes().to_vec(), None)
             .await?;
         Ok(String::from_utf8_lossy(&result.result).into_owned())
     }
@@ -135,7 +135,7 @@ impl NearClient {
             nep141: nep141.parse().unwrap(),
         };
         let result = self
-            .view_call("get_erc20_from_nep141", borsh::to_vec(&args)?)
+            .view_call("get_erc20_from_nep141", borsh::to_vec(&args)?, None)
             .await?;
 
         Address::try_from_slice(&result.result).map_err(|e| anyhow::anyhow!(e))
@@ -143,7 +143,9 @@ impl NearClient {
 
     #[cfg(feature = "advanced")]
     pub async fn get_bridge_prover(&self) -> anyhow::Result<String> {
-        let result = self.view_call("get_bridge_prover", Vec::new()).await?;
+        let result = self
+            .view_call("get_bridge_prover", Vec::new(), None)
+            .await?;
         Ok(String::from_utf8_lossy(&result.result).into_owned())
     }
 
