@@ -1495,7 +1495,7 @@ async fn handle_get_latest_hashchain(context: &Context) -> anyhow::Result<()> {
     let latest_hashchain = near::get_latest_hashchain(context).await?;
     output!(
         &context.cli.output_format,
-        result_object!("latest_hashchain" => format!("{:?}", latest_hashchain.to_string()))
+        result_object!("latest_hashchain" => latest_hashchain.to_string())
     );
     Ok(())
 }
