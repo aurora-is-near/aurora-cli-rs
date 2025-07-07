@@ -245,10 +245,10 @@ pub enum Command {
     /// Return Public and Secret ED25519 keys
     KeyPair {
         /// Random
-        #[arg(long, default_value = "false")]
+        #[arg(long, default_value = "false", conflicts_with = "seed")]
         random: bool,
         /// From seed
-        #[arg(long)]
+        #[arg(long, conflicts_with = "random")]
         seed: Option<u64>,
     },
     /// Return randomly generated NEAR key for `AccountId`
@@ -812,7 +812,7 @@ async fn handle_get_code(context: &Context, address: Address) -> anyhow::Result<
     let code = near::get_code(context, address).await?;
     output!(
         &context.cli.output_format,
-        result_object!("address" => format!("{:?}", address), "code" => format!("0x{:?}", code))
+        result_object!("address" => format!("{:?}", address), "code" => format!("0x{:?}", hex::encode(code)))
     );
     Ok(())
 }
@@ -1402,7 +1402,7 @@ async fn handle_set_eth_connector_contract_account(
 ) -> anyhow::Result<()> {
     near::set_eth_connector_contract_account(context, account_id).await?;
     output!(
-        &&context.cli.output_format,
+        &context.cli.output_format,
         CommandResult::success("Eth connector contract account set")
     );
     Ok(())
@@ -1620,7 +1620,7 @@ async fn handle_storage_withdraw(
 ) -> anyhow::Result<()> {
     near::storage_withdraw(context, amount.map(|n| Yocto::new(n.as_yoctonear()))).await?;
     output!(
-        &&context.cli.output_format,
+        &context.cli.output_format,
         CommandResult::success("Storage withdrawn successfully")
     );
     Ok(())
@@ -1629,7 +1629,7 @@ async fn handle_storage_withdraw(
 async fn handle_storage_balance_of(context: &Context, account_id: AccountId) -> anyhow::Result<()> {
     let balance = near::storage_balance_of(context, account_id.clone()).await?;
     output!(
-        &&context.cli.output_format,
+        &context.cli.output_format,
         result_object!("account_id" => account_id.to_string(), "storage_balance" => format!("{:?}", balance))
     );
     Ok(())
