@@ -69,7 +69,7 @@ pub struct SetKeyManager {
 #[contract_method(method = "add_relayer_key", response = ())]
 pub struct AddRelayerKey {
     #[contract_param(serialize_as = "json")]
-    args: RelayerKeyArgs,
+    pub args: RelayerKeyArgs,
 }
 
 #[derive(ContractMethodDerive)]
@@ -232,7 +232,7 @@ pub struct ResumePrecompiles {
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "factory_get_wnear_address", response = ())]
+#[contract_method(method = "factory_set_wnear_address", response = ())]
 pub struct FactorySetWnearAddress {
     #[contract_param(serialize_as = "borsh")]
     pub address: Address,

@@ -102,7 +102,7 @@ fn parse_array(value: Value, arr_kind: &ethabi::ParamType) -> anyhow::Result<Vec
             let mut tokens = Vec::with_capacity(values.len());
 
             for v in values {
-                let token = parse_arg(&serde_json::to_string(&v).unwrap(), arr_kind)?;
+                let token = parse_arg(&serde_json::to_string(&v)?, arr_kind)?;
                 tokens.push(token);
             }
 

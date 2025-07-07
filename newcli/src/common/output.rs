@@ -86,16 +86,3 @@ macro_rules! result_object {
         }
     };
 }
-
-#[macro_export]
-macro_rules! result_array {
-    ($($value:expr),*) => {
-        {
-            let mut arr = Vec::new();
-            $(
-                arr.push(serde_json::json!($value));
-            )*
-            $crate::common::output::CommandResult::Array(arr)
-        }
-    };
-}

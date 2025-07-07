@@ -13,8 +13,14 @@ pub fn parse_ft_metadata(input: Option<String>) -> anyhow::Result<FungibleTokenM
     let json: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&input)?;
 
     Ok(FungibleTokenMetadata {
-        spec: json.get("spec").expect("Missing spec field").to_string(),
-        name: json.get("name").expect("Missing name field").to_string(),
+        spec: json
+            .get("spec")
+            .ok_or_else(|| anyhow::anyhow!("Missing spec field"))?
+            .to_string(),
+        name: json
+            .get("name")
+            .ok_or_else(|| anyhow::anyhow!("Missing name field"))?
+            .to_string(),
         symbol: json
             .get("symbol")
             .ok_or_else(|| anyhow::anyhow!("Missing symbol field"))?

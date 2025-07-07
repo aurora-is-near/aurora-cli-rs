@@ -661,14 +661,14 @@ pub async fn set_upgrade_delay_blocks(
 
 pub async fn get_erc20_from_nep141(
     context: &Context,
-    accound_id: AccountId,
+    account_id: AccountId,
 ) -> anyhow::Result<String> {
     context
         .client
-        .call(
+        .view(
             &context.cli.engine,
             GetErc20FromNep141 {
-                nep141_account_id: accound_id,
+                nep141_account_id: account_id,
             },
         )
         .await
@@ -681,7 +681,7 @@ pub async fn get_nep141_from_erc20(
 ) -> anyhow::Result<AccountId> {
     context
         .client
-        .call(&context.cli.engine, GetNep141FromErc20 { address })
+        .view(&context.cli.engine, GetNep141FromErc20 { address })
         .await
         .map_err(Into::into)
 }
@@ -694,7 +694,7 @@ pub async fn get_erc20_metadata(
 
     context
         .client
-        .call(&context.cli.engine, GetErc20Metadata { id })
+        .view(&context.cli.engine, GetErc20Metadata { id })
         .await
         .map_err(Into::into)
 }

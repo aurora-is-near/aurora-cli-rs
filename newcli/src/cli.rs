@@ -49,18 +49,15 @@ impl Cli {
     }
 
     pub(crate) fn root_contract_id(&self) -> anyhow::Result<AccountId> {
-        let server_addr = self.network.rpc_url();
-
-        let account = if server_addr.contains("testnet.near.org") {
-            "testnet"
-        } else if server_addr.contains("mainnet.near.org") {
-            "near"
-        } else {
-            anyhow::bail!("Non-sub accounts could be created for mainnet or testnet only");
+        let account = match self.network {
+            Network::Testnet => "testnet",
+            Network::Mainnet => "near",
+            Network::Localnet => {
+                anyhow::bail!("Account creation is only supported for mainnet or testnet")
+            }
         };
 
-        let account_id = account.parse()?;
-        Ok(account_id)
+        account.parse().map_err(Into::into)
     }
 }
 

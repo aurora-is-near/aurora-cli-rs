@@ -79,12 +79,12 @@ pub fn gen_key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<(Address,
         Ok(SecretKey::random(&mut rand::thread_rng()))
     } else {
         seed.map_or_else(
-            || Ok(SecretKey::default()),
+            || Err(anyhow::anyhow!("Seed required when random is false")),
             |seed| {
                 let mut rng: rand::rngs::StdRng = rand::SeedableRng::seed_from_u64(seed);
                 let mut buffer = [0; 32];
                 rng.fill_bytes(&mut buffer);
-                SecretKey::parse(&buffer)
+                SecretKey::parse(&buffer).map_err(Into::into)
             },
         )
     }?;

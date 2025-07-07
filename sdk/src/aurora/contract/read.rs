@@ -292,7 +292,7 @@ impl ContractMethod for FtBalanceOf {
 }
 
 pub struct FtBalanceOfEth {
-    address: Address,
+    pub address: Address,
 }
 
 impl ContractMethod for FtBalanceOfEth {
