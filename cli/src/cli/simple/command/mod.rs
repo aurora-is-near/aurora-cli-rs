@@ -763,7 +763,7 @@ pub async fn get_erc20_metadata(context: Context, identifier: String) -> anyhow:
     let result = context
         .client
         .near()
-        .view_call("get_erc20_metadata", args)
+        .view_call("get_erc20_metadata", args, context.block_ref)
         .await?;
     let output = serde_json::from_slice::<Erc20Metadata>(&result.result)
         .and_then(|metadata| serde_json::to_string_pretty(&metadata))?;
@@ -891,7 +891,7 @@ async fn get_value<T: FromCallResult + Display>(
     let result = context
         .client
         .near()
-        .view_call(method_name, args.unwrap_or_default())
+        .view_call(method_name, args.unwrap_or_default(), context.block_ref)
         .await?;
     let output = T::from_result(result)?;
     println!("{output}");

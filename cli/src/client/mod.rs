@@ -4,6 +4,8 @@ use aurora_engine_types::H256;
 use aurora_engine_types::account_id::AccountId;
 #[cfg(feature = "advanced")]
 use aurora_engine_types::parameters::engine::SubmitResult;
+#[cfg(feature = "simple")]
+use near_primitives::types::BlockReference;
 #[cfg(feature = "advanced")]
 use thiserror::Error;
 
@@ -30,14 +32,20 @@ type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
 pub struct Context {
     pub client: Client,
     pub output_format: OutputFormat,
+    pub block_ref: Option<BlockReference>,
 }
 
 #[cfg(feature = "simple")]
 impl Context {
-    pub const fn new(client: Client, output_format: OutputFormat) -> Self {
+    pub const fn new(
+        client: Client,
+        output_format: OutputFormat,
+        block_ref: Option<BlockReference>,
+    ) -> Self {
         Self {
             client,
             output_format,
+            block_ref,
         }
     }
 }

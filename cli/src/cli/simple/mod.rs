@@ -2,6 +2,7 @@ use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
 use clap::{Parser, Subcommand, ValueEnum};
 use near_primitives::hash::CryptoHash;
+use near_primitives::types::{BlockId, BlockReference};
 use shadow_rs::shadow;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -36,6 +37,9 @@ pub struct Cli {
     /// Path to file with NEAR account id and secret key in JSON format
     #[arg(long)]
     pub near_key_path: Option<String>,
+    /// Block number to get data from
+    #[arg(long)]
+    pub block_number: Option<u64>,
     #[clap(subcommand)]
     pub command: Command,
 }
@@ -465,7 +469,12 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
     };
     let client = crate::client::Client::new(near_rpc, &args.engine, args.near_key_path);
-    let context = crate::client::Context::new(client, args.output_format);
+    let context = crate::client::Context::new(
+        client,
+        args.output_format,
+        args.block_number
+            .map(|n| BlockReference::BlockId(BlockId::Height(n))),
+    );
 
     match args.command {
         Command::GetChainId => command::get_chain_id(context).await?,

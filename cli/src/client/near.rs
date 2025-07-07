@@ -160,7 +160,7 @@ impl NearClient {
             amount: amount.to_bytes(),
             input,
         };
-        let result = self.view_call("view", borsh::to_vec(&args)?).await?;
+        let result = self.view_call("view", borsh::to_vec(&args)?, None).await?;
         let status = TransactionStatus::try_from_slice(&result.result)?;
         Ok(status)
     }
@@ -169,9 +169,10 @@ impl NearClient {
         &self,
         method_name: &str,
         args: Vec<u8>,
+        block_ref: Option<BlockReference>,
     ) -> anyhow::Result<views::CallResult> {
         let request = methods::query::RpcQueryRequest {
-            block_reference: Finality::Final.into(),
+            block_reference: block_ref.unwrap_or_else(|| Finality::Final.into()),
             request: views::QueryRequest::CallFunction {
                 account_id: self.engine_account_id.clone(),
                 method_name: method_name.to_string(),
@@ -450,7 +451,7 @@ impl NearClient {
         let sender_address = utils::address_from_secret_key(sk)?;
         let nonce = {
             let result = self
-                .view_call("get_nonce", sender_address.as_bytes().to_vec())
+                .view_call("get_nonce", sender_address.as_bytes().to_vec(), None)
                 .await?;
             U256::from_big_endian(&result.result)
         };
@@ -464,7 +465,7 @@ impl NearClient {
         };
         let chain_id = {
             let result = self
-                .view_call("get_chain_id", sender_address.as_bytes().to_vec())
+                .view_call("get_chain_id", sender_address.as_bytes().to_vec(), None)
                 .await?;
             U256::from_big_endian(&result.result).low_u64()
         };
