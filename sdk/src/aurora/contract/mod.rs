@@ -141,3 +141,9 @@ impl ContractMethodResponse for TransactionStatus {
         Self::try_from_slice(&value).map_err(Into::into)
     }
 }
+
+impl ContractMethodResponse for U256 {
+    fn parse(value: Vec<u8>) -> Result<Self, super::error::Error> {
+        Ok(Self::from_big_endian(&value))
+    }
+}

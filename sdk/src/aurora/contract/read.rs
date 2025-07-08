@@ -2,7 +2,7 @@ use std::io;
 
 use crate::aurora::{ContractMethod, MethodType};
 use aurora_engine_types::{
-    H256,
+    H256, U256,
     parameters::{
         connector::{Erc20Identifier, Erc20Metadata, PausedMask},
         engine::{GetStorageAtArgs, StorageBalance, TransactionStatus, ViewCallArgs},
@@ -82,7 +82,7 @@ pub struct GetNonce {
 }
 
 impl ContractMethod for GetNonce {
-    type Response = u64;
+    type Response = U256;
 
     fn method_name(&self) -> &'static str {
         "get_nonce"
