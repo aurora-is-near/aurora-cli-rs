@@ -170,8 +170,24 @@ impl NearClient {
         method_name: &str,
         args: Vec<u8>,
     ) -> anyhow::Result<views::CallResult> {
+        self.view_call_for_block(method_name, args, None).await
+    }
+
+    pub async fn view_call_for_block(
+        &self,
+        method_name: &str,
+        args: Vec<u8>,
+        block_number: Option<u64>,
+    ) -> anyhow::Result<views::CallResult> {
+        let block_reference = block_number.map_or_else(
+            || Finality::Final.into(),
+            |block_number| {
+                BlockReference::BlockId(near_primitives::types::BlockId::Height(block_number))
+            },
+        );
+
         let request = methods::query::RpcQueryRequest {
-            block_reference: Finality::Final.into(),
+            block_reference,
             request: views::QueryRequest::CallFunction {
                 account_id: self.engine_account_id.clone(),
                 method_name: method_name.to_string(),

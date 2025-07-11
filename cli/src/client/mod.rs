@@ -30,14 +30,20 @@ type NearCallError = near_jsonrpc_client::errors::JsonRpcError<
 pub struct Context {
     pub client: Client,
     pub output_format: OutputFormat,
+    pub block_number: Option<u64>,
 }
 
 #[cfg(feature = "simple")]
 impl Context {
-    pub const fn new(client: Client, output_format: OutputFormat) -> Self {
+    pub const fn new(
+        client: Client,
+        output_format: OutputFormat,
+        block_number: Option<u64>,
+    ) -> Self {
         Self {
             client,
             output_format,
+            block_number,
         }
     }
 }
