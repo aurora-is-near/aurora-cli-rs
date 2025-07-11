@@ -10,8 +10,8 @@ pub use advanced::{Cli, run};
 pub use simple::{Cli, command, run};
 
 /// NEAR Endpoints.
-const NEAR_MAINNET_ENDPOINT: &str = "https://rpc.mainnet.near.org/";
-const NEAR_TESTNET_ENDPOINT: &str = "https://rpc.testnet.near.org/";
+const NEAR_MAINNET_ENDPOINT: &str = "https://archival-rpc.mainnet.near.org/";
+const NEAR_TESTNET_ENDPOINT: &str = "https://archival-rpc.testnet.near.org/";
 #[cfg(feature = "simple")]
 const NEAR_LOCAL_ENDPOINT: &str = "http://127.0.0.1:3030/";
 /// Aurora Endpoints.
