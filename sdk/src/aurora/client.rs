@@ -6,6 +6,7 @@ use crate::near;
 
 use super::{ContractMethod, ContractMethodResponse, error::Error};
 
+#[derive(Clone)]
 pub struct Client {
     pub(crate) near: near::client::Client,
 }
