@@ -21,7 +21,7 @@ borsh.workspace = true
 near-gas.workspace = true
 near-token.workspace = true
 near-primitives.workspace = true
-near-sdk.workspace = true
+near-sdk = { workspace = true, features = ["non-contract-usage"] }
 rand.workspace = true
 rlp.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
