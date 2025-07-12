@@ -5,7 +5,9 @@ use syn::{parse_macro_input, DeriveInput, Fields, Meta, Type};
 /// Derive macro for implementing the ContractMethod trait
 ///
 /// Usage:
-/// ```rust
+/// ```ignore
+/// use aurora_sdk_macros::ContractMethod;
+///
 /// #[derive(ContractMethod)]
 /// #[contract_method(method = "some_method", response = ())] // No deserialize_as needed for unit type
 /// struct MyUnitMethod {
@@ -19,7 +21,7 @@ use syn::{parse_macro_input, DeriveInput, Fields, Meta, Type};
 /// #[contract_method(method = "some_method", response = String, deserialize_as = "json")]
 /// struct MyStringMethod {
 ///     #[contract_param(serialize_as = "borsh")]
-///     pub field2: MyStruct, // Serialized as Borsh
+///     pub field2: String, // Serialized as Borsh
 ///     #[contract_param]
 ///     pub text: String, // Converted to UTF-8 bytes (no serialize_as needed)
 /// }

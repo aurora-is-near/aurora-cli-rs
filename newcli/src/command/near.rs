@@ -364,6 +364,7 @@ pub async fn get_nonce(context: &Context, address: Address) -> anyhow::Result<u6
         .client
         .view(&context.cli.engine, GetNonce { address })
         .await
+        .map(|n| n.as_u64())
         .map_err(Into::into)
 }
 
