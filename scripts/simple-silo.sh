@@ -15,7 +15,7 @@ VENV=/tmp/venv
 # Install `nearup` utility if not installed before.
 python3 -m venv $VENV
 source $VENV/bin/activate
-pip list | grep nearup > /dev/null || pip install nearup > /dev/null
+pip list | grep nearup > /dev/null || pip install nearup #> /dev/null
 
 start_node() {
   cmd="nearup run localnet --home $NEARCORE_HOME"
@@ -24,7 +24,7 @@ start_node() {
     cmd="$cmd --binary-path $HOME/.nearup/near/localnet --num-nodes 1"
   fi
 
-  $cmd > /dev/null 2>&1
+  $cmd # > /dev/null 2>&1
 }
 
 stop_node() {

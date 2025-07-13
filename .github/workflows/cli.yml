@@ -9,7 +9,7 @@ on:
 
 jobs:
   shell_tests:
-    name: Tests ${{ matrix.interface }} CLI
+    name: ${{ matrix.interface }} CLI
     runs-on: selfhosted-heavy
     container: rust:latest
     strategy:
