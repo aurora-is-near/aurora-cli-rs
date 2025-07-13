@@ -14,7 +14,7 @@ jobs:
     container: rust:latest
     strategy:
       matrix:
-        interface: [ Advanced, Simple, Silo ]
+        interface: [ Advanced, Simple, Silo, Outputs ]
         include:
           - interface: Advanced
             args: --path ./cli --no-default-features -F advanced
@@ -25,6 +25,9 @@ jobs:
           - interface: Silo
             args: --path ./cli
             script: scripts/simple-silo.sh
+          - interface: Outputs
+            args: --path ./cli
+            script: scripts/different-outputs.sh
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -37,6 +40,4 @@ jobs:
         with:
           command: install
           args: ${{ matrix.args }}
-      - name: Fix issue with permissions
-        run: sudo chown -R $(whoami) /github/home/.cache
       - run: ${{ matrix.script }}
