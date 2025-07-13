@@ -11,7 +11,7 @@ jobs:
   shell_tests:
     name: ${{ matrix.interface }} CLI
     runs-on: selfhosted-heavy
-    container: rust:latest
+    container: devraymondsh/ubuntu-rust:22.04-latest
     strategy:
       matrix:
         interface: [ Advanced, Simple, Silo, Outputs ]
