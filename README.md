@@ -453,6 +453,7 @@ Commands:
 
 Options:
       --network <NETWORK>              NEAR network ID [default: localnet]
+      --block-number <BLOCK_NUMBER>    Block number to use for the view command
       --engine <ACCOUNT_ID>            Aurora EVM account [default: aurora]
       --near-key-path <NEAR_KEY_PATH>  Path to file with NEAR account id and secret key in JSON format
       --block-number                   Block number to get data from

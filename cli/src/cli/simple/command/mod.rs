@@ -878,7 +878,7 @@ pub async fn transaction_status(
         .transaction_status(tx_hash, wait_until.into())
         .await?;
 
-    println!("{}", serde_json::to_string_pretty(&rsp)?);
+    println!("{}", to_string_pretty(&rsp)?);
 
     Ok(())
 }
@@ -891,7 +891,7 @@ async fn get_value<T: FromCallResult + Display>(
     let result = context
         .client
         .near()
-        .view_call(method_name, args.unwrap_or_default())
+        .view_call_for_block(method_name, args.unwrap_or_default(), context.block_number)
         .await?;
     let output = T::from_result(result)?;
     println!("{output}");
