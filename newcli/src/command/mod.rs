@@ -25,7 +25,7 @@ mod near;
 
 #[derive(Clone, Subcommand)]
 pub enum Command {
-    /// Create new NEAR account
+    /// Create a new NEAR account
     CreateAccount {
         /// `AccountId`
         #[arg(long, short)]
@@ -371,7 +371,7 @@ pub enum Command {
     },
     /// Mirror ERC-20 token
     MirrorErc20Token {
-        /// Account of contract where ERC-20 has been deployed
+        /// Account of the contract where ERC-20 has been deployed
         #[arg(long)]
         contract_id: AccountId,
         /// Account of corresponding NEP-141

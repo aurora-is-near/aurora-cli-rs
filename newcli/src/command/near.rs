@@ -361,8 +361,7 @@ pub async fn get_chain_id(context: &Context) -> anyhow::Result<u64> {
 
 pub async fn get_nonce(context: &Context, address: Address) -> anyhow::Result<u64> {
     context
-        .client
-        .view(&context.cli.engine, GetNonce { address })
+        .view(GetNonce { address })
         .await
         .map(|n| n.as_u64())
         .map_err(Into::into)
@@ -451,7 +450,7 @@ pub async fn submit(
     amount: Wei,
     aurora_secret_key: String,
 ) -> anyhow::Result<SubmitResult> {
-    let secret_key = common::hex_to_arr(aurora_secret_key.trim())
+    let secret_key = hex_to_arr(aurora_secret_key.trim())
         .and_then(|bytes| SecretKeyEth::parse(&bytes).map_err(Into::into))
         .map_err(|e| anyhow::anyhow!("Couldn't create secret key from hex: {e}"))?;
 

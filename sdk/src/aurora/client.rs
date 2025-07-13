@@ -8,7 +8,7 @@ use super::{ContractMethod, ContractMethodResponse, error::Error};
 
 #[derive(Clone)]
 pub struct Client {
-    pub(crate) near: near::client::Client,
+    pub near: near::client::Client,
 }
 
 impl Client {
@@ -70,10 +70,30 @@ impl Client {
         M: ContractMethod,
         M::Response: ContractMethodResponse,
     {
+        self.view_in_block(account_id, method, None).await
+    }
+
+    pub async fn view_in_block<M>(
+        &self,
+        account_id: &AccountId,
+        method: M,
+        block_height: Option<u64>,
+    ) -> Result<M::Response, Error>
+    where
+        M: ContractMethod,
+        M::Response: ContractMethodResponse,
+    {
         let method_name = method.method_name();
         let params = method.params()?;
 
-        let view_result = self.near.view(account_id, method_name).args(params).await;
+        let view_query = self.near.view(account_id, method_name).args(params);
+        let view_result = if let Some(height) = block_height {
+            view_query.block_height(height)
+        } else {
+            view_query
+        }
+        .await;
+
         match view_result {
             Ok(call_result) => Ok(M::parse_response(call_result.result)?),
 

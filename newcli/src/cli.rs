@@ -39,6 +39,9 @@ pub struct Cli {
     /// Path to file with NEAR account id and secret key in JSON format
     #[arg(long)]
     pub near_key_path: PathBuf,
+    /// Block height to use for the view command
+    #[arg(short, long)]
+    pub block_height: Option<u64>,
     #[clap(subcommand)]
     pub command: Command,
 }
