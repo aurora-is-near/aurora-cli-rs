@@ -40,6 +40,7 @@ jobs:
         with:
           command: install
           args: ${{ matrix.args }}
-      - run: |
-          ${{ matrix.script }}
-          ls -la $HOME/.nearup/near/localnet/
+      - run: ${{ matrix.script }}
+      - name: Check neard
+        if: always()
+        run: ls -la $HOME/.nearup/near/localnet/
