@@ -40,4 +40,6 @@ jobs:
         with:
           command: install
           args: ${{ matrix.args }}
-      - run: ${{ matrix.script }}
+      - run: |
+          ${{ matrix.script }}
+          ls -la $HOME/.nearup/near/localnet/
