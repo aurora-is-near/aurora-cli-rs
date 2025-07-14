@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, string::FromUtf8Error};
 
 use aurora_engine_types::types::address::error::AddressError;
 use serde::Deserialize;
@@ -26,6 +26,18 @@ impl From<AddressError> for Error {
             }
         }
         .into()
+    }
+}
+
+impl From<FromUtf8Error> for Error {
+    fn from(e: FromUtf8Error) -> Self {
+        io::Error::new(io::ErrorKind::InvalidData, e).into()
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        io::Error::new(io::ErrorKind::InvalidData, e).into()
     }
 }
 
