@@ -11,7 +11,7 @@ jobs:
   shell_tests:
     name: ${{ matrix.interface }} CLI
     runs-on: selfhosted-heavy
-    container: devraymondsh/ubuntu-rust:22.04-latest
+    container: rust:latest
     strategy:
       matrix:
         interface: [ Advanced, Simple, Silo, Outputs ]
@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt update
-          apt install -y libssl-dev jq python3-venv pkg-config
+          apt install -y jq python3-venv
       - name: Install aurora-cli
         uses: actions-rs/cargo@v1
         with:
