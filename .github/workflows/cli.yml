@@ -14,20 +14,17 @@ jobs:
     container: rust:latest
     strategy:
       matrix:
-        interface: [ Simple ] #[ Advanced, Simple, Silo, Outputs ]
+        interface: [ Advanced, Simple, Silo ]
         include:
-          #          - interface: Advanced
-          #            args: --path ./cli --no-default-features -F advanced
-          #            script: scripts/advanced.sh
+          - interface: Advanced
+            args: --path ./cli --no-default-features -F advanced
+            script: scripts/advanced.sh
           - interface: Simple
             args: --path ./cli
             script: scripts/simple.sh
-    #          - interface: Silo
-    #            args: --path ./cli
-    #            script: scripts/simple-silo.sh
-    #          - interface: Outputs
-    #            args: --path ./cli
-    #            script: scripts/different-outputs.sh
+          - interface: Silo
+            args: --path ./cli
+            script: scripts/simple-silo.sh
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
