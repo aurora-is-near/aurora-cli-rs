@@ -74,8 +74,9 @@ assert_eq() {
 }
 
 # Start NEAR node.
+download_neard
 start_node
-sleep 1
+sleep 3
 
 # Download Aurora EVM.
 curl -sL $ENGINE_PREV_WASM_URL -o $ENGINE_WASM_PATH || error_exit

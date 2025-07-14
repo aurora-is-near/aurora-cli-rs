@@ -55,7 +55,9 @@ wait_for_block() {
 }
 
 # Download `neard` and preparing config files.
+download_neard
 start_node
+sleep 3
 nearup stop > /dev/null 2>&1
 wait_for_block
 

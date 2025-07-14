@@ -69,8 +69,9 @@ wait_for_block() {
 }
 
 # Start NEAR node.
+download_neard
 start_node
-sleep 2
+sleep 3
 
 export NEAR_KEY_PATH=$NODE_KEY_PATH
 # Create an account for Aurora EVM.

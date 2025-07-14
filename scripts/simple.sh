@@ -80,7 +80,7 @@ wait_for_block() {
 # Start NEAR node.
 download_neard
 start_node
-wait_for_block
+sleep 3
 
 # Download Aurora EVM.
 curl -sL $ENGINE_PREV_WASM_URL -o $ENGINE_WASM_PATH || error_exit
