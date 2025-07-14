@@ -29,7 +29,7 @@ download_neard() {
 
 start_node() {
   cmd="nearup run localnet --home $NEARCORE_HOME --binary-path $NEARD_PATH --num-nodes 1"
-  $cmd > /dev/null 2>&1 || error_exit
+  $cmd || error_exit
 }
 
 finish() {
