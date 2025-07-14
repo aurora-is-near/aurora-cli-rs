@@ -6,22 +6,30 @@ AURORA_LAST_VERSION=$(curl -s https://api.github.com/repos/aurora-is-near/aurora
 ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-mainnet.wasm"
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
 VENV=/tmp/venv
+NEARD_PATH="$HOME/.nearup/near/localnet"
+NEARD_VERSION=2.6.5
 
 export NEARCORE_HOME="/tmp/localnet"
+export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"
 
 # Install `nearup` utility if not installed before.
 python3 -m venv $VENV
 source $VENV/bin/activate
 pip list | grep nearup > /dev/null || pip install nearup > /dev/null
 
-start_node() {
-  cmd="nearup run localnet --home $NEARCORE_HOME --num-nodes 1"
-
-  if [[ $(uname -m) == "arm64" ]]; then # Check for local execution
-    cmd="$cmd --binary-path $HOME/.nearup/near/localnet"
+download_neard() {
+  if [[ ! -f $NEARD_PATH/neard ]]; then
+    mkdir -p $NEARD_PATH
+    url="https://s3-us-west-1.amazonaws.com/build.nearprotocol.com/nearcore/$(uname)-$(uname -m)/$NEARD_VERSION/neard.tar.gz"
+    curl -s $url -o $NEARD_PATH/neard.tar.gz || error_exit
+    tar xvzf $NEARD_PATH/neard.tar.gz -C $NEARD_PATH --strip-components 1
+    chmod +x $NEARD_PATH/neard
   fi
+}
 
-  $cmd > /dev/null 2>&1
+start_node() {
+  cmd="nearup run localnet --home $NEARCORE_HOME --binary-path $NEARD_PATH --num-nodes 1"
+  $cmd || error_exit
 }
 
 finish() {
@@ -47,7 +55,9 @@ wait_for_block() {
 }
 
 # Download `neard` and preparing config files.
+download_neard
 start_node
+sleep 3
 nearup stop > /dev/null 2>&1
 wait_for_block
 

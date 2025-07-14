@@ -9,8 +9,8 @@ on:
 
 jobs:
   shell_tests:
-    name: Tests ${{ matrix.interface }} CLI
-    runs-on: k8s-infrastructure-native
+    name: ${{ matrix.interface }} CLI
+    runs-on: selfhosted-heavy
     container: rust:latest
     strategy:
       matrix:
@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt update
-          apt install -y bash jq python3-venv
+          apt install -y jq python3-venv
       - name: Install aurora-cli
         uses: actions-rs/cargo@v1
         with:
