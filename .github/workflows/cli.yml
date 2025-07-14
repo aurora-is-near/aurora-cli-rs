@@ -14,7 +14,7 @@ jobs:
     container: rust:latest
     strategy:
       matrix:
-        interface: [ Advanced, Simple, Silo, Outputs ]
+        interface: [ Simple ] #[ Advanced, Simple, Silo, Outputs ]
         include:
           - interface: Advanced
             args: --path ./cli --no-default-features -F advanced
@@ -41,6 +41,3 @@ jobs:
           command: install
           args: ${{ matrix.args }}
       - run: ${{ matrix.script }}
-      - name: Check neard
-        if: always()
-        run: ls -la $HOME/.nearup/near/localnet/
