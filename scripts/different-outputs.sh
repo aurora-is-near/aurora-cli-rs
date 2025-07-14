@@ -19,23 +19,29 @@ AURORA_SECRET_KEY=27cb3ddbd18037b38d7fb9ae3433a9d6f5cd554a4ba5768c8a15053f688ee1
 ENGINE_ACCOUNT=aurora.node0
 MANAGER_ACCOUNT=key-manager.aurora.node0
 VENV=/tmp/venv
+NEARD_PATH="$HOME/.nearup/near/localnet"
+NEARD_VERSION=2.6.5
 
 export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"
-
 
 # Install `nearup` utility if not installed before.
 python3 -m venv $VENV
 source $VENV/bin/activate
 pip list | grep nearup > /dev/null || pip install nearup > /dev/null
 
-start_node() {
-  cmd="nearup run localnet --home $NEARCORE_HOME"
-
-  if [[ $(uname -m) == "arm64" ]]; then # Check for local execution
-    cmd="$cmd --binary-path $HOME/.nearup/near/localnet --num-nodes 1"
+download_neard() {
+  if [[ ! -f $NEARD_PATH/neard ]]; then
+    mkdir -p $NEARD_PATH
+    url="https://s3-us-west-1.amazonaws.com/build.nearprotocol.com/nearcore/$(uname)-$(uname -m)/$NEARD_VERSION/neard.tar.gz"
+    curl -s $url -o $NEARD_PATH/neard.tar.gz || error_exit
+    tar xvzf $NEARD_PATH/neard.tar.gz -C $NEARD_PATH --strip-components 1
+    chmod +x $NEARD_PATH/neard
   fi
+}
 
-  $cmd > /dev/null 2>&1
+start_node() {
+  cmd="nearup run localnet --home $NEARCORE_HOME --binary-path $NEARD_PATH --num-nodes 1"
+  $cmd || error_exit
 }
 
 stop_node() {
@@ -68,8 +74,9 @@ assert_eq() {
 }
 
 # Start NEAR node.
+download_neard
 start_node
-sleep 1
+sleep 3
 
 # Download Aurora EVM.
 curl -sL $ENGINE_PREV_WASM_URL -o $ENGINE_WASM_PATH || error_exit
@@ -132,7 +139,7 @@ export NEAR_KEY_PATH=$RELAYER_KEY_PATH
 aurora-cli --engine $ENGINE_ACCOUNT deploy --code "$EVM_CODE" --aurora-secret-key $AURORA_SECRET_KEY || error_exit
 sleep 1
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0xa3078bf607d2e859dca0b1a13878ec2e607f30de -f greet \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "Hello, World!"
 sleep 1
 
@@ -149,7 +156,7 @@ aurora-cli --engine $ENGINE_ACCOUNT deploy --code $EVM_CODE --abi-path $ABI_PATH
   --aurora-secret-key $AURORA_SECRET_KEY || error_exit
 sleep 1
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D|| error_exit)
 assert_eq "$result" "5"
 sleep 1
 aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f increment \
@@ -157,7 +164,7 @@ aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
 sleep 1
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "6"
 sleep 1
 aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f decrement \
@@ -165,7 +172,7 @@ aurora-cli --engine $ENGINE_ACCOUNT call -a 0x4cf003049d1a9c4918c73e9bf62464d904
   --aurora-secret-key 611830d3641a68f94a690dcc25d1f4b0dac948325ac18f6dd32564371735f32c || error_exit
 sleep 1
 result=$(aurora-cli --engine $ENGINE_ACCOUNT view-call -a 0x4cf003049d1a9c4918c73e9bf62464d904184555 -f value \
-  --abi-path $ABI_PATH || error_exit)
+  --abi-path $ABI_PATH --from 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D || error_exit)
 assert_eq "$result" "5"
 sleep 1
 
