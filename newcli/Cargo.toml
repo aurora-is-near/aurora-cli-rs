@@ -10,7 +10,7 @@ readme.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-aurora-sdk-rs = {path = "../sdk" }
+aurora-sdk-rs = { path = "../sdk", features = ["cli"] }
 base64.workspace = true
 clap = { workspace = true, features = ["derive"] }
 libsecp256k1 = { workspace = true, features = ["std"] }
