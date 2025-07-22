@@ -489,6 +489,8 @@ pub enum Command {
 }
 
 pub async fn run(cli: Cli) -> anyhow::Result<()> {
+    println!("Running command: {:?}", cli.command);
+
     let context = {
         let near_client =
             aurora_sdk_rs::near::client::Client::new(cli.network.rpc_url(), None, cli.signer()?)?;
@@ -499,8 +501,6 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             client: aurora_client,
         }
     };
-
-    println!("Running command: {:?}", context.cli.command);
 
     match context.cli.command.clone() {
         Command::CreateAccount { account, balance } => {
