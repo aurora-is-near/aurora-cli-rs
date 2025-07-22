@@ -31,7 +31,7 @@ pub enum Command {
         #[arg(long, short)]
         account: AccountId,
         /// Initial account balance in NEAR
-        #[arg(long, short)]
+        #[arg(long, short, value_parser = parse_near_token)]
         balance: NearToken,
     },
     /// View NEAR account
@@ -157,6 +157,7 @@ pub enum Command {
         /// Wnear Account Id
         wnear_account_id: Option<AccountId>,
         /// Attached deposit in NEAR
+        #[arg(value_parser = parse_near_token)]
         deposit: NearToken,
     },
     /// Upgrade contract with provided code
@@ -323,7 +324,7 @@ pub enum Command {
         #[arg(long)]
         public_key: PublicKey,
         /// Allowance
-        #[arg(long)]
+        #[arg(long, value_parser = parse_near_token)]
         allowance: NearToken,
     },
     /// Remove relayer public key
@@ -410,7 +411,7 @@ pub enum Command {
     GetPausedFlags,
     /// Add relayer
     AddRelayer {
-        #[arg(long)]
+        #[arg(long, value_parser = parse_near_token)]
         deposit: NearToken,
         #[arg(long)]
         full_access_pub_key: PublicKey,
@@ -420,6 +421,7 @@ pub enum Command {
     WithdrawWnearToRouter {
         #[arg(long, value_parser = parse_address)]
         address: Address,
+        #[arg(value_parser = parse_near_token)]
         amount: NearToken,
     },
     MirrorErc20TokenCallback {
@@ -441,7 +443,7 @@ pub enum Command {
     FtTransfer {
         #[arg(long)]
         receiver_id: AccountId,
-        #[arg(long)]
+        #[arg(long, value_parser = parse_near_token)]
         amount: NearToken,
         #[arg(long)]
         memo: Option<String>,
@@ -449,7 +451,7 @@ pub enum Command {
     FtTransferCall {
         #[arg(long)]
         receiver_id: AccountId,
-        #[arg(long)]
+        #[arg(long, value_parser = parse_near_token)]
         amount: NearToken,
         #[arg(long)]
         memo: Option<String>,
@@ -459,7 +461,7 @@ pub enum Command {
     FtOnTransfer {
         #[arg(long)]
         sender_id: AccountId,
-        #[arg(long)]
+        #[arg(long, value_parser = parse_near_token)]
         amount: NearToken,
         #[arg(long)]
         msg: String,
@@ -477,7 +479,7 @@ pub enum Command {
         force: bool,
     },
     StorageWithdraw {
-        #[arg(long)]
+        #[arg(long, value_parser = parse_near_token)]
         amount: Option<NearToken>,
     },
     StorageBalanceOf {
@@ -1661,6 +1663,12 @@ fn parse_withdraw_serialize_type(s: &str) -> anyhow::Result<WithdrawSerializeTyp
         "borsh" => Ok(WithdrawSerializeType::Borsh),
         _ => Err(anyhow::anyhow!("Invalid withdraw serialize type: {s}")),
     }
+}
+
+fn parse_near_token(s: &str) -> anyhow::Result<NearToken> {
+    s.parse::<u128>()
+        .map(|n| NearToken::from_yoctonear(n))
+        .map_err(|e| anyhow::anyhow!("Invalid NearToken value: {s}, error: {e}"))
 }
 
 fn parse_eth_gas(s: &str) -> anyhow::Result<EthGas> {

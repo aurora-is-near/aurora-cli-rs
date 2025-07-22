@@ -1,8 +1,11 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{io::Empty, path::PathBuf, str::FromStr};
 
-use aurora_sdk_rs::near::{
-    crypto::{InMemorySigner, Signer},
-    primitives::types::AccountId,
+use aurora_sdk_rs::{
+    aurora::error::Error,
+    near::{
+        crypto::{EmptySigner, InMemorySigner, Signer},
+        primitives::types::AccountId,
+    },
 };
 use clap::{Parser, ValueEnum, command};
 
@@ -28,7 +31,7 @@ impl Network {
 #[command(author, long_about = None)]
 pub struct Cli {
     /// Near network ID
-    #[arg(long, value_enum, default_value_t = Network::Localnet)]
+    #[arg(long, value_enum, default_value_t = Network::Mainnet)]
     pub network: Network,
     /// Aurora EVM account
     #[arg(long, value_name = "ACCOUNT_ID", default_value = "aurora")]
@@ -38,7 +41,7 @@ pub struct Cli {
     pub output_format: OutputFormat,
     /// Path to file with NEAR account id and secret key in JSON format
     #[arg(long)]
-    pub near_key_path: PathBuf,
+    pub near_key_path: Option<PathBuf>,
     /// Block height to use for the view command
     #[arg(short, long)]
     pub block_height: Option<u64>,
@@ -48,7 +51,15 @@ pub struct Cli {
 
 impl Cli {
     pub(crate) fn signer(&self) -> anyhow::Result<Signer> {
-        InMemorySigner::from_file(&self.near_key_path).map_err(Into::into)
+        let path = self
+            .near_key_path
+            .clone()
+            .or(std::env::var("NEAR_KEY_PATH").ok().map(PathBuf::from));
+
+        Ok(path
+            .map(|p| InMemorySigner::from_file(&p))
+            .transpose()?
+            .unwrap_or_else(|| Signer::Empty(EmptySigner::new())))
     }
 
     pub(crate) fn root_contract_id(&self) -> anyhow::Result<AccountId> {
