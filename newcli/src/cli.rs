@@ -28,7 +28,7 @@ impl Network {
 #[command(author, long_about = None)]
 pub struct Cli {
     /// Near network ID
-    #[arg(long, value_enum, default_value_t = Network::Mainnet)]
+    #[arg(long, value_enum, default_value_t = Network::Localnet)]
     pub network: Network,
     /// Aurora EVM account
     #[arg(long, value_name = "ACCOUNT_ID", default_value = "aurora")]
