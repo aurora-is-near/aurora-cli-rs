@@ -23,7 +23,7 @@ use crate::{common::output::CommandResult, context::Context};
 
 mod near;
 
-#[derive(Clone, Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 pub enum Command {
     /// Create a new NEAR account
     CreateAccount {
@@ -499,6 +499,8 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             client: aurora_client,
         }
     };
+
+    println!("Running command: {:?}", context.cli.command);
 
     match context.cli.command.clone() {
         Command::CreateAccount { account, balance } => {
