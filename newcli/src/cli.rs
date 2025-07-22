@@ -1,11 +1,8 @@
-use std::{io::Empty, path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr};
 
-use aurora_sdk_rs::{
-    aurora::error::Error,
-    near::{
-        crypto::{EmptySigner, InMemorySigner, Signer},
-        primitives::types::AccountId,
-    },
+use aurora_sdk_rs::near::{
+    crypto::{EmptySigner, InMemorySigner, Signer},
+    primitives::types::AccountId,
 };
 use clap::{Parser, ValueEnum, command};
 

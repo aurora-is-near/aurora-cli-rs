@@ -1667,7 +1667,7 @@ fn parse_withdraw_serialize_type(s: &str) -> anyhow::Result<WithdrawSerializeTyp
 
 fn parse_near_token(s: &str) -> anyhow::Result<NearToken> {
     s.parse::<u128>()
-        .map(|n| NearToken::from_yoctonear(n))
+        .map(NearToken::from_yoctonear)
         .map_err(|e| anyhow::anyhow!("Invalid NearToken value: {s}, error: {e}"))
 }
 
