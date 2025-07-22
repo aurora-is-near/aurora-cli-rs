@@ -8,6 +8,10 @@ homepage.workspace = true
 repository.workspace = true
 readme.workspace = true
 
+[[bin]]
+name = "aurora-cli"
+path = "src/main.rs"
+
 [dependencies]
 anyhow.workspace = true
 aurora-sdk-rs = { path = "../sdk", features = ["cli"] }
