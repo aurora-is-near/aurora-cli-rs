@@ -55,7 +55,8 @@ impl Cli {
 
         Ok(path
             .map(|p| InMemorySigner::from_file(&p))
-            .transpose()?
+            .transpose()
+            .map_err(|e| anyhow::anyhow!("Failed to read signer from file: {e}"))?
             .unwrap_or_else(|| Signer::Empty(EmptySigner::new())))
     }
 

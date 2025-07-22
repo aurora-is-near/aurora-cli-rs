@@ -736,7 +736,7 @@ async fn handle_create_account(
     let account_str = account.to_string();
     let outcome = near::create_account(context, account, balance).await?;
     output!(
-        &&context.cli.output_format,
+        &context.cli.output_format,
         result_object!("status" => "created", "account" => account_str, "outcome" => format!("{:?}", outcome))
     );
     Ok(())
@@ -745,7 +745,7 @@ async fn handle_create_account(
 async fn handle_view_account(context: &Context, account: &AccountId) -> anyhow::Result<()> {
     let view = near::view_account(context, account).await?;
     output!(
-        &&context.cli.output_format,
+        &context.cli.output_format,
         result_object!("account" => account.to_string(), "view" => format!("{:?}", view))
     );
     Ok(())
@@ -755,7 +755,7 @@ async fn handle_deploy_aurora(context: &Context, path: &PathBuf) -> anyhow::Resu
     let wasm = std::fs::read(path)?;
     let outcome = near::deploy_aurora(context, wasm).await?;
     output!(
-        &&context.cli.output_format,
+        &context.cli.output_format,
         result_object!("status" => "deployed", "path" => path.display().to_string(), "outcome" => format!("{:?}", outcome))
     );
     Ok(())
