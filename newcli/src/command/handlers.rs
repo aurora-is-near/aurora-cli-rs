@@ -168,11 +168,7 @@ pub async fn get_bridge_prover(context: &Context) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn get_storage_at(
-    context: &Context,
-    address: Address,
-    key: H256,
-) -> anyhow::Result<()> {
+pub async fn get_storage_at(context: &Context, address: Address, key: H256) -> anyhow::Result<()> {
     near::get_storage_at(context, address, key).await?;
     Ok(())
 }
@@ -272,10 +268,7 @@ pub async fn factory_update_address_version(
     Ok(())
 }
 
-pub async fn factory_set_wnear_address(
-    context: &Context,
-    address: Address,
-) -> anyhow::Result<()> {
+pub async fn factory_set_wnear_address(context: &Context, address: Address) -> anyhow::Result<()> {
     near::factory_set_wnear_address(context, address).await?;
     output!(
         &context.cli.output_format,
@@ -457,11 +450,7 @@ pub async fn encode_address(context: &Context, account: &AccountId) -> anyhow::R
     Ok(())
 }
 
-pub async fn key_pair(
-    context: &Context,
-    random: bool,
-    seed: Option<u64>,
-) -> anyhow::Result<()> {
+pub async fn key_pair(context: &Context, random: bool, seed: Option<u64>) -> anyhow::Result<()> {
     let (addr, sk) = near::gen_key_pair(random, seed)?;
     output!(
         &context.cli.output_format,
@@ -532,10 +521,7 @@ pub async fn disable_silo_mode(context: &Context) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn get_whitelist_status(
-    context: &Context,
-    kind: WhitelistKind,
-) -> anyhow::Result<()> {
+pub async fn get_whitelist_status(context: &Context, kind: WhitelistKind) -> anyhow::Result<()> {
     let status = near::get_whitelist_status(context, kind).await?;
     output!(
         &context.cli.output_format,
@@ -608,10 +594,7 @@ pub async fn add_relayer_key(
     Ok(())
 }
 
-pub async fn remove_relayer_key(
-    context: &Context,
-    public_key: PublicKey,
-) -> anyhow::Result<()> {
+pub async fn remove_relayer_key(context: &Context, public_key: PublicKey) -> anyhow::Result<()> {
     near::remove_relayer_key(context, public_key).await?;
     output!(
         &context.cli.output_format,
@@ -638,10 +621,7 @@ pub async fn set_upgrade_delay_blocks(context: &Context, blocks: u64) -> anyhow:
     Ok(())
 }
 
-pub async fn get_erc20_from_nep141(
-    context: &Context,
-    account_id: AccountId,
-) -> anyhow::Result<()> {
+pub async fn get_erc20_from_nep141(context: &Context, account_id: AccountId) -> anyhow::Result<()> {
     let account_str = account_id.to_string();
     let erc20 = near::get_erc20_from_nep141(context, account_id).await?;
     output!(
@@ -651,10 +631,7 @@ pub async fn get_erc20_from_nep141(
     Ok(())
 }
 
-pub async fn get_nep141_from_erc20(
-    context: &Context,
-    address: Address,
-) -> anyhow::Result<()> {
+pub async fn get_nep141_from_erc20(context: &Context, address: Address) -> anyhow::Result<()> {
     let acc_id = near::get_nep141_from_erc20(context, address).await?;
     output!(
         &context.cli.output_format,
@@ -924,10 +901,7 @@ pub async fn storage_unregister(context: &Context, force: bool) -> anyhow::Resul
     Ok(())
 }
 
-pub async fn storage_withdraw(
-    context: &Context,
-    amount: Option<NearToken>,
-) -> anyhow::Result<()> {
+pub async fn storage_withdraw(context: &Context, amount: Option<NearToken>) -> anyhow::Result<()> {
     near::storage_withdraw(context, amount.map(|n| Yocto::new(n.as_yoctonear()))).await?;
     output!(
         &context.cli.output_format,
@@ -936,10 +910,7 @@ pub async fn storage_withdraw(
     Ok(())
 }
 
-pub async fn storage_balance_of(
-    context: &Context,
-    account_id: AccountId,
-) -> anyhow::Result<()> {
+pub async fn storage_balance_of(context: &Context, account_id: AccountId) -> anyhow::Result<()> {
     let balance = near::storage_balance_of(context, account_id.clone()).await?;
     output!(
         &context.cli.output_format,

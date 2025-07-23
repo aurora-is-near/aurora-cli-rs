@@ -505,9 +505,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         Command::CreateAccount { account, balance } => {
             handlers::create_account(context, account, balance).await
         }
-        Command::ViewAccount { ref account } => {
-            handlers::view_account(context, account).await
-        }
+        Command::ViewAccount { ref account } => handlers::view_account(context, account).await,
         Command::DeployAurora { ref path } => handlers::deploy_aurora(context, path).await,
         Command::Init {
             chain_id,
@@ -541,26 +539,18 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         Command::GetStorageAt { address, key } => {
             handlers::get_storage_at(context, address, key).await
         }
-        Command::RegisterRelayer { address } => {
-            handlers::register_relayer(context, address).await
-        }
+        Command::RegisterRelayer { address } => handlers::register_relayer(context, address).await,
         Command::StartHashchain {
             block_height,
             block_hashchain,
         } => handlers::start_hashchain(context, block_height, block_hashchain).await,
         Command::PauseContract => handlers::pause_contract(context).await,
         Command::ResumeContract => handlers::resume_contract(context).await,
-        Command::PausePrecompiles { mask } => {
-            handlers::pause_precompiles(context, mask).await
-        }
-        Command::ResumePrecompiles { mask } => {
-            handlers::resume_precompiles(context, mask).await
-        }
+        Command::PausePrecompiles { mask } => handlers::pause_precompiles(context, mask).await,
+        Command::ResumePrecompiles { mask } => handlers::resume_precompiles(context, mask).await,
         Command::PausedPrecompiles => handlers::paused_precompiles(context).await,
         Command::FactoryUpdate { path } => handlers::factory_update(context, path).await,
-        Command::FactoryGetWnearAddress => {
-            handlers::factory_get_wnear_address(context).await
-        }
+        Command::FactoryGetWnearAddress => handlers::factory_get_wnear_address(context).await,
         Command::FactoryUpdateAddressVersion { address, version } => {
             handlers::factory_update_address_version(context, address, version).await
         }
@@ -571,9 +561,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             target,
             wnear_account_id,
             deposit,
-        } => {
-            handlers::fund_xcc_sub_account(context, target, wnear_account_id, deposit).await
-        }
+        } => handlers::fund_xcc_sub_account(context, target, wnear_account_id, deposit).await,
         Command::Upgrade { path } => handlers::upgrade(context, path).await,
         Command::StageUpgrade { path } => handlers::stage_upgrade(context, path).await,
         Command::DeployUpgrade => handlers::deploy_upgrade(context).await,
@@ -615,9 +603,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             )
             .await
         }
-        Command::EncodeAddress { ref account } => {
-            handlers::encode_address(context, account).await
-        }
+        Command::EncodeAddress { ref account } => handlers::encode_address(context, account).await,
         Command::KeyPair { random, seed } => handlers::key_pair(context, random, seed).await,
         Command::GenerateNearKey {
             account_id: _,
@@ -631,9 +617,7 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             fallback_address,
         } => handlers::set_silo_params(context, gas, fallback_address).await,
         Command::DisableSiloMode => handlers::disable_silo_mode(context).await,
-        Command::GetWhitelistStatus { kind } => {
-            handlers::get_whitelist_status(context, kind).await
-        }
+        Command::GetWhitelistStatus { kind } => handlers::get_whitelist_status(context, kind).await,
         Command::SetWhitelistStatus { kind, status } => {
             handlers::set_whitelist_status(context, kind, status).await
         }
@@ -703,13 +687,8 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             full_access_pub_key,
             function_call_pub_key,
         } => {
-            handlers::add_relayer(
-                context,
-                deposit,
-                full_access_pub_key,
-                function_call_pub_key,
-            )
-            .await
+            handlers::add_relayer(context, deposit, full_access_pub_key, function_call_pub_key)
+                .await
         }
         Command::WithdrawWnearToRouter { address, amount } => {
             handlers::withdraw_wnear_to_router(context, address, amount).await
@@ -720,12 +699,8 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         } => handlers::mirror_erc20_token_callback(context, contract_id, nep141).await,
         Command::GetLatestHashchain => handlers::get_latest_hashchain(context).await,
         Command::FtTotalSupply => handlers::ft_total_supply(context).await,
-        Command::FtBalanceOf { account_id } => {
-            handlers::ft_balance_of(context, account_id).await
-        }
-        Command::FtBalanceOfEth { address } => {
-            handlers::ft_balance_of_eth(context, address).await
-        }
+        Command::FtBalanceOf { account_id } => handlers::ft_balance_of(context, account_id).await,
+        Command::FtBalanceOfEth { address } => handlers::ft_balance_of_eth(context, address).await,
         Command::FtTransfer {
             receiver_id,
             amount,
@@ -742,19 +717,13 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             amount,
             msg,
         } => handlers::ft_on_transfer(context, sender_id, amount, msg).await,
-        Command::DeployErc20Token { nep141 } => {
-            handlers::deploy_erc20_token(context, nep141).await
-        }
+        Command::DeployErc20Token { nep141 } => handlers::deploy_erc20_token(context, nep141).await,
         Command::StorageDeposit {
             account_id,
             registration_only,
         } => handlers::storage_deposit(context, account_id, registration_only).await,
-        Command::StorageUnregister { force } => {
-            handlers::storage_unregister(context, force).await
-        }
-        Command::StorageWithdraw { amount } => {
-            handlers::storage_withdraw(context, amount).await
-        }
+        Command::StorageUnregister { force } => handlers::storage_unregister(context, force).await,
+        Command::StorageWithdraw { amount } => handlers::storage_withdraw(context, amount).await,
         Command::StorageBalanceOf { account_id } => {
             handlers::storage_balance_of(context, account_id).await
         }
