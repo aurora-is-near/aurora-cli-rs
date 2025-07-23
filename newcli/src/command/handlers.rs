@@ -22,9 +22,7 @@ use crate::{common::output::CommandResult, context::Context, output, result_obje
 
 use super::near;
 
-// Макрос для обработки результатов - поддерживает лямбда-функции и блоки
 macro_rules! handle_near_call {
-    // Новый синтаксис с лямбда-функцией
     ($context:expr, $call:expr, $closure:expr) => {
         match $call {
             Ok(result) => $closure(result),
@@ -33,7 +31,6 @@ macro_rules! handle_near_call {
             }
         }
     };
-    // Старый синтаксис с именем переменной и блоком
     ($context:expr, $call:expr, $var_name:ident, $success_block:block) => {
         match $call {
             Ok($var_name) => $success_block,
@@ -42,7 +39,6 @@ macro_rules! handle_near_call {
             }
         }
     };
-    // Для функций с сообщением об успехе
     ($context:expr, $call:expr, success: $msg:expr) => {
         match $call {
             Ok(_) => {
