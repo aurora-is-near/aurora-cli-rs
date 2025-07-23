@@ -72,7 +72,7 @@ pub async fn create_account(
     context: &Context,
     account: AccountId,
     balance: NearToken,
-) -> anyhow::Result<FinalExecutionOutcomeView> {
+) -> anyhow::Result<SecretKey> {
     let signer = context.cli.signer()?;
     let is_sub_account = account.is_sub_account_of(&signer.get_account_id());
     let new_key_pair = SecretKey::from_random(KeyType::ED25519);
@@ -97,8 +97,8 @@ pub async fn create_account(
         )
     };
 
-    let outcome_view = request.transact().await?;
-    Ok(outcome_view)
+    request.transact().await?;
+    Ok(new_key_pair)
 }
 
 pub async fn view_account(context: &Context, account: &AccountId) -> anyhow::Result<AccountView> {

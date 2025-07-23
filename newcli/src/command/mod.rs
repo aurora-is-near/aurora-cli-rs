@@ -734,10 +734,10 @@ async fn handle_create_account(
     balance: NearToken,
 ) -> anyhow::Result<()> {
     let account_str = account.to_string();
-    let outcome = near::create_account(context, account, balance).await?;
+    let key_pair = near::create_account(context, account, balance).await?;
     output!(
         &context.cli.output_format,
-        result_object!("status" => "created", "account" => account_str, "outcome" => format!("{:?}", outcome))
+        result_object!("account_id" => account_str, "public_key" => key_pair.public_key().to_string(), "private_key" => key_pair.to_string())
     );
     Ok(())
 }
@@ -756,7 +756,7 @@ async fn handle_deploy_aurora(context: &Context, path: &PathBuf) -> anyhow::Resu
     let outcome = near::deploy_aurora(context, wasm).await?;
     output!(
         &context.cli.output_format,
-        result_object!("status" => "deployed", "path" => path.display().to_string(), "outcome" => format!("{:?}", outcome))
+        result_object!("status" => "deployed", "path" => path.display().to_string(), "outcome" => outcome)
     );
     Ok(())
 }
