@@ -134,7 +134,7 @@ pub enum Command {
     PausedPrecompiles,
     /// Updates the bytecode for user's router contracts
     FactoryUpdate {
-        path: String,
+        path: PathBuf,
     },
     /// Return the address of the `wNEAR` ERC-20 contract
     FactoryGetWnearAddress,
@@ -161,11 +161,11 @@ pub enum Command {
     },
     /// Upgrade contract with provided code
     Upgrade {
-        path: String,
+        path: PathBuf,
     },
     /// Stage a new code for upgrade
     StageUpgrade {
-        path: String,
+        path: PathBuf,
     },
     /// Deploy staged upgrade
     DeployUpgrade,
@@ -526,16 +526,34 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             )
             .await
         }
-        Command::GetChainId => handlers::get_chain_id(context).await,
-        Command::GetNonce { address } => handlers::get_nonce(context, address).await,
-        Command::GetBlockHash { height } => handlers::get_block_hash(context, height).await,
-        Command::GetCode { address } => handlers::get_code(context, address).await,
-        Command::GetBalance { address } => handlers::get_balance(context, address).await,
-        Command::GetUpgradeIndex => handlers::get_upgrade_index(context).await,
-        Command::GetVersion => handlers::get_version(context).await,
-        Command::GetOwner => handlers::get_owner(context).await,
+        Command::GetChainId => {
+            handlers::get_chain_id(context).await;
+        }
+        Command::GetNonce { address } => {
+            handlers::get_nonce(context, address).await;
+        }
+        Command::GetBlockHash { height } => {
+            handlers::get_block_hash(context, height).await;
+        }
+        Command::GetCode { address } => {
+            handlers::get_code(context, address).await;
+        }
+        Command::GetBalance { address } => {
+            handlers::get_balance(context, address).await;
+        }
+        Command::GetUpgradeIndex => {
+            handlers::get_upgrade_index(context).await;
+        }
+        Command::GetVersion => {
+            handlers::get_version(context).await;
+        }
+        Command::GetOwner => {
+            handlers::get_owner(context).await;
+        }
         Command::SetOwner { account_id } => handlers::set_owner(context, account_id).await,
-        Command::GetBridgeProver => handlers::get_bridge_prover(context).await,
+        Command::GetBridgeProver => {
+            handlers::get_bridge_prover(context).await;
+        }
         Command::GetStorageAt { address, key } => {
             handlers::get_storage_at(context, address, key).await
         }
@@ -544,11 +562,21 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             block_height,
             block_hashchain,
         } => handlers::start_hashchain(context, block_height, block_hashchain).await,
-        Command::PauseContract => handlers::pause_contract(context).await,
-        Command::ResumeContract => handlers::resume_contract(context).await,
-        Command::PausePrecompiles { mask } => handlers::pause_precompiles(context, mask).await,
-        Command::ResumePrecompiles { mask } => handlers::resume_precompiles(context, mask).await,
-        Command::PausedPrecompiles => handlers::paused_precompiles(context).await,
+        Command::PauseContract => {
+            handlers::pause_contract(context).await;
+        }
+        Command::ResumeContract => {
+            handlers::resume_contract(context).await;
+        }
+        Command::PausePrecompiles { mask } => {
+            handlers::pause_precompiles(context, mask).await;
+        }
+        Command::ResumePrecompiles { mask } => {
+            handlers::resume_precompiles(context, mask).await;
+        }
+        Command::PausedPrecompiles => {
+            handlers::paused_precompiles(context).await;
+        }
         Command::FactoryUpdate { path } => handlers::factory_update(context, path).await,
         Command::FactoryGetWnearAddress => handlers::factory_get_wnear_address(context).await,
         Command::FactoryUpdateAddressVersion { address, version } => {
@@ -570,20 +598,20 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
             args,
             abi_path,
             aurora_secret_key,
-        } => handlers::deploy(context, code, args, abi_path, aurora_secret_key).await,
+        } => handlers::deploy(context, code, args, abi_path, aurora_secret_key).await?,
         Command::Call {
             address,
             input,
             value,
             from,
-        } => handlers::call(context, address, input, value, from).await,
+        } => handlers::call(context, address, input, value, from).await?,
         Command::ViewCall {
             address,
             function,
             args,
             from,
             abi_path,
-        } => handlers::view_call(context, address, function, args, from, abi_path).await,
+        } => handlers::view_call(context, address, function, args, from, abi_path).await?,
         Command::Submit {
             address,
             function,
@@ -601,17 +629,21 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
                 value,
                 aurora_secret_key,
             )
-            .await
+            .await?
         }
-        Command::EncodeAddress { ref account } => handlers::encode_address(context, account).await,
-        Command::KeyPair { random, seed } => handlers::key_pair(context, random, seed).await,
+        Command::EncodeAddress { ref account } => {
+            handlers::encode_address(context, account).await?
+        }
+        Command::KeyPair { random, seed } => handlers::key_pair(context, random, seed).await?,
         Command::GenerateNearKey {
             account_id: _,
             key_type,
         } => handlers::generate_near_key(context, key_type).await,
         Command::GetFixedGas => handlers::get_fixed_gas(context).await,
+
         Command::SetFixedGas { cost } => handlers::set_fixed_gas(context, cost).await,
         Command::GetSiloParams => handlers::get_silo_params(context).await,
+
         Command::SetSiloParams {
             gas,
             fallback_address,
@@ -727,7 +759,9 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
         Command::StorageBalanceOf { account_id } => {
             handlers::storage_balance_of(context, account_id).await
         }
-    }
+    };
+
+    Ok(())
 }
 
 fn parse_address(s: &str) -> anyhow::Result<Address> {
