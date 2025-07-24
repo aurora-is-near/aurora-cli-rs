@@ -7,7 +7,7 @@ ENGINE_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/downlo
 ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
 VENV=/tmp/venv
 NEARD_PATH="$HOME/.nearup/near/localnet"
-NEARD_VERSION=2.6.5
+NEARD_VERSION=$(curl -s https://rpc.mainnet.near.org/status | jq -r .version.version)
 
 export NEARCORE_HOME="/tmp/localnet"
 export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"

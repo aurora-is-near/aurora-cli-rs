@@ -18,7 +18,7 @@ use crate::near::types::{GlobalContractDeployMode, GlobalContractIdentifier};
 
 pub const MAX_GAS: NearGas = NearGas::from_tgas(300);
 
-pub(crate) const DEFAULT_CALL_FN_GAS: NearGas = NearGas::from_tgas(10);
+pub(crate) const DEFAULT_CALL_FN_GAS: NearGas = NearGas::from_tgas(300);
 pub(crate) const DEFAULT_CALL_DEPOSIT: NearToken = NearToken::from_near(0);
 pub(crate) const DEFAULT_PRIORITY_FEE: u64 = 0;
 

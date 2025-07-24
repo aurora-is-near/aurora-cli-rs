@@ -30,6 +30,9 @@ pub enum Error {
 
     #[error("Unexpected query response kind: {0:?}")]
     UnexpectedQueryResponseKind(Box<QueryResponseKind>),
+
+    #[error("Signer is not provided")]
+    SignerNotProvidedError,
 }
 
 impl From<serde_json::Error> for Error {
