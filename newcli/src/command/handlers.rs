@@ -59,7 +59,7 @@ pub async fn create_account(context: &Context, account: AccountId, balance: Near
         |key_pair: SecretKey| {
             output!(
                 &context.cli.output_format,
-                result_object!("account_id" => account_str, "public_key" => key_pair.public_key().to_string(), "private_key" => key_pair.to_string())
+                result_object!("account_id" => account_str, "public_key" => key_pair.public_key().to_string(), "secret_key" => key_pair.to_string())
             );
         }
     );
@@ -79,11 +79,26 @@ pub async fn view_account(context: &Context, account: &AccountId) {
 }
 
 pub async fn deploy_aurora(context: &Context, path: &PathBuf) {
-    let wasm = std::fs::read(path).unwrap();
-    let outcome = near::deploy_aurora(context, wasm).await.unwrap();
-    output!(
-        &context.cli.output_format,
-        result_object!("status" => "deployed", "path" => path.display().to_string(), "outcome" => outcome)
+    let wasm = match std::fs::read(path) {
+        Ok(data) => data,
+        Err(e) => {
+            output!(
+                &context.cli.output_format,
+                result_object!("error" => format!("Failed to read WASM file: {}", e))
+            );
+            return;
+        }
+    };
+
+    handle_near_call!(
+        context,
+        near::deploy_aurora(context, wasm).await,
+        |outcome| {
+            output!(
+                &context.cli.output_format,
+                result_object!("status" => "deployed", "path" => path.display().to_string(), "outcome" => outcome)
+            );
+        }
     );
 }
 
