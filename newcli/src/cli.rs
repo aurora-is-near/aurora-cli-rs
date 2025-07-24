@@ -1,12 +1,12 @@
 use std::{path::PathBuf, str::FromStr};
 
 use aurora_sdk_rs::near::{
-    crypto::{EmptySigner, InMemorySigner, Signer},
+    crypto::{EmptySigner, Signer},
     primitives::types::AccountId,
 };
 use clap::{Parser, ValueEnum, command};
 
-use crate::command::Command;
+use crate::{command::Command, common};
 
 #[derive(Debug, Clone, ValueEnum)]
 pub enum Network {
@@ -54,9 +54,12 @@ impl Cli {
             .or(std::env::var("NEAR_KEY_PATH").ok().map(PathBuf::from));
 
         Ok(path
-            .map(|p| InMemorySigner::from_file(&p))
-            .transpose()
-            .map_err(|e| anyhow::anyhow!("Failed to read signer from file: {e}"))?
+            .map(|p| {
+                common::read_key_file(p)
+                    .map(Signer::InMemory)
+                    .map_err(|e| anyhow::anyhow!("Failed to read signer from file: {e}"))
+            })
+            .transpose()?
             .unwrap_or_else(|| Signer::Empty(EmptySigner::new())))
     }
 

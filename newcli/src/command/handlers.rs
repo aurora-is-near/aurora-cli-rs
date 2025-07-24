@@ -22,6 +22,20 @@ use crate::{common::output::CommandResult, context::Context, output, result_obje
 
 use super::near;
 
+/// Common function to read WASM files with proper error handling
+fn read_wasm_file(context: &Context, path: &PathBuf) -> Option<Vec<u8>> {
+    match std::fs::read(path) {
+        Ok(data) => Some(data),
+        Err(e) => {
+            output!(
+                &context.cli.output_format,
+                result_object!("error" => format!("Failed to read WASM file {}: {}", path.display(), e))
+            );
+            None
+        }
+    }
+}
+
 macro_rules! handle_near_call {
     ($context:expr, $call:expr, $closure:expr) => {
         match $call {
@@ -79,15 +93,8 @@ pub async fn view_account(context: &Context, account: &AccountId) {
 }
 
 pub async fn deploy_aurora(context: &Context, path: &PathBuf) {
-    let wasm = match std::fs::read(path) {
-        Ok(data) => data,
-        Err(e) => {
-            output!(
-                &context.cli.output_format,
-                result_object!("error" => format!("Failed to read WASM file: {}", e))
-            );
-            return;
-        }
+    let Some(wasm) = read_wasm_file(context, path) else {
+        return;
     };
 
     handle_near_call!(
@@ -277,7 +284,9 @@ pub async fn paused_precompiles(context: &Context) {
 }
 
 pub async fn factory_update(context: &Context, path: PathBuf) {
-    let wasm = std::fs::read(path).unwrap();
+    let Some(wasm) = read_wasm_file(context, &path) else {
+        return;
+    };
     handle_near_call!(context, near::factory_update(context, wasm).await, success: "Factory updated successfully");
 }
 
@@ -313,12 +322,16 @@ pub async fn fund_xcc_sub_account(
 }
 
 pub async fn upgrade(context: &Context, path: PathBuf) {
-    let code = std::fs::read(path).unwrap();
+    let Some(code) = read_wasm_file(context, &path) else {
+        return;
+    };
     handle_near_call!(context, near::upgrade(context, code).await, success: "Contract upgraded successfully");
 }
 
 pub async fn stage_upgrade(context: &Context, path: PathBuf) {
-    let code = std::fs::read(path).unwrap();
+    let Some(code) = read_wasm_file(context, &path) else {
+        return;
+    };
     handle_near_call!(context, near::stage_upgrade(context, code).await, success: "Contract staged successfully");
 }
 
