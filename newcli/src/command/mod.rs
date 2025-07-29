@@ -763,7 +763,8 @@ pub async fn run(cli: Cli) -> anyhow::Result<()> {
 }
 
 fn parse_address(s: &str) -> anyhow::Result<Address> {
-    Address::decode(s).map_err(|e| anyhow::anyhow!("Invalid address: {s}, error: {e}"))
+    Address::decode(s.trim_start_matches("0x"))
+        .map_err(|e| anyhow::anyhow!("Invalid address: {s}, error: {e}"))
 }
 
 fn parse_wei(s: &str) -> anyhow::Result<Wei> {
