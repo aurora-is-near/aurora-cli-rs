@@ -18,7 +18,9 @@ use aurora_sdk_rs::{
 };
 use serde_json::Value;
 
-use crate::{common::output::CommandResult, context::Context, output, result_object};
+use crate::{
+    cli::OutputFormat, common::output::CommandResult, context::Context, output, result_object,
+};
 
 use super::near;
 
@@ -197,12 +199,21 @@ pub async fn get_upgrade_index(context: &Context) {
 }
 
 pub async fn get_version(context: &Context) {
-    handle_near_call!(context, near::get_version(context).await, |version| {
-        output!(
-            &context.cli.output_format,
-            result_object!("version" => version)
-        );
-    });
+    handle_near_call!(
+        context,
+        near::get_version(context).await,
+        |version: String| {
+            if context.cli.output_format == OutputFormat::Plain {
+                println!("{}", version.trim());
+                return;
+            }
+
+            output!(
+                &context.cli.output_format,
+                result_object!("version" => version.trim())
+            );
+        }
+    );
 }
 
 pub async fn get_owner(context: &Context) {

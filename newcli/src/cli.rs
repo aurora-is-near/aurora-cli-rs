@@ -34,7 +34,7 @@ pub struct Cli {
     #[arg(long, value_name = "ACCOUNT_ID", default_value = "aurora")]
     pub engine: AccountId,
     /// The way output of a command would be formatted
-    #[arg(long, default_value = "json")]
+    #[arg(long, default_value = "plain")]
     pub output_format: OutputFormat,
     /// Path to file with NEAR account id and secret key in JSON format
     #[arg(long)]
@@ -76,7 +76,7 @@ impl Cli {
     }
 }
 
-#[derive(Default, Clone, ValueEnum)]
+#[derive(Default, Clone, PartialEq, Eq, ValueEnum)]
 pub enum OutputFormat {
     #[default]
     Plain,
