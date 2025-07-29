@@ -113,11 +113,12 @@ pub async fn init(
     context: &Context,
     chain_id: u64,
     owner_id: AccountId,
-    bridge_prover_id: AccountId,
+    bridge_prover_id: Option<AccountId>,
     upgrade_delay_blocks: Option<u64>,
     custodian_address: Option<Address>,
     ft_metadata_path: FungibleTokenMetadata,
 ) {
+    let bridge_prover_id = bridge_prover_id.unwrap_or_else(|| context.cli.engine.clone());
     handle_near_call!(context, near::init(
         context,
         chain_id,

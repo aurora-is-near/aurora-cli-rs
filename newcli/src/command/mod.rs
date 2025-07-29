@@ -53,7 +53,7 @@ pub enum Command {
         owner_id: AccountId,
         /// Account of the bridge prover
         #[arg(long)]
-        bridge_prover_id: AccountId,
+        bridge_prover_id: Option<AccountId>,
         /// How many blocks after staging upgrade can deploy it
         #[arg(long)]
         upgrade_delay_blocks: Option<u64>,
