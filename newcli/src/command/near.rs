@@ -50,7 +50,7 @@ use aurora_sdk_rs::{
             xcc::{AddressVersionUpdateArgs, CodeVersion, FundXccArgs, WithdrawWnearToRouterArgs},
         },
         transactions::{EthTransactionKind, legacy::TransactionLegacy},
-        types::{Address, Balance, EthGas, NEP141Wei, NearGas, Wei, Yocto},
+        types::{Address, Balance, EthGas, NEP141Wei, Wei, Yocto},
     },
     near::{
         crypto::{KeyType, PublicKey, SecretKey},

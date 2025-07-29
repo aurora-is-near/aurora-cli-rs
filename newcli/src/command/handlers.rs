@@ -69,7 +69,12 @@ pub async fn create_account(context: &Context, account: AccountId, balance: Near
     let account_str = account.to_string();
     handle_near_call!(
         context,
-        near::create_account(context, account, balance).await,
+        near::create_account(
+            context,
+            account,
+            NearToken::from_near(balance.as_yoctonear())
+        )
+        .await,
         |key_pair: SecretKey| {
             output!(
                 &context.cli.output_format,
