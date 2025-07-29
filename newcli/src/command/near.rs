@@ -50,7 +50,7 @@ use aurora_sdk_rs::{
             xcc::{AddressVersionUpdateArgs, CodeVersion, FundXccArgs, WithdrawWnearToRouterArgs},
         },
         transactions::{EthTransactionKind, legacy::TransactionLegacy},
-        types::{Address, Balance, EthGas, NEP141Wei, Wei, Yocto},
+        types::{Address, Balance, EthGas, NEP141Wei, NearGas, Wei, Yocto},
     },
     near::{
         crypto::{KeyType, PublicKey, SecretKey},
@@ -67,6 +67,8 @@ use libsecp256k1::SecretKey as SecretKeyEth;
 use serde_json::json;
 
 use crate::{common::parse_ft_metadata, context::Context};
+
+const ONE_TERA_GAS: u64 = 10u64.pow(12);
 
 pub async fn create_account(
     context: &Context,
@@ -153,8 +155,16 @@ pub async fn init(
         .client
         .near()
         .batch(&context.cli.engine)
-        .call(Function::new("new").args_borsh(aurora_init_args)?)
-        .call(Function::new("new_eth_connector").args_borsh(eth_conn_init_args)?)
+        .call(
+            Function::new("new")
+                .args_borsh(aurora_init_args)?
+                .gas(150 * ONE_TERA_GAS),
+        )
+        .call(
+            Function::new("new_eth_connector")
+                .args_borsh(eth_conn_init_args)?
+                .gas(150 * ONE_TERA_GAS),
+        )
         .transact()
         .await?;
 
