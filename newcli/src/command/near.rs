@@ -134,7 +134,7 @@ pub async fn init(
     upgrade_delay_blocks: Option<u64>,
     custodian_address: Option<Address>,
     ft_metadata: FungibleTokenMetadata,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<FinalExecutionOutcomeView> {
     let aurora_init_args = LegacyNewCallArgs {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id: owner_id.into_aurora(),
@@ -151,7 +151,7 @@ pub async fn init(
         metadata: ft_metadata,
     };
 
-    context
+    let outcome = context
         .client
         .near()
         .batch(&context.cli.engine)
@@ -168,7 +168,7 @@ pub async fn init(
         .transact()
         .await?;
 
-    Ok(())
+    Ok(outcome)
 }
 
 pub async fn get_storage_at(

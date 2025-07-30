@@ -126,15 +126,25 @@ pub async fn init(
     ft_metadata_path: FungibleTokenMetadata,
 ) {
     let bridge_prover_id = bridge_prover_id.unwrap_or_else(|| context.cli.engine.clone());
-    handle_near_call!(context, near::init(
+    handle_near_call!(
         context,
-        chain_id,
-        owner_id,
-        bridge_prover_id,
-        upgrade_delay_blocks,
-        custodian_address,
-        ft_metadata_path,
-    ).await, success: "Aurora EVM and ETH connector initialized successfully");
+        near::init(
+            context,
+            chain_id,
+            owner_id,
+            bridge_prover_id,
+            upgrade_delay_blocks,
+            custodian_address,
+            ft_metadata_path,
+        )
+        .await,
+        |outcome| {
+            output!(
+                &context.cli.output_format,
+                result_object!("outcome" => outcome)
+            );
+        }
+    );
 }
 
 pub async fn get_chain_id(context: &Context) {

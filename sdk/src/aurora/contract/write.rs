@@ -10,9 +10,9 @@ use aurora_engine_types::{
             StorageWithdrawCallArgs, TransferCallArgs, TransferCallCallArgs,
         },
         engine::{
-            CallArgs, DeployErc20TokenArgs, PausePrecompilesCallArgs, RelayerKeyArgs,
-            RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, StartHashchainArgs,
-            StorageUnregisterArgs, SubmitResult,
+            CallArgs, DeployErc20TokenArgs, LegacyNewCallArgs, PausePrecompilesCallArgs,
+            RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs,
+            StartHashchainArgs, StorageUnregisterArgs, SubmitResult,
         },
         silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
         xcc::{AddressVersionUpdateArgs, FundXccArgs, WithdrawWnearToRouterArgs},
@@ -179,6 +179,13 @@ impl ContractMethod for DeployERC20 {
 pub struct SetERC20Metadata {
     #[contract_param(serialize_as = "json")]
     pub args: SetErc20MetadataArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "new", response = ())]
+pub struct New {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: LegacyNewCallArgs,
 }
 
 #[derive(ContractMethodDerive)]
