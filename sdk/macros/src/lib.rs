@@ -1,11 +1,12 @@
+#![allow(clippy::too_many_lines)]
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput, Fields, Meta, Type};
 
-/// Derive macro for implementing the ContractMethod trait
+/// Derive macro for implementing the `ContractMethod` trait
 ///
 /// Usage:
-/// ```rust
+/// ```ignore
 /// #[derive(ContractMethod)]
 /// #[contract_method(method = "some_method", response = ())] // No deserialize_as needed for unit type
 /// struct MyUnitMethod {
@@ -19,11 +20,13 @@ use syn::{parse_macro_input, DeriveInput, Fields, Meta, Type};
 /// #[contract_method(method = "some_method", response = String, deserialize_as = "json")]
 /// struct MyStringMethod {
 ///     #[contract_param(serialize_as = "borsh")]
-///     pub field2: MyStruct, // Serialized as Borsh
+///     pub field2: String, // Serialized as Borsh
 ///     #[contract_param]
 ///     pub text: String, // Converted to UTF-8 bytes (no serialize_as needed)
 /// }
 /// ```
+/// # Panics:
+///
 #[proc_macro_derive(ContractMethod, attributes(contract_method, contract_param))]
 pub fn derive_contract_method(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -95,9 +98,10 @@ pub fn derive_contract_method(input: TokenStream) -> TokenStream {
                             .find(|attr| attr.path().is_ident("contract_param"));
 
                         if let Some(attr) = contract_param_attr {
-                            if param_field.is_some() {
-                                panic!("Only one field can be marked with #[contract_param]");
-                            }
+                            assert!(
+                                param_field.is_none(),
+                                "Only one field can be marked with #[contract_param]"
+                            );
 
                             // Parse serialize_as from contract_param attribute
                             let mut serialize_as = None;
@@ -132,8 +136,8 @@ pub fn derive_contract_method(input: TokenStream) -> TokenStream {
             }
         }
         syn::Data::Union(_) => None,
-        _ => {
-            panic!("ContractMethod can only be derived for structs or unions");
+        syn::Data::Enum(_) => {
+            panic!("ContractMethod can only be derived from structs or unions");
         }
     };
 
@@ -224,13 +228,8 @@ pub fn derive_contract_method(input: TokenStream) -> TokenStream {
         .unwrap_or_default();
 
     // Check if the response type is unit type ()
-    let is_response_unit = if let Ok(response_type_syn) =
-        syn::parse_str::<syn::Type>(&quote! { #response_type }.to_string())
-    {
-        is_unit_type(&response_type_syn)
-    } else {
-        false
-    };
+    let is_response_unit = syn::parse_str::<Type>(&quote! { #response_type }.to_string())
+        .is_ok_and(|response_type_syn| is_unit_type(&response_type_syn));
 
     // Generate the parse_response method based on deserialize_as or response type
     let (parse_response_impl, _trait_path_for_response) = if is_response_unit {

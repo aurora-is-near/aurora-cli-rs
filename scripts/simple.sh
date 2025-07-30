@@ -20,7 +20,7 @@ ENGINE_ACCOUNT=aurora.node0
 MANAGER_ACCOUNT=key-manager.aurora.node0
 VENV=/tmp/venv
 NEARD_PATH="$HOME/.nearup/near/localnet"
-NEARD_VERSION=2.6.5
+NEARD_VERSION=$(curl -s https://rpc.mainnet.near.org/status | jq -r .version.version)
 
 export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"
 
@@ -87,7 +87,7 @@ curl -sL $ENGINE_PREV_WASM_URL -o $ENGINE_WASM_PATH || error_exit
 
 export NEAR_KEY_PATH=$NODE_KEY_PATH
 # Create an account for Aurora EVM.
-aurora-cli create-account --account $ENGINE_ACCOUNT --balance 100 > $AURORA_KEY_PATH || error_exit
+aurora-cli --output-format json create-account --account $ENGINE_ACCOUNT --balance 100 > $AURORA_KEY_PATH || error_exit
 wait_for_block
 
 # View info of created account.

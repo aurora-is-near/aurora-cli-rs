@@ -14,24 +14,28 @@
 
 ## What is Engine?
 
-[Aurora](https://doc.aurora.dev/getting-started/aurora-engine/) is an Ethereum Virtual Machine (EVM)
-project built on the NEAR Protocol, that provides a solution for developers to deploy their apps
-on an Ethereum-compatible, high-throughput, scalable and future-safe platform, with low transaction costs
+[Aurora](https://doc.aurora.dev/getting-started/aurora-engine/) is an Ethereum
+Virtual Machine (EVM) project built on the NEAR Protocol, that provides a
+solution for developers to deploy their apps on an Ethereum-compatible,
+high-throughput, scalable and future-safe platform, with low transaction costs
 for their users. Engine is the Aurora's implementation for it.
 
 ## What is Aurora CLI?
 
-Aurora CLI is a command line interface to bootstrap Aurora Engine with rapid speed built with rust.
+Aurora CLI is a command line interface to bootstrap Aurora Engine with rapid
+speed built with rust.
 
-Aurora CLI comes pre-configuration with opinionated, sensible defaults for standard testing environments.
-If other projects mention testing on Aurora, they are referring to the settings defined in this repo.
+Aurora CLI comes pre-configuration with opinionated, sensible defaults for
+standard testing environments. If other projects mention testing on Aurora, they
+are referring to the settings defined in this repo.
 
 **Aurora CLI has the following advantages over api:**
 
 - :pencil: **Easily modifiable EVM states through terminal**
 - :handshake: **Quick to interact for rapid iterations**
 
-See also prior version [aurora-cli](https://github.com/aurora-is-near/aurora-cli).
+See also prior version
+[aurora-cli](https://github.com/aurora-is-near/aurora-cli).
 
 ## Prerequisites
 
@@ -40,14 +44,17 @@ See also prior version [aurora-cli](https://github.com/aurora-is-near/aurora-cli
 ## Quickstart
 
 - 📦 Install `aurora-cli-rs` and start interacting with it:
-  *`cargo install --git https://github.com/aurora-is-near/aurora-cli-rs.git`*
-- 🔍 Check out what each command is for in the [Commands Reference](#commands-reference) section
-- ✋ Have questions? Ask them at the official Aurora [forum](https://forum.aurora.dev/)
+  _`cargo install --git https://github.com/aurora-is-near/aurora-cli-rs.git`_
+- 🔍 Check out what each command is for in the
+  [Commands Reference](#commands-reference) section
+- ✋ Have questions? Ask them at the official Aurora
+  [forum](https://forum.aurora.dev/)
 
 ## Usage
 
-In the following example, we will see how to deploy Aurora EVM on the `localnet`. Also, we will deploy a simple EVM
-smart contract and will be interacting with it.
+In the following example, we will see how to deploy Aurora EVM on the
+`localnet`. Also, we will deploy a simple EVM smart contract and will be
+interacting with it.
 
 ### **Requirements**
 
@@ -60,10 +67,11 @@ First what we need to do is to install `aurora-cli`:
 
 ```shell
 git clone https://github.com/aurora-engine/aurora-cli-rs
-cd aurora-cli-rs/cli && cargo install --path . 
+cd aurora-cli-rs/cli && cargo install --path .
 ```
 
-Next we need to start a NEAR node locally. We can use the NEAR utility, `nearup`.
+Next we need to start a NEAR node locally. We can use the NEAR utility,
+`nearup`.
 
 ### **Start a NEAR node locally**
 
@@ -79,8 +87,9 @@ Start NEAR node:
 nearup run localnet --home /tmp/localnet
 ```
 
-When running the `nearup run localnet` command on Apple’s M-based hardware, a local build of `neard` is required due to
-compatibility issues with the architecture.
+When running the `nearup run localnet` command on Apple’s M-based hardware, a
+local build of `neard` is required due to compatibility issues with the
+architecture.
 
 Start NEAR node (Apple's M-based hardware):
 
@@ -88,7 +97,8 @@ Start NEAR node (Apple's M-based hardware):
 nearup run localnet --home /tmp/localnet --binary-path /path/to/nearcore/target/release
 ```
 
-Replace `/path/to/nearcore/target/release` with the actual path to the locally built `neard` binary.
+Replace `/path/to/nearcore/target/release` with the actual path to the locally
+built `neard` binary.
 
 ### **Prepare an account and create a private key file for Aurora EVM**
 
@@ -125,8 +135,9 @@ aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json i
 
 ### **Deploy the EVM smart contract**
 
-And now we can deploy the EVM smart contract. In our example, it will be a simple counter that can return its current
-value and increment and decrement its value.
+And now we can deploy the EVM smart contract. In our example, it will be a
+simple counter that can return its current value and increment and decrement its
+value.
 
 But before that we need to generate a private key for signing transactions:
 
@@ -161,13 +172,14 @@ If everything went well, the response should be like this:
 Contract has been deployed to address: 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf successfully
 ```
 
-So. Now we have deployed the smart contract at address: `0x53a9fed853e02a39bf8d298f751374de8b5a6ddf`.
+So. Now we have deployed the smart contract at address:
+`0x53a9fed853e02a39bf8d298f751374de8b5a6ddf`.
 
 ### **Interact with the smart contract**
 
 First, let's check that the current value is the same as we set in the
-initialization stage. For that, we will use the `view-call` operation, which doesn't demand a private key
-because it is a read-only operation:
+initialization stage. For that, we will use the `view-call` operation, which
+doesn't demand a private key because it is a read-only operation:
 
 ```shell
 aurora-cli --engine aurora.node0 view-call -a 0x53a9fed853e02a39bf8d298f751374de8b5a6ddf -f value \
@@ -186,8 +198,8 @@ aurora-cli --engine aurora.node0 --near-key-path /tmp/localnet/aurora_key.json s
   --aurora-secret-key 3fac6dca1c6fc056b971a4e9090afbbfbdf3bc443e9cda595facb653cb1c01e1
 ```
 
-In the response, we can see if the transaction was successful and the amount of gas used for the execution of this
-transaction.
+In the response, we can see if the transaction was successful and the amount of
+gas used for the execution of this transaction.
 
 Let's make sure that our value was incremented:
 
@@ -200,13 +212,15 @@ So, if we can see `6` in the output then the demo was successful. That's it!
 
 ### **Build aurora-cli with the advanced command line interface (Advanced CLI)**
 
-Advanced CLI provides more options andadvanced features. You can try it by building with the following command:
+Advanced CLI provides more options andadvanced features. You can try it by
+building with the following command:
 
 ```shell
 cargo install --path . --no-default-features -F advanced
 ```
 
-Documentation on how to work with the advanced version of `aurora-cli` can be found [here](docs/localnet.md).
+Documentation on how to work with the advanced version of `aurora-cli` can be
+found [here](docs/localnet.md).
 
 ### **Browse Deployed EVM Metadata**
 
@@ -269,8 +283,9 @@ Disable whitelist status
 aurora-cli --engine aurora.node0 set-whitelist-status --kind <whitelist-kind> --status 0
 ```
 
-Replace `<whitelist-kind>` with the desired whitelist type (admin, evm-admin, account, or address), and `<entry-value>`
-with the address or account to be whitelisted or removed.
+Replace `<whitelist-kind>` with the desired whitelist type (admin, evm-admin,
+account, or address), and `<entry-value>` with the address or account to be
+whitelisted or removed.
 
 Add whitelist batch
 
@@ -278,8 +293,9 @@ Add whitelist batch
 aurora-cli --engine aurora.node0 add-entry-to-whitelist-batch path/to/batch_list.json
 ```
 
-The batch should be provided in a JSON format. Each entry in the JSON array should have two properties: `kind` and
-either `account_id` or `address`, depending on the type of whitelist being updated.
+The batch should be provided in a JSON format. Each entry in the JSON array
+should have two properties: `kind` and either `account_id` or `address`,
+depending on the type of whitelist being updated.
 
 Example JSON batch file (`batch_list.json`):
 
@@ -440,6 +456,7 @@ Options:
       --block-number <BLOCK_NUMBER>    Block number to use for the view command
       --engine <ACCOUNT_ID>            Aurora EVM account [default: aurora]
       --near-key-path <NEAR_KEY_PATH>  Path to file with NEAR account id and secret key in JSON format
+      --block-number                   Block number to get data from
   -h, --help                           Print help
   -V, --version                        Print version
 ```
@@ -538,7 +555,6 @@ Arguments:
 
 Options:
   -h, --help  Print help
-
 ```
 
 ### `aurora-cli get-block-hash`
@@ -569,7 +585,6 @@ Arguments:
 
 Options:
   -h, --help  Print help
-
 ```
 
 ### `aurora-cli get-balance`
@@ -868,7 +883,7 @@ Options:
       --value <VALUE>      Attached value in EVM transaction
       --from <FROM>        From account_id
   -h, --help               Print help
- ```
+```
 
 ### `aurora-cli submit`
 
@@ -1203,7 +1218,7 @@ Usage: aurora-cli set-eth-connector-contract-account [OPTIONS] --account-id <ACC
 Options:
       --account-id <ACCOUNT_ID>      Account id of eth connector
       --withdraw-ser <WITHDRAW_SER>  Serialization type in withdraw method
-  -h, --help           
+  -h, --help
 ```
 
 ### `aurora-cli get-eth-connector-contract-account`

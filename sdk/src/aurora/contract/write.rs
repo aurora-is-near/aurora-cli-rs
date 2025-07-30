@@ -1,12 +1,21 @@
 use std::io;
 
+use aurora_engine_transactions::EthTransactionKind;
 use aurora_engine_types::{
     parameters::{
+        ExitToNearPrecompileCallbackCallArgs,
         connector::{
-            MirrorErc20TokenArgs, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs,
+            InitCallArgs, MirrorErc20TokenArgs, NEP141FtOnTransferArgs, PauseEthConnectorCallArgs,
+            SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, StorageDepositCallArgs,
+            StorageWithdrawCallArgs, TransferCallArgs, TransferCallCallArgs,
         },
-        engine::DeployErc20TokenArgs,
+        engine::{
+            CallArgs, DeployErc20TokenArgs, LegacyNewCallArgs, PausePrecompilesCallArgs,
+            RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs,
+            StartHashchainArgs, StorageUnregisterArgs, SubmitResult,
+        },
         silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
+        xcc::{AddressVersionUpdateArgs, FundXccArgs, WithdrawWnearToRouterArgs},
     },
     types::Address,
 };
@@ -49,6 +58,34 @@ pub struct SetFixedGas {
     pub args: FixedGasArgs,
 }
 
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_key_manager", response = ())]
+pub struct SetKeyManager {
+    #[contract_param(serialize_as = "json")]
+    pub args: RelayerKeyManagerArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "add_relayer_key", response = ())]
+pub struct AddRelayerKey {
+    #[contract_param(serialize_as = "json")]
+    pub args: RelayerKeyArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "remove_relayer_key", response = ())]
+pub struct RemoveRelayerKey {
+    #[contract_param(serialize_as = "json")]
+    pub args: RelayerKeyArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_upgrade_delay_blocks", response = ())]
+pub struct SetUpgradeDelayBlocks {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: SetUpgradeDelayBlocksArgs,
+}
+
 // Temporarily until engine 4.0.0 release
 // This structure serializes itself rather than a separate field, so we keep manual implementation
 #[derive(Debug, borsh::BorshDeserialize, borsh::BorshSerialize)]
@@ -89,6 +126,29 @@ pub struct SetWhitelistStatus {
     pub args: WhitelistStatusArgs,
 }
 
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_owner", response = ())]
+pub struct SetOwner {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: SetOwnerArgs,
+}
+
+pub struct Submit {
+    pub transaction: EthTransactionKind,
+}
+
+impl ContractMethod for Submit {
+    type Response = SubmitResult;
+
+    fn method_name(&self) -> &'static str {
+        "submit"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        Ok((&self.transaction).into())
+    }
+}
+
 pub struct DeployERC20 {
     pub args: DeployErc20TokenArgs,
 }
@@ -119,6 +179,220 @@ impl ContractMethod for DeployERC20 {
 pub struct SetERC20Metadata {
     #[contract_param(serialize_as = "json")]
     pub args: SetErc20MetadataArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "new", response = ())]
+pub struct New {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: LegacyNewCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_eth_connector_contract_data", response = ())]
+pub struct SetEthConnectorContractData {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: InitCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "set_paused_flags", response = ())]
+pub struct SetPausedFlags {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: PauseEthConnectorCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "register_relayer", response = ())]
+pub struct RegisterRelayer {
+    #[contract_param(serialize_as = "borsh")]
+    pub address: Address,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "start_hashchain", response = ())]
+pub struct StartHashchain {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: StartHashchainArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "pause_contract", response = ())]
+pub struct PauseContract;
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "resume_contract", response = ())]
+pub struct ResumeContract;
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "pause_precompiles", response = ())]
+pub struct PausePrecompiles {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: PausePrecompilesCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "resume_precompiles", response = ())]
+pub struct ResumePrecompiles {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: PausePrecompilesCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "factory_set_wnear_address", response = ())]
+pub struct FactorySetWnearAddress {
+    #[contract_param(serialize_as = "borsh")]
+    pub address: Address,
+}
+
+pub struct FundXccSubAccount {
+    pub args: FundXccArgs,
+}
+
+impl ContractMethod for FundXccSubAccount {
+    type Response = ();
+
+    fn method_name(&self) -> &'static str {
+        "fund_xcc_sub_account"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(&self.args)
+    }
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "upgrade", response = ())]
+pub struct Upgrade {
+    #[contract_param(serialize_as = "raw")]
+    pub code: Vec<u8>,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "stage_upgrade", response = ())]
+pub struct StageUpgrade {
+    #[contract_param(serialize_as = "raw")]
+    pub code: Vec<u8>,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "deploy_upgrade", response = ())]
+pub struct DeployUpgrade;
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "factory_update_address_version", response = ())]
+pub struct FactoryUpdateAddressVersion {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: AddressVersionUpdateArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "withdraw_wnear_to_router", response = SubmitResult)]
+pub struct WithdrawWnearToRouter {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: WithdrawWnearToRouterArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "mirror_erc20_token_callback", response = ())]
+pub struct MirrorErc20TokenCallback {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: MirrorErc20TokenArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "ft_transfer", response = ())]
+pub struct FtTransfer {
+    #[contract_param(serialize_as = "json")]
+    pub args: TransferCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "ft_transfer_call", response = ())]
+pub struct FtTransferCall {
+    #[contract_param(serialize_as = "json")]
+    pub args: TransferCallCallArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "ft_on_transfer", response = ())]
+pub struct FtOnTransfer {
+    #[contract_param(serialize_as = "json")]
+    pub args: NEP141FtOnTransferArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "exit_to_near_precompile_callback", response = ())]
+pub struct ExitToNearPrecompileCallback {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: ExitToNearPrecompileCallbackCallArgs,
+}
+
+pub struct StorageDeposit {
+    pub args: StorageDepositCallArgs,
+}
+
+impl ContractMethod for StorageDeposit {
+    type Response = ();
+
+    fn deposit(&self) -> u128 {
+        1 // 1 yocto
+    }
+
+    fn method_name(&self) -> &'static str {
+        "storage_deposit"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        serde_json::to_vec(&self.args).map_err(Into::into)
+    }
+}
+
+pub struct StorageUnregister {
+    pub args: StorageUnregisterArgs,
+}
+
+impl ContractMethod for StorageUnregister {
+    type Response = ();
+
+    fn deposit(&self) -> u128 {
+        1 // 1 yocto
+    }
+
+    fn method_name(&self) -> &'static str {
+        "storage_unregister"
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        serde_json::to_vec(&self.args).map_err(Into::into)
+    }
+}
+
+pub struct StorageWithdraw {
+    pub args: StorageWithdrawCallArgs,
+}
+
+impl ContractMethod for StorageWithdraw {
+    type Response = ();
+
+    fn method_name(&self) -> &'static str {
+        "storage_withdraw"
+    }
+
+    fn deposit(&self) -> u128 {
+        1 // 1 yocto
+    }
+
+    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+        serde_json::to_vec(&self.args).map_err(Into::into)
+    }
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "call", response = ())]
+pub struct Call {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: CallArgs,
 }
 
 #[cfg(test)]
