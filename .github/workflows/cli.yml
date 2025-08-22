@@ -10,7 +10,7 @@ on:
 jobs:
   shell_tests:
     name: ${{ matrix.interface }} CLI
-    runs-on: selfhosted-heavy
+    runs-on: k8s-worker-4
     container: rust:latest
     strategy:
       matrix:
