@@ -35,8 +35,8 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Install dependencies
         run: |
-          apt update
-          apt install -y jq python3-venv
+          sudo apt update
+          sudo apt install -y jq python3-venv
       - name: Install aurora-cli
         uses: actions-rs/cargo@v1
         with:
