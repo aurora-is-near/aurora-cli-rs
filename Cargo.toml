@@ -10,16 +10,17 @@ readme = "README.md"
 [workspace]
 resolver = "3"
 members = [
-    "cli",
+    "cli", "newcli",
     "sdk"
 ]
 
 [workspace.dependencies]
 anyhow = "1"
 aurora-engine-precompiles = { version = "1", features = ["std"] }
-aurora-engine-sdk = { version = "1", features = ["std"] }
-aurora-engine-transactions = { version = "1", features = ["std"] }
-aurora-engine-types = { version = "1", features = ["std", "impl-serde"] }
+aurora-engine-sdk = { version = "1" }
+aurora-engine-transactions = { version = "1" }
+aurora-engine-types = { version = "1" }
+base64 = "0.22"
 borsh = "1"
 bs58 = "0.5"
 clap = "4"
@@ -44,5 +45,5 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 shadow-rs = "1"
 thiserror = "2"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["fs"] }
 toml = "0.8"

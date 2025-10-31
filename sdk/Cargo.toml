@@ -9,16 +9,36 @@ homepage.workspace = true
 repository.workspace = true
 readme.workspace = true
 
+[features]
+default = []
+cli = [
+  "std",
+  "aurora-engine-sdk/std",
+  "aurora-engine-types/std",
+  "aurora-engine-types/impl-serde", 
+  "libsecp256k1/std",
+  "near-sdk/non-contract-usage",
+  "tokio/macros",
+  "tokio/rt-multi-thread"
+]
+std = []
+
 [dependencies]
 anyhow.workspace = true
-aurora-engine-types = { workspace = true, features = ["std", "impl-serde"] }
+aurora-engine-sdk.workspace = true
+aurora-engine-types.workspace = true
+aurora-engine-transactions.workspace = true
+ethabi.workspace = true
+libsecp256k1.workspace = true
 near-crypto.workspace = true
 borsh.workspace = true
 near-gas.workspace = true
 near-token.workspace = true
 near-primitives.workspace = true
 near-sdk.workspace = true
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+rand.workspace = true
+rlp.workspace = true
+tokio.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 near-jsonrpc-client.workspace = true

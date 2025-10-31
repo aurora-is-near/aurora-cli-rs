@@ -11,7 +11,7 @@ AURORA_SECRET_KEY=27cb3ddbd18037b38d7fb9ae3433a9d6f5cd554a4ba5768c8a15053f688ee1
 ENGINE_ACCOUNT=aurora.node0
 VENV=/tmp/venv
 NEARD_PATH="$HOME/.nearup/near/localnet"
-NEARD_VERSION=2.6.5
+NEARD_VERSION=$(curl -s https://rpc.mainnet.near.org/status | jq -r .version.version)
 
 export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"
 

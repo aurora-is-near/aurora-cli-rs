@@ -20,7 +20,7 @@ ENGINE_ACCOUNT=aurora.node0
 MANAGER_ACCOUNT=key-manager.aurora.node0
 VENV=/tmp/venv
 NEARD_PATH="$HOME/.nearup/near/localnet"
-NEARD_VERSION=2.6.5
+NEARD_VERSION=$(curl -s https://rpc.mainnet.near.org/status | jq -r .version.version)
 
 export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"
 
