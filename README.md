@@ -437,7 +437,7 @@ Commands:
 
 Options:
       --network <NETWORK>              NEAR network ID [default: localnet]
-      --block-height<BLOCK_HEIGHT>     Block height to use for the view command
+      --block-height <BLOCK_HEIGHT>    Block height to use for the view command
       --engine <ACCOUNT_ID>            Aurora EVM account [default: aurora]
       --near-key-path <NEAR_KEY_PATH>  Path to file with NEAR account id and secret key in JSON format
   -h, --help                           Print help
