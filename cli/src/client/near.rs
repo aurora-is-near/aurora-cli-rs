@@ -153,6 +153,7 @@ impl NearClient {
         target: Address,
         amount: Wei,
         input: Vec<u8>,
+        block_number: Option<u64>,
     ) -> anyhow::Result<TransactionStatus> {
         let args = aurora_engine_types::parameters::engine::ViewCallArgs {
             sender,
@@ -160,7 +161,9 @@ impl NearClient {
             amount: amount.to_bytes(),
             input,
         };
-        let result = self.view_call("view", borsh::to_vec(&args)?).await?;
+        let result = self
+            .view_call_for_block("view", borsh::to_vec(&args)?, block_number)
+            .await?;
         let status = TransactionStatus::try_from_slice(&result.result)?;
         Ok(status)
     }

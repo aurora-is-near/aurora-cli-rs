@@ -328,7 +328,7 @@ pub async fn view_call(
     let result = context
         .client
         .near()
-        .view_contract_call(from, target, Wei::zero(), input)
+        .view_contract_call(from, target, Wei::zero(), input, context.block_number)
         .await?;
 
     if let TransactionStatus::Succeed(bytes) = result {
