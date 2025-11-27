@@ -328,7 +328,7 @@ pub async fn view_call(
     let result = context
         .client
         .near()
-        .view_contract_call(from, target, Wei::zero(), input, context.block_number)
+        .view_contract_call(from, target, Wei::zero(), input, context.block_height)
         .await?;
 
     if let TransactionStatus::Succeed(bytes) = result {
@@ -891,7 +891,7 @@ async fn get_value<T: FromCallResult + Display>(
     let result = context
         .client
         .near()
-        .view_call_for_block(method_name, args.unwrap_or_default(), context.block_number)
+        .view_call_for_block(method_name, args.unwrap_or_default(), context.block_height)
         .await?;
     let output = T::from_result(result)?;
     println!("{output}");

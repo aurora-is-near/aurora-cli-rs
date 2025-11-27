@@ -153,7 +153,7 @@ impl NearClient {
         target: Address,
         amount: Wei,
         input: Vec<u8>,
-        block_number: Option<u64>,
+        block_height: Option<u64>,
     ) -> anyhow::Result<TransactionStatus> {
         let args = aurora_engine_types::parameters::engine::ViewCallArgs {
             sender,
@@ -162,7 +162,7 @@ impl NearClient {
             input,
         };
         let result = self
-            .view_call_for_block("view", borsh::to_vec(&args)?, block_number)
+            .view_call_for_block("view", borsh::to_vec(&args)?, block_height)
             .await?;
         let status = TransactionStatus::try_from_slice(&result.result)?;
         Ok(status)
@@ -180,13 +180,11 @@ impl NearClient {
         &self,
         method_name: &str,
         args: Vec<u8>,
-        block_number: Option<u64>,
+        block_height: Option<u64>,
     ) -> anyhow::Result<views::CallResult> {
-        let block_reference = block_number.map_or_else(
+        let block_reference = block_height.map_or_else(
             || Finality::Final.into(),
-            |block_number| {
-                BlockReference::BlockId(near_primitives::types::BlockId::Height(block_number))
-            },
+            |height| BlockReference::BlockId(near_primitives::types::BlockId::Height(height)),
         );
 
         let request = methods::query::RpcQueryRequest {

@@ -138,8 +138,8 @@ The response should be similar to this:
 
 ```json
 {
-  "address": "0xa003a6e0e1a1dc40aa9e496c1c058b2667c409f5",
-  "secret_key": "3fac6dca1c6fc056b971a4e9090afbbfbdf3bc443e9cda595facb653cb1c01e1"
+    "address": "0xa003a6e0e1a1dc40aa9e496c1c058b2667c409f5",
+    "secret_key": "3fac6dca1c6fc056b971a4e9090afbbfbdf3bc443e9cda595facb653cb1c01e1"
 }
 ```
 
@@ -285,22 +285,22 @@ Example JSON batch file (`batch_list.json`):
 
 ```json
 [
-  {
-    "kind": "Admin",
-    "account_id": "account.near"
-  },
-  {
-    "kind": "EvmAdmin",
-    "address": "0xef5d992c74e531bba6bf92ca1476d8ca4ca1b997"
-  },
-  {
-    "kind": "Account",
-    "account_id": "account1.near"
-  },
-  {
-    "kind": "Address",
-    "address": "0x92f854dadc0526717893da71cb44012fd4b8faac"
-  }
+    {
+        "kind": "Admin",
+        "account_id": "account.near"
+    },
+    {
+        "kind": "EvmAdmin",
+        "address": "0xef5d992c74e531bba6bf92ca1476d8ca4ca1b997"
+    },
+    {
+        "kind": "Account",
+        "account_id": "account1.near"
+    },
+    {
+        "kind": "Address",
+        "address": "0x92f854dadc0526717893da71cb44012fd4b8faac"
+    }
 ]
 ```
 
@@ -437,7 +437,7 @@ Commands:
 
 Options:
       --network <NETWORK>              NEAR network ID [default: localnet]
-      --block-number <BLOCK_NUMBER>    Block number to use for the view command
+      --block-height<BLOCK_HEIGHT>     Block height to use for the view command
       --engine <ACCOUNT_ID>            Aurora EVM account [default: aurora]
       --near-key-path <NEAR_KEY_PATH>  Path to file with NEAR account id and secret key in JSON format
   -h, --help                           Print help
