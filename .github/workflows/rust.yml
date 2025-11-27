@@ -10,10 +10,18 @@ on:
 jobs:
   fmt:
     name: Formatting
-    runs-on: ubuntu-latest
+    runs-on: runs-on=${{ github.run_id }}/family=c6a.4xlarge/image=ubuntu24-full-x64/extras=s3-cache
     steps:
+      - name: Setup RunsOn
+        uses: runs-on/action@v2
+        with:
+          metrics: cpu,network,memory,disk,io
       - name: Checkout sources
         uses: actions/checkout@v4
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
       - name: Run rustfmt
         uses: actions-rs/cargo@v1
         with:
@@ -22,10 +30,18 @@ jobs:
 
   clippy:
     name: Clippy
-    runs-on: ubuntu-latest
+    runs-on: runs-on=${{ github.run_id }}/family=c6a.4xlarge/image=ubuntu24-full-x64/extras=s3-cache
     steps:
+      - name: Setup RunsOn
+        uses: runs-on/action@v2
+        with:
+          metrics: cpu,network,memory,disk,io
       - name: Checkout sources
         uses: actions/checkout@v4
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
       - name: Run clippy simple
         uses: actions-rs/clippy-check@v1
         with:
@@ -45,12 +61,21 @@ jobs:
         build: [ Linux, macOS ]
         include:
           - build: Linux
-            os: ubuntu-latest
+            os: runs-on=${{ github.run_id }}/family=c6a.8xlarge/image=ubuntu24-full-x64/disk=large/extras=s3-cache
           - build: macOS
             os: macos-latest
     steps:
+      - name: Setup RunsOn
+        if: ${{ matrix.build == 'Linux' }}
+        uses: runs-on/action@v2
+        with:
+          metrics: cpu,network,memory,disk,io
       - name: Checkout sources
         uses: actions/checkout@v4
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
       - name: Run tests simple
         uses: actions-rs/cargo@v1
         with:
