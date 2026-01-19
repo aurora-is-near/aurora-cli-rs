@@ -3,7 +3,7 @@ use crate::{
     utils,
 };
 use aurora_engine_types::borsh::BorshDeserialize;
-use aurora_engine_types::parameters::connector::{InitCallArgs, PauseEthConnectorArgs};
+use aurora_engine_types::parameters::connector::PauseEthConnectorArgs;
 use aurora_engine_types::parameters::engine::{
     DeployErc20TokenArgs, GetStorageAtArgs, NewCallArgs, NewCallArgsV2, SubmitResult,
     TransactionStatus,
@@ -446,28 +446,11 @@ pub async fn execute_command(
                 chain_id,
                 owner_id,
                 upgrade_delay_blocks,
-                prover_account,
-                eth_custodian_address,
-                ft_metadata,
+                ..
             } => {
                 let wasm_bytes = tokio::fs::read(wasm_path).await?;
                 let chain_id = chain_id.unwrap_or(AURORA_LOCAL_NET_CHAIN_ID);
                 let owner_id = owner_id.as_deref().unwrap_or(&config.engine_account_id);
-                let prover_account: AccountId = {
-                    let prover_account = prover_account
-                        .as_deref()
-                        .unwrap_or(&config.engine_account_id);
-                    prover_account
-                        .parse()
-                        .map_err(|_| anyhow::anyhow!("Prover account is an invalid Near account"))?
-                };
-                let eth_custodian_address = eth_custodian_address
-                    .as_deref()
-                    .map(utils::hex_to_address)
-                    .transpose()?
-                    .unwrap_or_default();
-                let metadata = utils::ft_metadata::parse_ft_metadata(ft_metadata)?;
-
                 let new_args = NewCallArgs::V2(NewCallArgsV2 {
                     chain_id: aurora_engine_types::types::u256_to_arr(&U256::from(chain_id)),
                     owner_id: owner_id
@@ -475,12 +458,6 @@ pub async fn execute_command(
                         .map_err(|_| anyhow::anyhow!("Owner account is an invalid Near account"))?,
                     upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
                 });
-
-                let init_args = InitCallArgs {
-                    prover_account,
-                    eth_custodian_address: eth_custodian_address.encode(),
-                    metadata,
-                };
 
                 let deploy_response = client.deploy_contract(wasm_bytes).await?;
                 assert_tx_success(&deploy_response);
@@ -490,16 +467,6 @@ pub async fn execute_command(
                     .contract_call_with_nonce("new", borsh::to_vec(&new_args)?, next_nonce)
                     .await?;
                 assert_tx_success(&new_response);
-                let next_nonce = new_response.transaction.nonce + 1;
-
-                let init_response = client
-                    .contract_call_with_nonce(
-                        "new_eth_connector",
-                        borsh::to_vec(&init_args).unwrap(),
-                        next_nonce,
-                    )
-                    .await?;
-                assert_tx_success(&init_response);
 
                 println!(
                     "Deploy of Engine to {} successful",

@@ -2,15 +2,15 @@
 
 export NEARCORE_HOME="/tmp/localnet"
 
-AURORA_PREV_VERSION="3.6.4"
+AURORA_PREV_VERSION="3.9.2"
 AURORA_LAST_VERSION=$(curl -s https://api.github.com/repos/aurora-is-near/aurora-engine/releases/latest | jq -r .tag_name)
 EVM_CODE=$(cat docs/res/HelloWorld.hex)
 ABI_PATH="docs/res/HelloWorld.abi"
 ENGINE_PREV_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_PREV_VERSION/aurora-mainnet.wasm"
-ENGINE_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-mainnet.wasm"
-XCC_ROUTER_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-factory-mainnet.wasm"
-ENGINE_WASM_PATH="/tmp/aurora-mainnet.wasm"
-XCC_ROUTER_WASM_PATH="/tmp/aurora-factory-mainnet.wasm"
+ENGINE_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-engine.wasm"
+XCC_ROUTER_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-xcc-router.wasm"
+ENGINE_WASM_PATH="/tmp/aurora-engine.wasm"
+XCC_ROUTER_WASM_PATH="/tmp/aurora-xcc-router.wasm"
 NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
 AURORA_KEY_PATH=$NEARCORE_HOME/node0/aurora_key.json
 MANAGER_KEY_PATH=$NEARCORE_HOME/node0/manager_key.json
@@ -20,7 +20,7 @@ ENGINE_ACCOUNT=aurora.node0
 MANAGER_ACCOUNT=key-manager.aurora.node0
 VENV=/tmp/venv
 NEARD_PATH="$HOME/.nearup/near/localnet"
-NEARD_VERSION=2.6.5
+NEARD_VERSION=2.10.4
 
 export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"
 
@@ -102,9 +102,7 @@ sleep 4
 aurora-cli --engine $ENGINE_ACCOUNT init \
   --chain-id 1313161556 \
   --owner-id $ENGINE_ACCOUNT \
-  --upgrade-delay-blocks 1 \
-  --custodian-address 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D \
-  --ft-metadata-path docs/res/ft_metadata.json || error_exit
+  --upgrade-delay-blocks 1 || error_exit
 wait_for_block
 
 # Upgrading Aurora EVM to the latest.
@@ -120,9 +118,8 @@ version=$(aurora-cli --engine $ENGINE_ACCOUNT get-version || error_exit)
 assert_eq "$version" $AURORA_LAST_VERSION
 echo "$version"
 
-# Modify eth connector data
-aurora-cli --engine $ENGINE_ACCOUNT set-eth-connector-contract-data --prover-id "another.prover" \
-  --custodian-address "0xa3078bf607d2e859dca0b1a13878ec2e607f30de" --ft-metadata-path docs/res/ft_metadata.json || error_exit
+# Set eth connector
+aurora-cli --engine $ENGINE_ACCOUNT set-eth-connector-contract-account --account-id eth.connector.near || error_exit
 wait_for_block
 
 # Create account id for key manager
@@ -203,7 +200,6 @@ wait_for_block
 # Check read operations.
 aurora-cli --engine $ENGINE_ACCOUNT get-chain-id || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT get-owner || error_exit
-aurora-cli --engine $ENGINE_ACCOUNT get-bridge-prover || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT get-balance 0x04b678962787ccd195a8e324d4c6bc4d5727f82b || error_exit
 aurora-cli --engine $ENGINE_ACCOUNT get-code 0xa3078bf607d2e859dca0b1a13878ec2e607f30de || error_exit
 aurora-cli key-pair --seed 1 || error_exit
@@ -228,19 +224,19 @@ assert_eq "$owner" $ENGINE_ACCOUNT
 # Check pausing precompiles. Not working on the current release because of
 # hardcoded aurora account in EngineAuthorizer.
 export NEAR_KEY_PATH=$AURORA_KEY_PATH
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
+mask=$(aurora-cli --engine $ENGINE_ACCOUNT get-paused-precompiles || error_exit)
 assert_eq "$mask" 0
 aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 1 || error_exit
 wait_for_block
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
+mask=$(aurora-cli --engine $ENGINE_ACCOUNT get-paused-precompiles || error_exit)
 assert_eq "$mask" 1
 aurora-cli --engine $ENGINE_ACCOUNT pause-precompiles 2 || error_exit
 wait_for_block
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
+mask=$(aurora-cli --engine $ENGINE_ACCOUNT get-paused-precompiles || error_exit)
 assert_eq "$mask" 3
 aurora-cli --engine $ENGINE_ACCOUNT resume-precompiles 3 || error_exit
 wait_for_block
-mask=$(aurora-cli --engine $ENGINE_ACCOUNT paused-precompiles || error_exit)
+mask=$(aurora-cli --engine $ENGINE_ACCOUNT get-paused-precompiles || error_exit)
 assert_eq "$mask" 0
 
 # XCC router operations.

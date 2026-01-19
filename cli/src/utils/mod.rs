@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 pub mod abi;
+#[cfg(feature = "simple")]
 pub mod ft_metadata;
 
 #[allow(dead_code)]

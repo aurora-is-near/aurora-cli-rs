@@ -72,18 +72,9 @@ pub enum Command {
         /// Owner of the Aurora EVM
         #[arg(long)]
         owner_id: Option<String>,
-        /// Account of the bridge prover
-        #[arg(long)]
-        bridge_prover_id: Option<String>,
         /// How many blocks after staging upgrade can deploy it
         #[arg(long)]
         upgrade_delay_blocks: Option<u64>,
-        /// Custodian ETH address
-        #[arg(long)]
-        custodian_address: Option<String>,
-        /// Path to the file with the metadata of the fungible token
-        #[arg(long)]
-        ft_metadata_path: Option<String>,
     },
     /// Return chain id of the network
     GetChainId,
@@ -132,7 +123,7 @@ pub enum Command {
     /// Resume precompiles
     ResumePrecompiles { mask: u32 },
     /// Return paused precompiles
-    PausedPrecompiles,
+    GetPausedPrecompiles,
     /// Updates the bytecode for user's router contracts
     FactoryUpdate { path: String },
     /// Return the address of the `wNEAR` ERC-20 contract
@@ -517,7 +508,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         } => command::view_call(context, address, function, args, from, abi_path).await?,
         Command::PausePrecompiles { mask } => command::pause_precompiles(context, mask).await?,
         Command::ResumePrecompiles { mask } => command::resume_precompiles(context, mask).await?,
-        Command::PausedPrecompiles => command::paused_precompiles(context).await?,
+        Command::GetPausedPrecompiles => command::get_paused_precompiles(context).await?,
         Command::GetUpgradeIndex => command::get_upgrade_index(context).await?,
         Command::FactoryUpdate { path } => command::factory_update(context, path).await?,
         Command::FactoryGetWnearAddress => command::factory_get_wnear_address(context).await?,
@@ -554,21 +545,9 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::Init {
             chain_id,
             owner_id,
-            bridge_prover_id,
             upgrade_delay_blocks,
-            custodian_address,
-            ft_metadata_path,
         } => {
-            command::init(
-                context,
-                chain_id,
-                owner_id,
-                bridge_prover_id,
-                upgrade_delay_blocks,
-                custodian_address,
-                ft_metadata_path,
-            )
-            .await?;
+            command::init(context, chain_id, owner_id, upgrade_delay_blocks).await?;
         }
         Command::EncodeAddress { account } => command::encode_address(&account),
         Command::KeyPair { random, seed } => command::key_pair(random, seed)?,

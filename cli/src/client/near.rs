@@ -246,6 +246,7 @@ impl NearClient {
         .await
     }
 
+    #[allow(dead_code)]
     #[cfg(feature = "simple")]
     pub async fn contract_call_batch(
         &self,
