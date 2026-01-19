@@ -72,7 +72,7 @@ pub enum Command {
         /// Owner of the Aurora EVM
         #[arg(long)]
         owner_id: Option<String>,
-        /// How many blocks after staging upgrade can deploy it
+        /// Delay in blocks between staging and updating the contract
         #[arg(long)]
         upgrade_delay_blocks: Option<u64>,
     },
@@ -345,6 +345,15 @@ pub enum Command {
         /// Decimals of the token
         #[arg(long)]
         decimals: u8,
+    },
+    /// Deploy ERC-20 token
+    DeployErc20Token {
+        /// Account ID of corresponding NEP-141
+        #[arg(long)]
+        nep141: String,
+        /// With ERC-20 metadata received from the corresponding NEP-141
+        #[arg(long, default_value_t = false)]
+        with_metadata: bool,
     },
     /// Mirror ERC-20 token
     MirrorErc20Token {
@@ -619,6 +628,12 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
             decimals,
         } => {
             command::set_erc20_metadata(context, erc20_id, name, symbol, decimals).await?;
+        }
+        Command::DeployErc20Token {
+            nep141,
+            with_metadata,
+        } => {
+            command::deploy_erc20_token(context, nep141, with_metadata).await?;
         }
         Command::MirrorErc20Token {
             contract_id,

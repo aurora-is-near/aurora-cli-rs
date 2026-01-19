@@ -9,8 +9,8 @@ use aurora_engine_types::parameters::connector::{
     PausedMask, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, WithdrawSerializeType,
 };
 use aurora_engine_types::parameters::engine::{
-    CallArgs, FunctionCallArgsV2, GetStorageAtArgs, NewCallArgs, NewCallArgsV2,
-    PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs,
+    CallArgs, DeployErc20TokenArgs, FunctionCallArgsV2, GetStorageAtArgs, NewCallArgs,
+    NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs,
     SetUpgradeDelayBlocksArgs, SubmitResult, TransactionStatus,
 };
 use aurora_engine_types::parameters::xcc::FundXccArgs;
@@ -778,6 +778,28 @@ pub async fn set_erc20_metadata(
     .await
 }
 
+/// Deploy a new ERC-20 contract.
+pub async fn deploy_erc20_token(
+    context: Context,
+    nep141: String,
+    with_metadata: bool,
+) -> anyhow::Result<()> {
+    let nep141_account_id = nep141.parse().map_err(|e| anyhow::anyhow!("{e}"))?;
+    let args = borsh::to_vec(&if with_metadata {
+        DeployErc20TokenArgs::WithMetadata(nep141_account_id)
+    } else {
+        DeployErc20TokenArgs::Legacy(nep141_account_id)
+    })?;
+
+    contract_call!(
+        "deploy_erc20_token",
+        "ERC-20 token has been deployed successfully",
+        "Error while deploying ERC-20 token"
+    )
+    .proceed(context, args)
+    .await
+}
+
 /// Mirror ERC-20 contract.
 pub async fn mirror_erc20_token(
     context: Context,
@@ -1039,7 +1061,17 @@ impl ContractCall<'_> {
                 // TODO: The output could be serialized with JSON or Borsh.
                 // TODO: In the case of Borsh we should provide a type for deserializing the output in the corresponding object.
                 OutputFormat::Plain => match to_string_pretty(&output) {
-                    Ok(msg) if !output.is_empty() => println!("{}\n{msg}", self.success_message),
+                    Ok(msg) if !output.is_empty() => {
+                        // TODO: Add optional argument `fn(&[u8]) -> String` which will generate a custom output message.
+                        if self.method == "deploy_erc20_token"
+                            || self.method == "mirror_erc20_token"
+                        {
+                            let address = hex::encode(&output);
+                            println!("{}, ERC-20 address: 0x{address}", self.success_message);
+                        } else {
+                            println!("{}: {msg}", self.success_message);
+                        }
+                    }
                     Ok(_) | Err(_) => println!("{}", self.success_message),
                 },
                 OutputFormat::Json => {

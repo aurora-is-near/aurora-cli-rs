@@ -123,6 +123,10 @@ echo "$version"
 aurora-cli --engine $ENGINE_ACCOUNT set-eth-connector-contract-account --account-id eth.connector.near || error_exit
 wait_for_block
 
+# Deploy ERC-20 token contract
+aurora-cli --engine $ENGINE_ACCOUNT deploy-erc20-token --nep141 eth.token.near || error_exit
+wait_for_block
+
 # Create account id for key manager
 aurora-cli create-account --account $MANAGER_ACCOUNT --balance 10 > $MANAGER_KEY_PATH || error_exit
 wait_for_block
