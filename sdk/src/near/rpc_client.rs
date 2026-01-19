@@ -76,7 +76,7 @@ impl RpcClient {
                 args,
                 method_name,
                 gas,
-                deposit: deposit.as_yoctonear(),
+                deposit,
             }
             .into(),
             priority_fee,

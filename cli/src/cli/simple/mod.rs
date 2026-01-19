@@ -462,12 +462,8 @@ impl FromStr for WithdrawSerialization {
 }
 
 pub async fn run(args: Cli) -> anyhow::Result<()> {
-    let near_rpc = match args.network {
-        Network::Mainnet => super::NEAR_MAINNET_ENDPOINT,
-        Network::Testnet => super::NEAR_TESTNET_ENDPOINT,
-        Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
-    };
-    let client = crate::client::Client::new(near_rpc, &args.engine, args.near_key_path);
+    let near_rpc = parse_near_rpc(&args.network)?;
+    let client = crate::client::Client::new(&near_rpc, &args.engine, args.near_key_path);
     let context = crate::client::Context::new(client, args.output_format, args.block_height);
 
     match args.command {
@@ -702,4 +698,16 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
 
 fn parse_account_id(arg: &str) -> anyhow::Result<AccountId> {
     arg.parse().map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+fn parse_near_rpc(network: &Network) -> anyhow::Result<String> {
+    std::env::var("NEAR_RPC_URL").or_else(|_| {
+        let endpoint = match network {
+            Network::Mainnet => super::NEAR_MAINNET_ENDPOINT,
+            Network::Testnet => super::NEAR_TESTNET_ENDPOINT,
+            Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
+        };
+
+        Ok(endpoint.to_string())
+    })
 }

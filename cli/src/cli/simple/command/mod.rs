@@ -5,8 +5,8 @@ use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::borsh::BorshDeserialize;
 use aurora_engine_types::parameters::connector::{
-    Erc20Identifier, Erc20Metadata, InitCallArgs, MirrorErc20TokenArgs, PauseEthConnectorCallArgs,
-    PausedMask, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, WithdrawSerializeType,
+    Erc20Identifier, Erc20Metadata, InitCallArgs, MirrorErc20TokenArgs, PausedMask,
+    SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, WithdrawSerializeType,
 };
 use aurora_engine_types::parameters::engine::{
     CallArgs, FunctionCallArgsV2, GetStorageAtArgs, LegacyNewCallArgs, PausePrecompilesCallArgs,
@@ -1107,4 +1107,9 @@ pub async fn add_relayer(
         rsp.transaction.hash
     );
     Ok(())
+}
+
+#[derive(BorshDeserialize, borsh::BorshSerialize)]
+struct PauseEthConnectorCallArgs {
+    paused_mask: PausedMask,
 }

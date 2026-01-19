@@ -3,7 +3,7 @@ use crate::{
     utils,
 };
 use aurora_engine_types::borsh::BorshDeserialize;
-use aurora_engine_types::parameters::connector::{InitCallArgs, PauseEthConnectorCallArgs};
+use aurora_engine_types::parameters::connector::{InitCallArgs, PauseEthConnectorArgs};
 use aurora_engine_types::parameters::engine::{
     DeployErc20TokenArgs, GetStorageAtArgs, NewCallArgs, NewCallArgsV2, SubmitResult,
     TransactionStatus,
@@ -16,6 +16,7 @@ use aurora_engine_types::{
 };
 use clap::Subcommand;
 use near_primitives::account::AccountContract;
+use near_primitives::types::Balance;
 use near_primitives::{
     account::{AccessKey, Account},
     state_record::StateRecord,
@@ -605,7 +606,7 @@ pub async fn execute_command(
             }
             WriteCommand::DeployERC20Token { nep141 } => {
                 let nep141: AccountId = nep141.parse().unwrap();
-                let input = borsh::to_vec(&DeployErc20TokenArgs { nep141 })?;
+                let input = borsh::to_vec(&DeployErc20TokenArgs::Legacy(nep141))?;
                 let tx_outcome = client.contract_call("deploy_erc20_token", input).await?;
                 println!("{tx_outcome:?}");
             }
@@ -616,7 +617,7 @@ pub async fn execute_command(
                 println!("{tx_outcome:?}");
             }
             WriteCommand::SetPausedFlags { paused_mask } => {
-                let input = borsh::to_vec(&PauseEthConnectorCallArgs {
+                let input = borsh::to_vec(&PauseEthConnectorArgs {
                     paused_mask: u8::from_str(&paused_mask).unwrap(),
                 })?;
                 let tx_outcome = client.contract_call("set_paused_flags", input).await?;
@@ -645,7 +646,7 @@ pub async fn execute_command(
                 }
                 let secret_key = near_crypto::SecretKey::from_random(near_crypto::KeyType::ED25519);
                 let public_key = secret_key.public_key();
-                let aurora_amount = 1_000_000_000_000_000_000_000_000_000_000_000; // 1e9 NEAR
+                let aurora_amount = Balance::from_near(1_000_000_000); // 1e9 NEAR
                 let aurora_key_record = StateRecord::AccessKey {
                     account_id: aurora_id.clone(),
                     public_key: public_key.clone(),
@@ -653,11 +654,12 @@ pub async fn execute_command(
                 };
                 let aurora_account_record = StateRecord::Account {
                     account_id: aurora_id.clone(),
-                    account: Account::new(aurora_amount, 0, AccountContract::None, 0),
+                    account: Account::new(aurora_amount, Balance::ZERO, AccountContract::None, 0),
                 };
                 records.0.push(aurora_key_record);
                 records.0.push(aurora_account_record);
-                genesis.config.total_supply += aurora_amount;
+                genesis.config.total_supply =
+                    genesis.config.total_supply.saturating_add(aurora_amount);
                 genesis.to_file(&path);
                 println!("Aurora account added to {path}");
                 let key_path = Path::new(&path).parent().unwrap().join("aurora_key.json");

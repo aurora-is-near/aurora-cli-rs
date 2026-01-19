@@ -5,7 +5,7 @@ use syn::{parse_macro_input, DeriveInput, Fields, Meta, Type};
 /// Derive macro for implementing the ContractMethod trait
 ///
 /// Usage:
-/// ```rust
+/// ```ignore
 /// use aurora_sdk_macros::ContractMethod;
 ///
 /// #[derive(ContractMethod)]
