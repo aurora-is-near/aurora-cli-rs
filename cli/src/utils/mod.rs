@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 pub mod abi;
+#[cfg(feature = "simple")]
 pub mod ft_metadata;
 
 #[allow(dead_code)]
@@ -133,7 +134,8 @@ pub fn gen_key_pair(random: bool, seed: Option<u64>) -> anyhow::Result<(Address,
     use rand::RngCore;
 
     let sk = if random {
-        Ok(SecretKey::random(&mut rand::thread_rng()))
+        let seed: [u8; 32] = rand::random();
+        SecretKey::parse(&seed)
     } else {
         seed.map_or_else(
             || Ok(SecretKey::default()),

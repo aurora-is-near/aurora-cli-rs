@@ -1,5 +1,7 @@
 use near_crypto::{InMemorySigner, KeyFile, PublicKey, Signer};
 use near_gas::NearGas;
+use near_primitives::gas::Gas;
+use near_primitives::types::Balance;
 use near_primitives::{
     account::AccessKey,
     action::{
@@ -18,7 +20,7 @@ use crate::near::types::{GlobalContractDeployMode, GlobalContractIdentifier};
 
 pub const MAX_GAS: NearGas = NearGas::from_tgas(300);
 
-pub(crate) const DEFAULT_CALL_FN_GAS: NearGas = NearGas::from_tgas(10);
+pub(crate) const DEFAULT_CALL_FN_GAS: Gas = Gas::from_teragas(10);
 pub(crate) const DEFAULT_CALL_DEPOSIT: NearToken = NearToken::from_near(0);
 pub(crate) const DEFAULT_PRIORITY_FEE: u64 = 0;
 
@@ -27,8 +29,8 @@ use super::rpc_client::RpcClient;
 
 pub struct Function {
     pub(crate) args: Vec<u8>,
-    deposit: NearToken,
-    gas: NearGas,
+    deposit: Balance,
+    gas: Gas,
     pub(crate) name: String,
 }
 
@@ -86,7 +88,7 @@ impl Function {
     /// Specify the amount of gas to be used.
     #[must_use]
     pub const fn gas(mut self, gas: u64) -> Self {
-        self.gas = NearGas::from_gas(gas);
+        self.gas = Gas::from_gas(gas);
         self
     }
 
@@ -138,8 +140,8 @@ impl<'a> Transaction<'a> {
             .push(Action::FunctionCall(Box::new(FunctionCallAction {
                 method_name: function.name.to_string(),
                 args: function.args,
-                deposit: function.deposit.as_yoctonear(),
-                gas: function.gas.as_gas(),
+                deposit: function.deposit,
+                gas: function.gas,
             })));
 
         self
@@ -214,13 +216,7 @@ impl<'a> Transaction<'a> {
     /// An action which stakes the signer's tokens and sets a validator public key.
     #[must_use]
     pub fn stake(mut self, stake: NearToken, public_key: PublicKey) -> Self {
-        self.actions.push(
-            StakeAction {
-                stake: stake.as_yoctonear(),
-                public_key,
-            }
-            .into(),
-        );
+        self.actions.push(StakeAction { stake, public_key }.into());
         self
     }
 
@@ -234,12 +230,7 @@ impl<'a> Transaction<'a> {
     /// Transfer `deposit` amount from `signer`'s account into `receiver_id`'s account.
     #[must_use]
     pub fn transfer(mut self, deposit: NearToken) -> Self {
-        self.actions.push(
-            TransferAction {
-                deposit: deposit.as_yoctonear(),
-            }
-            .into(),
-        );
+        self.actions.push(TransferAction { deposit }.into());
         self
     }
 
@@ -384,7 +375,7 @@ impl<'a> CallTransaction<'a> {
                 &self.contract_id,
                 self.function.name.to_string(),
                 self.function.args,
-                self.function.gas.as_gas(),
+                self.function.gas,
                 self.function.deposit,
                 self.priority_fee,
             )
@@ -404,8 +395,8 @@ impl<'a> CallTransaction<'a> {
                     FunctionCallAction {
                         args: self.function.args,
                         method_name: self.function.name,
-                        gas: self.function.gas.as_gas(),
-                        deposit: self.function.deposit.as_yoctonear(),
+                        gas: self.function.gas,
+                        deposit: self.function.deposit,
                     }
                     .into(),
                 ],

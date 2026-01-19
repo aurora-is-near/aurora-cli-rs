@@ -5,17 +5,16 @@ use aurora_engine_sdk::types::near_account_to_evm_address;
 use aurora_engine_types::account_id::AccountId;
 use aurora_engine_types::borsh::BorshDeserialize;
 use aurora_engine_types::parameters::connector::{
-    Erc20Identifier, Erc20Metadata, InitCallArgs, MirrorErc20TokenArgs, PauseEthConnectorCallArgs,
+    Erc20Identifier, Erc20Metadata, InitCallArgs, MirrorErc20TokenArgs, PauseEthConnectorArgs,
     PausedMask, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, WithdrawSerializeType,
 };
 use aurora_engine_types::parameters::engine::{
-    CallArgs, FunctionCallArgsV2, GetStorageAtArgs, LegacyNewCallArgs, PausePrecompilesCallArgs,
-    RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs, SetUpgradeDelayBlocksArgs, SubmitResult,
-    TransactionStatus,
+    CallArgs, FunctionCallArgsV2, GetStorageAtArgs, NewCallArgs, NewCallArgsV2,
+    PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs,
+    SetUpgradeDelayBlocksArgs, SubmitResult, TransactionStatus,
 };
 use aurora_engine_types::parameters::xcc::FundXccArgs;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
-use aurora_engine_types::types::Address;
 use aurora_engine_types::{H256, U256, types::Wei};
 use clap::ValueEnum;
 use near_primitives::hash::CryptoHash;
@@ -124,41 +123,20 @@ pub async fn init(
     context: Context,
     chain_id: u64,
     owner_id: Option<String>,
-    bridge_prover: Option<String>,
     upgrade_delay_blocks: Option<u64>,
-    custodian_address: Option<String>,
-    ft_metadata_path: Option<String>,
 ) -> anyhow::Result<()> {
     let owner_id = to_account_id(owner_id, &context)?;
-    let prover_id = to_account_id(bridge_prover, &context)?;
 
-    let aurora_init_args = borsh::to_vec(&LegacyNewCallArgs {
+    let aurora_init_args = borsh::to_vec(&NewCallArgs::V2(NewCallArgsV2 {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
-        bridge_prover_id: prover_id.clone(),
         upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
-    })?;
-
-    let eth_connector_init_args = borsh::to_vec(&InitCallArgs {
-        prover_account: prover_id,
-        eth_custodian_address: custodian_address.map_or_else(
-            || Address::default().encode(),
-            |address| address.trim_start_matches("0x").to_string(),
-        ),
-        metadata: utils::ft_metadata::parse_ft_metadata(
-            ft_metadata_path.and_then(|path| std::fs::read_to_string(path).ok()),
-        )?,
-    })?;
-
-    let batch = vec![
-        ("new".to_string(), aurora_init_args),
-        ("new_eth_connector".to_string(), eth_connector_init_args),
-    ];
+    }))?;
 
     match context
         .client
         .near()
-        .contract_call_batch(batch)
+        .contract_call("new", aurora_init_args)
         .await?
         .status
     {
@@ -657,13 +635,13 @@ pub async fn resume_precompiles(context: Context, mask: u32) -> anyhow::Result<(
 }
 
 /// Return paused precompiles.
-pub async fn paused_precompiles(context: Context) -> anyhow::Result<()> {
-    get_value::<u32>(context, "paused_precompiles", None).await
+pub async fn get_paused_precompiles(context: Context) -> anyhow::Result<()> {
+    get_value::<u32>(context, "get_paused_precompiles", None).await
 }
 
 /// Set the paused mask for ETH connector.
 pub async fn set_paused_flags(context: Context, paused_mask: PausedMask) -> anyhow::Result<()> {
-    let args = borsh::to_vec(&PauseEthConnectorCallArgs { paused_mask })?;
+    let args = borsh::to_vec(&PauseEthConnectorArgs { paused_mask })?;
 
     contract_call!(
         "set_paused_flags",

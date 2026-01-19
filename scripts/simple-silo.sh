@@ -4,14 +4,17 @@ export NEARCORE_HOME="/tmp/localnet"
 
 EVM_CODE=$(cat docs/res/Counter.hex)
 ABI_PATH=docs/res/Counter.abi
-ENGINE_WASM_PATH="docs/res/aurora-mainnet-silo.wasm"
+AURORA_LAST_VERSION=$(curl -s https://api.github.com/repos/aurora-is-near/aurora-engine/releases/latest | jq -r .tag_name)
+ENGINE_LAST_WASM_URL="https://github.com/aurora-is-near/aurora-engine/releases/download/$AURORA_LAST_VERSION/aurora-engine.wasm"
+ENGINE_WASM_PATH="/tmp/aurora-engine.wasm"
 NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
 AURORA_KEY_PATH=$NEARCORE_HOME/node0/aurora_key.json
+# Test-only secret key for localnet development - DO NOT use in production
 AURORA_SECRET_KEY=27cb3ddbd18037b38d7fb9ae3433a9d6f5cd554a4ba5768c8a15053f688ee167
 ENGINE_ACCOUNT=aurora.node0
 VENV=/tmp/venv
 NEARD_PATH="$HOME/.nearup/near/localnet"
-NEARD_VERSION=2.6.5
+NEARD_VERSION=2.10.4
 
 export PATH="$HOME/NearProtocol/aurora/aurora-cli-rs/target/debug/:$PATH:$USER_BASE_BIN"
 
@@ -73,6 +76,9 @@ download_neard
 start_node
 sleep 3
 
+# Download Aurora EVM.
+curl -sL $ENGINE_LAST_WASM_URL -o $ENGINE_WASM_PATH || error_exit
+
 export NEAR_KEY_PATH=$NODE_KEY_PATH
 # Create an account for Aurora EVM.
 aurora-cli create-account --account $ENGINE_ACCOUNT --balance 100 > $AURORA_KEY_PATH || error_exit
@@ -90,11 +96,8 @@ sleep 4
 aurora-cli --engine $ENGINE_ACCOUNT init \
   --chain-id 1313161556 \
   --owner-id $ENGINE_ACCOUNT \
-  --bridge-prover-id "prover" \
-  --upgrade-delay-blocks 1 \
-  --custodian-address 0x1B16948F011686AE64BB2Ba0477aeFA2Ea97084D \
-  --ft-metadata-path docs/res/ft_metadata.json || error_exit
-sleep 2
+  --upgrade-delay-blocks 1 || error_exit
+wait_for_block
 
 # Prerequisites for the start-hashchain command: Change the key manager of ENGINE_ACCOUNT to ENGINE_ACCOUNT
 aurora-cli --engine $ENGINE_ACCOUNT set-key-manager $ENGINE_ACCOUNT || error_exit
@@ -124,7 +127,27 @@ wait_for_block
 result=$(aurora-cli --engine $ENGINE_ACCOUNT get-fixed-gas || error_exit)
 assert_eq "0" "$result"
 
-# Check whitelists statuses
+# Check whitelists statuses, all whitelists are disabled by default
+result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status admin || error_exit)
+assert_eq "0" "$result"
+result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status evm-admin || error_exit)
+assert_eq "0" "$result"
+result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status account || error_exit)
+assert_eq "0" "$result"
+result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status address || error_exit)
+assert_eq "0" "$result"
+
+# Enable all whitelists
+aurora-cli --engine $ENGINE_ACCOUNT set-whitelist-status --kind admin --status 1 || error_exit
+wait_for_block
+aurora-cli --engine $ENGINE_ACCOUNT set-whitelist-status --kind evm-admin --status 1 || error_exit
+wait_for_block
+aurora-cli --engine $ENGINE_ACCOUNT set-whitelist-status --kind account --status 1 || error_exit
+wait_for_block
+aurora-cli --engine $ENGINE_ACCOUNT set-whitelist-status --kind address --status 1 || error_exit
+wait_for_block
+
+# Check whitelists statuses after enabling
 result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status admin || error_exit)
 assert_eq "1" "$result"
 result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status evm-admin || error_exit)
@@ -133,6 +156,7 @@ result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status account || err
 assert_eq "1" "$result"
 result=$(aurora-cli --engine $ENGINE_ACCOUNT get-whitelist-status address || error_exit)
 assert_eq "1" "$result"
+
 
 # Add whitelist batch
 aurora-cli --engine $ENGINE_ACCOUNT add-entry-to-whitelist-batch docs/res/batch_list.json || error_exit

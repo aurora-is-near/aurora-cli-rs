@@ -3,7 +3,7 @@ use crate::{
     utils,
 };
 use aurora_engine_types::borsh::BorshDeserialize;
-use aurora_engine_types::parameters::connector::{InitCallArgs, PauseEthConnectorCallArgs};
+use aurora_engine_types::parameters::connector::PauseEthConnectorArgs;
 use aurora_engine_types::parameters::engine::{
     DeployErc20TokenArgs, GetStorageAtArgs, NewCallArgs, NewCallArgsV2, SubmitResult,
     TransactionStatus,
@@ -16,6 +16,7 @@ use aurora_engine_types::{
 };
 use clap::Subcommand;
 use near_primitives::account::AccountContract;
+use near_primitives::types::Balance;
 use near_primitives::{
     account::{AccessKey, Account},
     state_record::StateRecord,
@@ -445,28 +446,11 @@ pub async fn execute_command(
                 chain_id,
                 owner_id,
                 upgrade_delay_blocks,
-                prover_account,
-                eth_custodian_address,
-                ft_metadata,
+                ..
             } => {
                 let wasm_bytes = tokio::fs::read(wasm_path).await?;
                 let chain_id = chain_id.unwrap_or(AURORA_LOCAL_NET_CHAIN_ID);
                 let owner_id = owner_id.as_deref().unwrap_or(&config.engine_account_id);
-                let prover_account: AccountId = {
-                    let prover_account = prover_account
-                        .as_deref()
-                        .unwrap_or(&config.engine_account_id);
-                    prover_account
-                        .parse()
-                        .map_err(|_| anyhow::anyhow!("Prover account is an invalid Near account"))?
-                };
-                let eth_custodian_address = eth_custodian_address
-                    .as_deref()
-                    .map(utils::hex_to_address)
-                    .transpose()?
-                    .unwrap_or_default();
-                let metadata = utils::ft_metadata::parse_ft_metadata(ft_metadata)?;
-
                 let new_args = NewCallArgs::V2(NewCallArgsV2 {
                     chain_id: aurora_engine_types::types::u256_to_arr(&U256::from(chain_id)),
                     owner_id: owner_id
@@ -474,12 +458,6 @@ pub async fn execute_command(
                         .map_err(|_| anyhow::anyhow!("Owner account is an invalid Near account"))?,
                     upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
                 });
-
-                let init_args = InitCallArgs {
-                    prover_account,
-                    eth_custodian_address: eth_custodian_address.encode(),
-                    metadata,
-                };
 
                 let deploy_response = client.deploy_contract(wasm_bytes).await?;
                 assert_tx_success(&deploy_response);
@@ -489,16 +467,6 @@ pub async fn execute_command(
                     .contract_call_with_nonce("new", borsh::to_vec(&new_args)?, next_nonce)
                     .await?;
                 assert_tx_success(&new_response);
-                let next_nonce = new_response.transaction.nonce + 1;
-
-                let init_response = client
-                    .contract_call_with_nonce(
-                        "new_eth_connector",
-                        borsh::to_vec(&init_args).unwrap(),
-                        next_nonce,
-                    )
-                    .await?;
-                assert_tx_success(&init_response);
 
                 println!(
                     "Deploy of Engine to {} successful",
@@ -605,7 +573,7 @@ pub async fn execute_command(
             }
             WriteCommand::DeployERC20Token { nep141 } => {
                 let nep141: AccountId = nep141.parse().unwrap();
-                let input = borsh::to_vec(&DeployErc20TokenArgs { nep141 })?;
+                let input = borsh::to_vec(&DeployErc20TokenArgs::Legacy(nep141))?;
                 let tx_outcome = client.contract_call("deploy_erc20_token", input).await?;
                 println!("{tx_outcome:?}");
             }
@@ -616,7 +584,7 @@ pub async fn execute_command(
                 println!("{tx_outcome:?}");
             }
             WriteCommand::SetPausedFlags { paused_mask } => {
-                let input = borsh::to_vec(&PauseEthConnectorCallArgs {
+                let input = borsh::to_vec(&PauseEthConnectorArgs {
                     paused_mask: u8::from_str(&paused_mask).unwrap(),
                 })?;
                 let tx_outcome = client.contract_call("set_paused_flags", input).await?;
@@ -645,7 +613,7 @@ pub async fn execute_command(
                 }
                 let secret_key = near_crypto::SecretKey::from_random(near_crypto::KeyType::ED25519);
                 let public_key = secret_key.public_key();
-                let aurora_amount = 1_000_000_000_000_000_000_000_000_000_000_000; // 1e9 NEAR
+                let aurora_amount = Balance::from_near(1_000_000_000); // 1e9 NEAR
                 let aurora_key_record = StateRecord::AccessKey {
                     account_id: aurora_id.clone(),
                     public_key: public_key.clone(),
@@ -653,11 +621,12 @@ pub async fn execute_command(
                 };
                 let aurora_account_record = StateRecord::Account {
                     account_id: aurora_id.clone(),
-                    account: Account::new(aurora_amount, 0, AccountContract::None, 0),
+                    account: Account::new(aurora_amount, Balance::ZERO, AccountContract::None, 0),
                 };
                 records.0.push(aurora_key_record);
                 records.0.push(aurora_account_record);
-                genesis.config.total_supply += aurora_amount;
+                genesis.config.total_supply =
+                    genesis.config.total_supply.saturating_add(aurora_amount);
                 genesis.to_file(&path);
                 println!("Aurora account added to {path}");
                 let key_path = Path::new(&path).parent().unwrap().join("aurora_key.json");

@@ -17,8 +17,9 @@ use near_jsonrpc_client::{
     AsUrl, JsonRpcClient, methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest,
 };
 use near_jsonrpc_primitives::types::query::QueryResponseKind;
+use near_primitives::gas::Gas;
 use near_primitives::transaction::{Action, SignedTransaction};
-use near_primitives::types::{BlockReference, Finality, Nonce};
+use near_primitives::types::{Balance, BlockReference, Finality, Nonce};
 use near_primitives::views::BlockView;
 #[cfg(feature = "simple")]
 use near_primitives::views::FinalExecutionStatus;
@@ -45,7 +46,7 @@ use super::TransactionOutcome;
 use crate::utils;
 
 // The maximum amount of prepaid NEAR gas required for paying for a transaction.
-const NEAR_GAS: u64 = 300_000_000_000_000;
+const NEAR_GAS: Gas = Gas::from_teragas(300);
 const TIMEOUT: Duration = Duration::from_secs(20);
 #[derive(Clone)]
 pub struct NearClient {
@@ -131,9 +132,7 @@ impl NearClient {
 
     #[cfg(feature = "advanced")]
     pub async fn get_erc20_from_nep141(&self, nep141: &str) -> anyhow::Result<Address> {
-        let args = aurora_engine_types::parameters::engine::GetErc20FromNep141CallArgs {
-            nep141: nep141.parse().unwrap(),
-        };
+        let args: AccountId = nep141.parse()?;
         let result = self
             .view_call("get_erc20_from_nep141", borsh::to_vec(&args)?)
             .await?;
@@ -239,7 +238,7 @@ impl NearClient {
                     method_name: method_name.to_string(),
                     args,
                     gas: NEAR_GAS,
-                    deposit,
+                    deposit: Balance::from_yoctonear(deposit),
                 },
             ))],
             None,
@@ -247,6 +246,7 @@ impl NearClient {
         .await
     }
 
+    #[allow(dead_code)]
     #[cfg(feature = "simple")]
     pub async fn contract_call_batch(
         &self,
@@ -266,7 +266,9 @@ impl NearClient {
         &self,
         batch: Vec<(String, Vec<u8>, u128)>,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
-        let gas = NEAR_GAS / u64::try_from(batch.len())?;
+        anyhow::ensure!(!batch.is_empty(), "Batch must contain at least one action");
+
+        let gas = Gas::from_gas(NEAR_GAS.as_gas() / u64::try_from(batch.len())?);
         let actions = batch
             .into_iter()
             .map(|(method_name, args, deposit)| {
@@ -274,7 +276,7 @@ impl NearClient {
                     method_name,
                     args,
                     gas,
-                    deposit,
+                    deposit: Balance::from_yoctonear(deposit),
                 }))
             })
             .collect();
@@ -295,7 +297,7 @@ impl NearClient {
                     method_name: method_name.to_string(),
                     args,
                     gas: NEAR_GAS,
-                    deposit: 0,
+                    deposit: Balance::ZERO,
                 },
             ))],
             Some(nonce_override),
@@ -316,7 +318,7 @@ impl NearClient {
                     method_name: method_name.to_string(),
                     args,
                     gas: NEAR_GAS,
-                    deposit: 0,
+                    deposit: Balance::ZERO,
                 },
             ))],
             from,
@@ -371,7 +373,7 @@ impl NearClient {
         let is_sub_account = new_account_id.is_sub_account_of(&signer.account_id);
         let new_key_pair = near_crypto::SecretKey::from_random(near_crypto::KeyType::ED25519);
         let (block_hash, nonce) = self.get_nonce(&signer).await?;
-        let initial_balance = utils::near_to_yocto(deposit);
+        let initial_balance = Balance::from_yoctonear(utils::near_to_yocto(deposit));
 
         let request = if is_sub_account {
             RpcBroadcastTxCommitRequest {
@@ -605,7 +607,9 @@ impl NearClient {
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
         let actions = vec![
             Action::CreateAccount(CreateAccountAction {}),
-            Action::Transfer(TransferAction { deposit }),
+            Action::Transfer(TransferAction {
+                deposit: Balance::from_yoctonear(deposit),
+            }),
             Action::AddKey(Box::new(AddKeyAction {
                 public_key: full_access_key,
                 access_key: AccessKey {

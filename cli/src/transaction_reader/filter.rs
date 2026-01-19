@@ -104,6 +104,7 @@ impl Filter for EthTxTo {
             EthTransactionKind::Legacy(tx) => tx.transaction.to.as_ref(),
             EthTransactionKind::Eip2930(t) => t.transaction.to.as_ref(),
             EthTransactionKind::Eip1559(t) => t.transaction.to.as_ref(),
+            EthTransactionKind::Eip7702(t) => Some(&t.transaction.to),
         }) == Some(&self.0)
     }
 }

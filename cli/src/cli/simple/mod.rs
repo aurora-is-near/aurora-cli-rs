@@ -72,18 +72,9 @@ pub enum Command {
         /// Owner of the Aurora EVM
         #[arg(long)]
         owner_id: Option<String>,
-        /// Account of the bridge prover
-        #[arg(long)]
-        bridge_prover_id: Option<String>,
         /// How many blocks after staging upgrade can deploy it
         #[arg(long)]
         upgrade_delay_blocks: Option<u64>,
-        /// Custodian ETH address
-        #[arg(long)]
-        custodian_address: Option<String>,
-        /// Path to the file with the metadata of the fungible token
-        #[arg(long)]
-        ft_metadata_path: Option<String>,
     },
     /// Return chain id of the network
     GetChainId,
@@ -132,7 +123,7 @@ pub enum Command {
     /// Resume precompiles
     ResumePrecompiles { mask: u32 },
     /// Return paused precompiles
-    PausedPrecompiles,
+    GetPausedPrecompiles,
     /// Updates the bytecode for user's router contracts
     FactoryUpdate { path: String },
     /// Return the address of the `wNEAR` ERC-20 contract
@@ -462,12 +453,8 @@ impl FromStr for WithdrawSerialization {
 }
 
 pub async fn run(args: Cli) -> anyhow::Result<()> {
-    let near_rpc = match args.network {
-        Network::Mainnet => super::NEAR_MAINNET_ENDPOINT,
-        Network::Testnet => super::NEAR_TESTNET_ENDPOINT,
-        Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
-    };
-    let client = crate::client::Client::new(near_rpc, &args.engine, args.near_key_path);
+    let near_rpc = parse_near_rpc(&args.network)?;
+    let client = crate::client::Client::new(&near_rpc, &args.engine, args.near_key_path);
     let context = crate::client::Context::new(client, args.output_format, args.block_height);
 
     match args.command {
@@ -521,7 +508,7 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         } => command::view_call(context, address, function, args, from, abi_path).await?,
         Command::PausePrecompiles { mask } => command::pause_precompiles(context, mask).await?,
         Command::ResumePrecompiles { mask } => command::resume_precompiles(context, mask).await?,
-        Command::PausedPrecompiles => command::paused_precompiles(context).await?,
+        Command::GetPausedPrecompiles => command::get_paused_precompiles(context).await?,
         Command::GetUpgradeIndex => command::get_upgrade_index(context).await?,
         Command::FactoryUpdate { path } => command::factory_update(context, path).await?,
         Command::FactoryGetWnearAddress => command::factory_get_wnear_address(context).await?,
@@ -558,21 +545,9 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
         Command::Init {
             chain_id,
             owner_id,
-            bridge_prover_id,
             upgrade_delay_blocks,
-            custodian_address,
-            ft_metadata_path,
         } => {
-            command::init(
-                context,
-                chain_id,
-                owner_id,
-                bridge_prover_id,
-                upgrade_delay_blocks,
-                custodian_address,
-                ft_metadata_path,
-            )
-            .await?;
+            command::init(context, chain_id, owner_id, upgrade_delay_blocks).await?;
         }
         Command::EncodeAddress { account } => command::encode_address(&account),
         Command::KeyPair { random, seed } => command::key_pair(random, seed)?,
@@ -702,4 +677,16 @@ pub async fn run(args: Cli) -> anyhow::Result<()> {
 
 fn parse_account_id(arg: &str) -> anyhow::Result<AccountId> {
     arg.parse().map_err(|e| anyhow::anyhow!("{e}"))
+}
+
+fn parse_near_rpc(network: &Network) -> anyhow::Result<String> {
+    std::env::var("NEAR_RPC_URL").or_else(|_| {
+        let endpoint = match network {
+            Network::Mainnet => super::NEAR_MAINNET_ENDPOINT,
+            Network::Testnet => super::NEAR_TESTNET_ENDPOINT,
+            Network::Localnet => super::NEAR_LOCAL_ENDPOINT,
+        };
+
+        Ok(endpoint.to_string())
+    })
 }
