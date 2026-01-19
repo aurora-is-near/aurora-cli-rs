@@ -266,6 +266,8 @@ impl NearClient {
         &self,
         batch: Vec<(String, Vec<u8>, u128)>,
     ) -> anyhow::Result<FinalExecutionOutcomeView> {
+        anyhow::ensure!(!batch.is_empty(), "Batch must contain at least one action");
+
         let gas = Gas::from_gas(NEAR_GAS.as_gas() / u64::try_from(batch.len())?);
         let actions = batch
             .into_iter()

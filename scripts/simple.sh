@@ -15,6 +15,7 @@ NODE_KEY_PATH=$NEARCORE_HOME/node0/validator_key.json
 AURORA_KEY_PATH=$NEARCORE_HOME/node0/aurora_key.json
 MANAGER_KEY_PATH=$NEARCORE_HOME/node0/manager_key.json
 RELAYER_KEY_PATH=$NEARCORE_HOME/node0/relayer_key.json
+# Test-only secret key for localnet development - DO NOT use in production
 AURORA_SECRET_KEY=27cb3ddbd18037b38d7fb9ae3433a9d6f5cd554a4ba5768c8a15053f688ee167
 ENGINE_ACCOUNT=aurora.node0
 MANAGER_ACCOUNT=key-manager.aurora.node0
