@@ -281,7 +281,7 @@ pub async fn execute_command(
                     parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref())?;
                 let input = utils::hex_to_vec(&input_data_hex)?;
                 let result = client
-                    .view_contract_call(sender, target, amount, input)
+                    .view_contract_call(sender, target, amount, input, None)
                     .await?;
                 println!("{result:?}");
             }
@@ -295,7 +295,7 @@ pub async fn execute_command(
                     parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref())?;
                 let input = erc20.abi_encode()?;
                 let result = client
-                    .view_contract_call(sender, target, amount, input)
+                    .view_contract_call(sender, target, amount, input, None)
                     .await?;
                 println!("{result:?}");
             }
@@ -309,7 +309,7 @@ pub async fn execute_command(
                     parse_read_call_args(sender_addr_hex, &target_addr_hex, amount.as_deref())?;
                 let input = contract_call.abi_encode()?;
                 let result = client
-                    .view_contract_call(sender, target, amount, input)
+                    .view_contract_call(sender, target, amount, input, None)
                     .await?;
                 if let TransactionStatus::Succeed(bytes) = result {
                     let parsed_output = contract_call.abi_decode(&bytes)?;
@@ -343,6 +343,7 @@ pub async fn execute_command(
                         aurora_engine_precompiles::xcc::cross_contract_call::ADDRESS,
                         Wei::zero(),
                         borsh::to_vec(&precompile_args).unwrap(),
+                        None,
                     )
                     .await?;
                 println!("{result:?}");
