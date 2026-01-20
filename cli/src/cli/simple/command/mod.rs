@@ -15,6 +15,7 @@ use aurora_engine_types::parameters::engine::{
 };
 use aurora_engine_types::parameters::xcc::FundXccArgs;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
+use aurora_engine_types::types::Address;
 use aurora_engine_types::{H256, U256, types::Wei};
 use clap::ValueEnum;
 use near_primitives::hash::CryptoHash;
@@ -783,9 +784,7 @@ pub async fn deploy_erc20_token(
         "ERC-20 token has been deployed successfully",
         "Error while deploying ERC-20 token"
     )
-    .proceed_with_output(context, args, |output| {
-        format!("token address: 0x{}", hex::encode(output))
-    })
+    .proceed_with_output(context, args, erc20_output)
     .await
 }
 
@@ -805,9 +804,7 @@ pub async fn mirror_erc20_token(
         "ERC-20 token has been mirrored successfully",
         "Error while mirroring ERC-20 token"
     )
-    .proceed_with_output(context, args, |output| {
-        format!("token address: 0x{}", hex::encode(output))
-    })
+    .proceed_with_output(context, args, erc20_output)
     .await
 }
 
@@ -1125,4 +1122,11 @@ pub async fn add_relayer(
         rsp.transaction.hash
     );
     Ok(())
+}
+
+fn erc20_output(bytes: &[u8]) -> String {
+    let raw_bytes: Vec<u8> = BorshDeserialize::try_from_slice(bytes).unwrap();
+    let erc20_address = Address::try_from_slice(&raw_bytes).unwrap();
+
+    format!("token address: 0x{}", erc20_address.encode())
 }
