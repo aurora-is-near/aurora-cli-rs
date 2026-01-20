@@ -9,12 +9,13 @@ use aurora_engine_types::parameters::connector::{
     PausedMask, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs, WithdrawSerializeType,
 };
 use aurora_engine_types::parameters::engine::{
-    CallArgs, FunctionCallArgsV2, GetStorageAtArgs, NewCallArgs, NewCallArgsV2,
-    PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs,
+    CallArgs, DeployErc20TokenArgs, FunctionCallArgsV2, GetStorageAtArgs, NewCallArgs,
+    NewCallArgsV2, PausePrecompilesCallArgs, RelayerKeyArgs, RelayerKeyManagerArgs, SetOwnerArgs,
     SetUpgradeDelayBlocksArgs, SubmitResult, TransactionStatus,
 };
 use aurora_engine_types::parameters::xcc::FundXccArgs;
 use aurora_engine_types::public_key::{KeyType, PublicKey};
+use aurora_engine_types::types::Address;
 use aurora_engine_types::{H256, U256, types::Wei};
 use clap::ValueEnum;
 use near_primitives::hash::CryptoHash;
@@ -126,32 +127,19 @@ pub async fn init(
     upgrade_delay_blocks: Option<u64>,
 ) -> anyhow::Result<()> {
     let owner_id = to_account_id(owner_id, &context)?;
-
     let aurora_init_args = borsh::to_vec(&NewCallArgs::V2(NewCallArgsV2 {
         chain_id: H256::from_low_u64_be(chain_id).into(),
         owner_id,
         upgrade_delay_blocks: upgrade_delay_blocks.unwrap_or_default(),
     }))?;
 
-    match context
-        .client
-        .near()
-        .contract_call("new", aurora_init_args)
-        .await?
-        .status
-    {
-        FinalExecutionStatus::Failure(e) => {
-            anyhow::bail!("Error while initializing Aurora EVM: {e}")
-        }
-        FinalExecutionStatus::Started | FinalExecutionStatus::NotStarted => {
-            anyhow::bail!("Error while initializing Aurora EVM: Bad status of the transaction")
-        }
-        FinalExecutionStatus::SuccessValue(_) => {}
-    }
-
-    println!("Aurora EVM has been initialized successfully");
-
-    Ok(())
+    contract_call!(
+        "new",
+        "Aurora EVM has been initialized successfully",
+        "Error while initializing Aurora EVM"
+    )
+    .proceed(context, aurora_init_args)
+    .await
 }
 
 /// Deploy EVM byte code.
@@ -677,7 +665,7 @@ pub async fn set_key_manager(
     .await
 }
 
-/// Add relayer public key.
+/// Add relayer's public key.
 pub async fn add_relayer_key(
     context: Context,
     public_key: PublicKey,
@@ -688,7 +676,7 @@ pub async fn add_relayer_key(
     contract_call!(
         "add_relayer_key",
         "The public key: {public_key} has been added successfully",
-        "Error while adding public key"
+        "Error while adding a public key"
     )
     .proceed_with_deposit(context, args, allowance)
     .await
@@ -701,7 +689,7 @@ pub async fn remove_relayer_key(context: Context, public_key: PublicKey) -> anyh
     contract_call!(
         "remove_relayer_key",
         "The public key: {public_key} has been removed successfully",
-        "Error while removing public key"
+        "Error while removing a public key"
     )
     .proceed(context, args)
     .await
@@ -728,7 +716,7 @@ pub async fn get_erc20_from_nep141(context: Context, account_id: String) -> anyh
     get_value::<HexString>(context, "get_erc20_from_nep141", Some(args)).await
 }
 
-/// Get NEP-141 account id from address of ERC-20.
+/// Get NEP-141 account id from the address of ERC-20.
 pub async fn get_nep141_from_erc20(context: Context, address: String) -> anyhow::Result<()> {
     let args = hex_to_address(&address)?.as_bytes().to_vec();
     get_value::<AccountId>(context, "get_nep141_from_erc20", Some(args)).await
@@ -778,6 +766,28 @@ pub async fn set_erc20_metadata(
     .await
 }
 
+/// Deploy a new ERC-20 contract.
+pub async fn deploy_erc20_token(
+    context: Context,
+    nep141: String,
+    with_metadata: bool,
+) -> anyhow::Result<()> {
+    let nep141_account_id = nep141.parse().map_err(|e| anyhow::anyhow!("{e}"))?;
+    let args = borsh::to_vec(&if with_metadata {
+        DeployErc20TokenArgs::WithMetadata(nep141_account_id)
+    } else {
+        DeployErc20TokenArgs::Legacy(nep141_account_id)
+    })?;
+
+    contract_call!(
+        "deploy_erc20_token",
+        "ERC-20 token has been deployed successfully",
+        "Error while deploying ERC-20 token"
+    )
+    .proceed_with_output(context, args, erc20_output)
+    .await
+}
+
 /// Mirror ERC-20 contract.
 pub async fn mirror_erc20_token(
     context: Context,
@@ -794,7 +804,7 @@ pub async fn mirror_erc20_token(
         "ERC-20 token has been mirrored successfully",
         "Error while mirroring ERC-20 token"
     )
-    .proceed(context, args)
+    .proceed_with_output(context, args, erc20_output)
     .await
 }
 
@@ -1015,39 +1025,66 @@ impl ContractCall<'_> {
         self.proceed_with_deposit(context, args, 0.0).await
     }
 
+    async fn proceed_with_output(
+        &self,
+        context: Context,
+        args: Vec<u8>,
+        output: fn(&[u8]) -> String,
+    ) -> anyhow::Result<()> {
+        self.proceed_with_deposit_and_output(context, args, 0.0, Some(output))
+            .await
+    }
+
     async fn proceed_with_deposit(
         &self,
         context: Context,
         args: Vec<u8>,
         deposit: f64,
     ) -> anyhow::Result<()> {
+        self.proceed_with_deposit_and_output(context, args, deposit, None)
+            .await
+    }
+
+    async fn proceed_with_deposit_and_output(
+        &self,
+        context: Context,
+        args: Vec<u8>,
+        deposit: f64,
+        output: Option<fn(&[u8]) -> String>,
+    ) -> anyhow::Result<()> {
         let yocto = near_to_yocto(deposit);
-        let result = context
+        let outcome = context
             .client
             .near()
             .contract_call_with_deposit(self.method, args, yocto)
             .await?;
 
-        match result.status {
+        match outcome.status {
             FinalExecutionStatus::NotStarted | FinalExecutionStatus::Started => {
                 anyhow::bail!("{}: Bad transaction status", self.error_message)
             }
             FinalExecutionStatus::Failure(e) => {
                 anyhow::bail!("{}: {e}", self.error_message)
             }
-            FinalExecutionStatus::SuccessValue(output) => match context.output_format {
+            FinalExecutionStatus::SuccessValue(result) => match context.output_format {
                 // TODO: The output could be serialized with JSON or Borsh.
                 // TODO: In the case of Borsh we should provide a type for deserializing the output in the corresponding object.
-                OutputFormat::Plain => match to_string_pretty(&output) {
-                    Ok(msg) if !output.is_empty() => println!("{}\n{msg}", self.success_message),
+                OutputFormat::Plain => match to_string_pretty(&result) {
+                    Ok(msg) if !result.is_empty() => {
+                        if let Some(output) = output {
+                            println!("{}, {}", self.success_message, output(&result));
+                        } else {
+                            println!("{}: {msg}", self.success_message);
+                        }
+                    }
                     Ok(_) | Err(_) => println!("{}", self.success_message),
                 },
                 OutputFormat::Json => {
-                    let formatted = to_string_pretty(&result.transaction_outcome)?;
+                    let formatted = to_string_pretty(&outcome.transaction_outcome)?;
                     println!("{formatted}");
                 }
                 OutputFormat::Toml => {
-                    let formatted = toml::to_string_pretty(&result.transaction_outcome)?;
+                    let formatted = toml::to_string_pretty(&outcome.transaction_outcome)?;
                     println!("{formatted}");
                 }
             },
@@ -1085,4 +1122,11 @@ pub async fn add_relayer(
         rsp.transaction.hash
     );
     Ok(())
+}
+
+fn erc20_output(bytes: &[u8]) -> String {
+    let raw_bytes: Vec<u8> = BorshDeserialize::try_from_slice(bytes).unwrap();
+    let erc20_address = Address::try_from_slice(&raw_bytes).unwrap();
+
+    format!("token address: 0x{}", erc20_address.encode())
 }
