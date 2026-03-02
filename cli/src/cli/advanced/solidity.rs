@@ -87,7 +87,7 @@ impl Solidity {
     }
 }
 
-fn read_arg(arg: Option<&str>, stdin_arg: Option<bool>) -> Cow<str> {
+fn read_arg(arg: Option<&str>, stdin_arg: Option<bool>) -> Cow<'_, str> {
     arg.map_or_else(
         || match stdin_arg {
             Some(true) => {

@@ -3,7 +3,8 @@ use aurora_engine_types::types::Address;
 use aurora_engine_types::{U256, types::Wei};
 use clap::Subcommand;
 
-use crate::{client::AuroraClient, config::Config, utils};
+use crate::cli::advanced::Config;
+use crate::{client::AuroraClient, utils};
 
 #[derive(Subcommand)]
 pub enum Command {

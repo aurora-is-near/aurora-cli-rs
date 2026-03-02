@@ -1,3 +1,4 @@
+use aurora_engine_types::parameters::engine::SubmitResult;
 use aurora_engine_types::types::{Address, EthGas};
 use borsh::BorshDeserialize;
 use near_primitives::types::AccountId;
@@ -13,6 +14,12 @@ mod test_macro;
 impl ContractMethodResponse for () {
     fn parse(_rsp: Vec<u8>) -> Result<Self, Error> {
         Ok(())
+    }
+}
+
+impl ContractMethodResponse for SubmitResult {
+    fn parse(rsp: Vec<u8>) -> Result<Self, Error> {
+        Self::try_from_slice(&rsp).map_err(Into::into)
     }
 }
 

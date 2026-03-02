@@ -13,6 +13,7 @@ pub enum EthMethod {
 }
 
 impl EthMethod {
+    #[must_use]
     pub const fn name(&self) -> &str {
         match &self {
             Self::GetChainId => "net_version",
@@ -26,6 +27,7 @@ impl EthMethod {
         }
     }
 
+    #[must_use]
     pub fn params(&self) -> Vec<String> {
         match &self {
             Self::GetChainId => Vec::new(),

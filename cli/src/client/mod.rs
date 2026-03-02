@@ -35,6 +35,7 @@ pub struct Context {
 
 #[cfg(feature = "simple")]
 impl Context {
+    #[must_use]
     pub const fn new(
         client: Client,
         output_format: OutputFormat,
@@ -59,6 +60,7 @@ pub struct Client {
 
 #[cfg(feature = "simple")]
 impl Client {
+    #[must_use]
     pub fn new(near_rpc: &str, engine_account: &str, signer_key_path: Option<String>) -> Self {
         Self {
             near_rpc: near_rpc.to_string(),
@@ -67,6 +69,7 @@ impl Client {
         }
     }
 
+    #[must_use]
     pub fn near(&self) -> NearClient {
         NearClient::new(
             &self.near_rpc,

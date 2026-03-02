@@ -2,7 +2,7 @@
 version = "0.1.0"
 authors = ["Aurora Labs <hello@aurora.dev>"]
 edition = "2024"
-rust-version = "1.86.0"
+rust-version = "1.93.0"
 homepage = "https://github.com/aurora-is-near/aurora-cli-rs"
 repository = "https://github.com/aurora-is-near/aurora-cli-rs"
 readme = "README.md"
@@ -13,6 +13,14 @@ members = [
     "cli",
     "sdk"
 ]
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+result_large_err = "allow" # TODO: Remove this when we have better error types in place
 
 [workspace.dependencies]
 anyhow = "1"
@@ -45,4 +53,4 @@ serde_json = "1"
 shadow-rs = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
-toml = "0.9"
+toml = "1"

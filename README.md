@@ -10,13 +10,13 @@
 <br />
 
 [![CI](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/aurora-is-near/aurora-cli-rs/actions/workflows/rust.yml)
-![rust 1.70.0+ required](https://img.shields.io/badge/rust-1.70.0+-blue.svg?label=MSRV)
+![rust 1.93.0+ required](https://img.shields.io/badge/rust-1.93.0+-blue.svg?label=MSRV)
 
 ## What is Engine?
 
 [Aurora](https://doc.aurora.dev/getting-started/aurora-engine/) is an Ethereum Virtual Machine (EVM)
-project built on the NEAR Protocol, that provides a solution for developers to deploy their apps
-on an Ethereum-compatible, high-throughput, scalable and future-safe platform, with low transaction costs
+project built on the NEAR Protocol that provides a solution for developers to deploy their apps
+on an Ethereum-compatible, high-throughput, scalable, and future-safe platform, with low transaction costs
 for their users. Engine is the Aurora's implementation for it.
 
 ## What is Aurora CLI?
@@ -51,7 +51,7 @@ smart contract and will be interacting with it.
 
 ### **Requirements**
 
-- Rust 1.75.0 or newer
+- Rust 1.93.0 or newer
 - Python3
 
 First what we need to do is to install `aurora-cli`:
