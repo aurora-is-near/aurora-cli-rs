@@ -26,6 +26,7 @@ pub struct TxData {
 }
 
 impl TxData {
+    #[must_use]
     pub fn from_value(value: &Value) -> Option<Self> {
         let status = get_tx_status(value)?;
         let gas_profile = get_gas_profile(value)?;

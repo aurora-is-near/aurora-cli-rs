@@ -205,7 +205,7 @@ impl Display for FixedGas {
         let value = self
             .0
             .fixed_gas
-            .map_or("none".to_string(), |cost| cost.to_string());
+            .map_or_else(|| "none".to_string(), |cost| cost.to_string());
         f.write_str(&value)
     }
 }

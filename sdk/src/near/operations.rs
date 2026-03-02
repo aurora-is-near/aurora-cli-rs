@@ -138,7 +138,7 @@ impl<'a> Transaction<'a> {
     pub fn call(mut self, function: Function) -> Self {
         self.actions
             .push(Action::FunctionCall(Box::new(FunctionCallAction {
-                method_name: function.name.to_string(),
+                method_name: function.name.clone(),
                 args: function.args,
                 deposit: function.deposit,
                 gas: function.gas,
@@ -373,7 +373,7 @@ impl<'a> CallTransaction<'a> {
             .call(
                 &self.signer,
                 &self.contract_id,
-                self.function.name.to_string(),
+                self.function.name.clone(),
                 self.function.args,
                 self.function.gas,
                 self.function.deposit,

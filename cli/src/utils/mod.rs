@@ -35,6 +35,7 @@ pub fn secret_key_from_hex(key: &str) -> anyhow::Result<SecretKey> {
         .map_err(|e| anyhow::anyhow!("Couldn't create secret key from hex: {e}"))
 }
 
+#[must_use]
 pub fn sign_transaction(
     tx: TransactionLegacy,
     chain_id: u64,
@@ -124,6 +125,7 @@ struct KeyFileWithoutPublicKey {
 /// Converts NEAR into yocto. 1NEAR == 10^24 yocto.
 #[cfg(feature = "simple")]
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[must_use]
 pub fn near_to_yocto(near: f64) -> u128 {
     (near * 1_000_000.0) as u128 * 1_000_000_000_000_000_000
 }

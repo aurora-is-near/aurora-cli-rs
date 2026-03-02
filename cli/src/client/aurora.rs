@@ -25,6 +25,7 @@ pub struct AuroraClient {
 
 impl AuroraClient {
     #[allow(clippy::used_underscore_binding)]
+    #[must_use]
     pub fn new(url: &str, near_url: &str, engine_account: &str) -> Self {
         let inner = reqwest::Client::new();
         Self {

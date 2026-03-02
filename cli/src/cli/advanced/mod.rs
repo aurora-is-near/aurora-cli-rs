@@ -1,8 +1,9 @@
 use clap::{Parser, Subcommand};
 
-use crate::config::{Config, Network};
+use crate::cli::advanced::config::{Config, Network};
 
 pub mod aurora;
+pub mod config;
 pub mod erc20;
 pub mod near;
 pub mod process_tx_data;

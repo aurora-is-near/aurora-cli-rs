@@ -1,5 +1,4 @@
-use std::io;
-
+use aurora_engine_types::parameters::engine::SubmitArgs;
 use aurora_engine_types::{
     parameters::{
         connector::{
@@ -10,6 +9,7 @@ use aurora_engine_types::{
     },
     types::Address,
 };
+use std::io;
 
 use crate::ContractMethod as ContractMethodDerive;
 use crate::aurora::{ContractMethod, error::Error};
@@ -87,6 +87,13 @@ pub struct RemoveEntryFromWhitelist {
 pub struct SetWhitelistStatus {
     #[contract_param(serialize_as = "borsh")]
     pub args: WhitelistStatusArgs,
+}
+
+#[derive(ContractMethodDerive)]
+#[contract_method(method = "submit_with_args", response = ())]
+pub struct SubmitWithArgs {
+    #[contract_param(serialize_as = "borsh")]
+    pub args: SubmitArgs,
 }
 
 pub struct DeployERC20 {

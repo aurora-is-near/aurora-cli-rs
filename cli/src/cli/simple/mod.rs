@@ -452,6 +452,7 @@ impl FromStr for WithdrawSerialization {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn run(args: Cli) -> anyhow::Result<()> {
     let near_rpc = parse_near_rpc(&args.network)?;
     let client = crate::client::Client::new(&near_rpc, &args.engine, args.near_key_path);

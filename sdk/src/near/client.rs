@@ -52,7 +52,7 @@ impl Client {
     /// # Returns
     ///
     /// A `CallTransaction` builder instance to configure and execute the call.
-    pub fn call<M: Into<String>>(&self, contract_id: &AccountId, method: M) -> CallTransaction {
+    pub fn call<M: Into<String>>(&self, contract_id: &AccountId, method: M) -> CallTransaction<'_> {
         CallTransaction::new(
             &self.client,
             contract_id.to_owned(),
@@ -73,7 +73,7 @@ impl Client {
     /// # Returns
     ///
     /// A `Transaction` builder instance to add actions and execute the batch.
-    pub fn batch(&self, contract_id: &AccountId) -> Transaction {
+    pub fn batch(&self, contract_id: &AccountId) -> Transaction<'_> {
         Transaction::new(&self.client, self.signer.clone(), contract_id.to_owned())
     }
 

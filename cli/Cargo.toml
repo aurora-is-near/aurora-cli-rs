@@ -17,6 +17,9 @@ path = "src/lib.rs"
 name = "aurora-cli"
 path = "src/main.rs"
 
+[lints]
+workspace = true
+
 [features]
 default = ["simple"]
 simple = ["toml"]

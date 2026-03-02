@@ -40,6 +40,7 @@ impl Filter for MinNearGasUsed {
     }
 }
 
+#[allow(dead_code)]
 pub struct MaxNearGasUsed(pub u128);
 
 impl Filter for MaxNearGasUsed {
@@ -50,6 +51,7 @@ impl Filter for MaxNearGasUsed {
     }
 }
 
+#[allow(dead_code)]
 pub struct MinEvmGasUsed(pub u64);
 
 impl Filter for MinEvmGasUsed {
@@ -61,6 +63,7 @@ impl Filter for MinEvmGasUsed {
     }
 }
 
+#[allow(dead_code)]
 pub struct MaxEvmGasUsed(pub u64);
 
 impl Filter for MaxEvmGasUsed {

@@ -308,6 +308,7 @@ impl Aggregator for GasComparison {
     }
 }
 
+#[allow(dead_code)]
 pub struct Pair<A1: Aggregator, A2: Aggregator> {
     a1: Option<A1>,
     a2: Option<A2>,

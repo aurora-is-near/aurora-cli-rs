@@ -1,7 +1,3 @@
-use crate::{
-    config::{Config, Network},
-    utils,
-};
 use aurora_engine_types::borsh::BorshDeserialize;
 use aurora_engine_types::parameters::connector::PauseEthConnectorArgs;
 use aurora_engine_types::parameters::engine::{
@@ -23,6 +19,9 @@ use near_primitives::{
     views::FinalExecutionOutcomeView,
 };
 use std::{path::Path, str::FromStr};
+
+use crate::cli::advanced::{Config, Network};
+use crate::utils;
 
 /// Chain ID for Aurora localnet, per the documentation on
 /// <https://doc.aurora.dev/getting-started/network-endpoints>
@@ -252,6 +251,7 @@ pub enum InitCommand {
     },
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn execute_command(
     command: Command,
     client: &NearClient,
@@ -638,7 +638,7 @@ pub async fn execute_command(
                 key_file
                     .write_to_file(&key_path)
                     .expect("Failed to write Aurora access key file");
-                println!("Aurora access key written to {key_path:?}");
+                println!("Aurora access key written to {}", key_path.display());
             }
             InitCommand::LocalConfig {
                 nearcore_config_path,

@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "advanced")]
 use std::path::Path;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -11,7 +10,6 @@ pub struct Config {
     pub evm_secret_key: Option<String>,
 }
 
-#[cfg(feature = "advanced")]
 impl Config {
     pub fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
         std::fs::File::open(path)

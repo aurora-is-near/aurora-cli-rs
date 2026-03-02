@@ -77,8 +77,7 @@ pub(crate) fn parse_action_error(action_error: ActionError) -> Result<error::Err
         ActionErrorKind::FunctionCallError(FunctionCallError::ExecutionError(error_msg)) => {
             convert_call_msg_to_error(&error_msg)
         }
-        _ => Err(io::Error::new(
-            io::ErrorKind::Other,
+        _ => Err(io::Error::other(
             "Unexpected action error: ".to_string() + &action_error.to_string(),
         )),
     }
@@ -89,8 +88,7 @@ pub(crate) fn convert_call_msg_to_error(error_msg: &str) -> Result<error::Error,
 
     error_msg.strip_prefix(ERR_MSG_PREFIX).map_or_else(
         || {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 "Unexpected error: ".to_string() + error_msg,
             ))
         },
@@ -106,8 +104,7 @@ pub(crate) fn parse_query_error(query_error: RpcQueryError) -> Result<error::Err
             block_hash: _,
         } => Ok(convert_view_msg_to_error(vm_error)
             .unwrap_or_else(|| near::error::Error::from(query_error).into())),
-        _ => Err(io::Error::new(
-            io::ErrorKind::Other,
+        _ => Err(io::Error::other(
             "Unexpected query error: ".to_string() + &query_error.to_string(),
         )),
     }
