@@ -373,7 +373,7 @@ impl<'a> CallTransaction<'a> {
             .call(
                 &self.signer,
                 &self.contract_id,
-                self.function.name.clone(),
+                self.function.name,
                 self.function.args,
                 self.function.gas,
                 self.function.deposit,

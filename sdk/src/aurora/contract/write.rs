@@ -1,10 +1,9 @@
-use aurora_engine_types::parameters::engine::SubmitArgs;
 use aurora_engine_types::{
     parameters::{
         connector::{
             MirrorErc20TokenArgs, SetErc20MetadataArgs, SetEthConnectorContractAccountArgs,
         },
-        engine::DeployErc20TokenArgs,
+        engine::{DeployErc20TokenArgs, SubmitArgs, SubmitResult},
         silo::{FixedGasArgs, SiloParamsArgs, WhitelistArgs, WhitelistStatusArgs},
     },
     types::Address,
@@ -90,7 +89,7 @@ pub struct SetWhitelistStatus {
 }
 
 #[derive(ContractMethodDerive)]
-#[contract_method(method = "submit_with_args", response = ())]
+#[contract_method(method = "submit_with_args", response = SubmitResult)]
 pub struct SubmitWithArgs {
     #[contract_param(serialize_as = "borsh")]
     pub args: SubmitArgs,
@@ -107,7 +106,7 @@ impl ContractMethod for DeployERC20 {
         "deploy_erc20_token"
     }
 
-    fn params(&self) -> Result<Vec<u8>, std::io::Error> {
+    fn params(&self) -> Result<Vec<u8>, io::Error> {
         borsh::to_vec(&self.args)
     }
 
