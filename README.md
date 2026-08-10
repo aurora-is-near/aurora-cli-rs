@@ -59,7 +59,7 @@ First what we need to do is to install `aurora-cli`:
 ### **Installing aurora-cli**
 
 ```shell
-git clone https://github.com/aurora-engine/aurora-cli-rs
+git clone https://github.com/aurora-is-near/aurora-cli-rs
 cd aurora-cli-rs/cli && cargo install --path . 
 ```
 
