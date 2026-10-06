@@ -10,7 +10,7 @@ on:
 jobs:
   shell_tests:
     name: ${{ matrix.interface }} CLI
-    runs-on: runs-on=${{ github.run_id }}/family=c6a.4xlarge/image=ubuntu24-full-x64/extras=s3-cache
+    runs-on: runs-on=${{ github.run_id }}/family=c6a.4xlarge/image=ubuntu24-full-x64/volume=100gb/extras=s3-cache
     strategy:
       matrix:
         interface: [ Advanced, Simple, Silo ]
